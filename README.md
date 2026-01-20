@@ -86,27 +86,27 @@ graph TD;
   <h3>[분석 리포트 & 주요 이슈 카드]</h3>
   <table style="width: 100%; border-collapse: collapse;">
     <tr>
-      <td width="25%"><img src="output/2026.01.20_NIGHT/Instagram_Feed_NIGHT_2026.01.20/P1_Ranking.png" alt="전체 랭킹" /></td>
-      <td width="25%"><img src="output/2026.01.20_NIGHT/Instagram_Feed_NIGHT_2026.01.20/P2_트럼프_그린란드.png" alt="이슈 1" /></td>
-      <td width="25%"><img src="output/2026.01.20_NIGHT/Instagram_Feed_NIGHT_2026.01.20/P3_장동혁_단식.png" alt="이슈 2" /></td>
-      <td width="25%"><img src="output/2026.01.20_NIGHT/Instagram_Feed_NIGHT_2026.01.20/P4_한덕수.png" alt="이슈 3" /></td>
+      <td width="25%"><img src="image/sample_feed/P1_Ranking.png" alt="Main Ranking Board" /></td>
+      <td width="25%"><img src="image/sample_feed/P2_Issue_Analysis_01.png" alt="AI Issue Analysis 01" /></td>
+      <td width="25%"><img src="image/sample_feed/P3_Issue_Analysis_02.png" alt="AI Issue Analysis 02" /></td>
+      <td width="25%"><img src="image/sample_feed/P4_Issue_Analysis_03.png" alt="AI Issue Analysis 03" /></td>
     </tr>
     <tr align="center">
       <td><b>P1. 종합 랭킹</b></td>
-      <td><b>P2. 심층 분석 1</b></td>
-      <td><b>P3. 심층 분석 2</b></td>
-      <td><b>P4. 심층 분석 3</b></td>
+      <td><b>P2. 심층 분석 01</b></td>
+      <td><b>P3. 심층 분석 02</b></td>
+      <td><b>P4. 심층 분석 03</b></td>
     </tr>
     <tr>
-      <td width="25%"><img src="output/2026.01.20_NIGHT/Instagram_Feed_NIGHT_2026.01.20/P5_임성근_음주운전.png" alt="이슈 4" /></td>
-      <td width="25%"><img src="output/2026.01.20_NIGHT/Instagram_Feed_NIGHT_2026.01.20/P6_Group5-7.png" alt="그룹화 이슈 1" /></td>
-      <td width="25%"><img src="output/2026.01.20_NIGHT/Instagram_Feed_NIGHT_2026.01.20/P7_Group8-10.png" alt="그룹화 이슈 2" /></td>
+      <td width="25%"><img src="image/sample_feed/P5_Issue_Analysis_04.png" alt="AI Issue Analysis 04" /></td>
+      <td width="25%"><img src="image/sample_feed/P6_Group_Summary_01.png" alt="Group Summary 01" /></td>
+      <td width="25%"><img src="image/sample_feed/P7_Group_Summary_02.png" alt="Group Summary 02" /></td>
       <td width="25%"></td>
     </tr>
     <tr align="center">
-      <td><b>P5. 심층 분석 4</b></td>
-      <td><b>P6. 그룹 요약 (5-7위)</b></td>
-      <td><b>P7. 그룹 요약 (8-10위)</b></td>
+      <td><b>P5. 심층 분석 04</b></td>
+      <td><b>P6. 그룹 요약 A</b></td>
+      <td><b>P7. 그룹 요약 B</b></td>
       <td></td>
     </tr>
   </table>
