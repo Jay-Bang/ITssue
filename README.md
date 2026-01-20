@@ -15,7 +15,7 @@
 
 | **Instagram Feed** | **QR Code** |
 | :--- | :--- |
-| [itssue - 트렌드 지능형 분석 엔진](https://www.instagram.com/issue.itssue/) | <img src="image/Instagram_QR.png" width="150" alt="Instagram QR Code" /> |
+| [itssue - 트렌드 지능형 분석 엔진](https://www.instagram.com/issue.itssue/) | <img src="docs/assets/Instagram_QR.png" width="150" alt="Instagram QR Code" /> |
 
 ---
 
@@ -86,10 +86,10 @@ graph TD;
   <h3>[분석 리포트 & 주요 이슈 카드]</h3>
   <table style="width: 100%; border-collapse: collapse;">
     <tr>
-      <td width="25%"><img src="image/sample_feed/P1_Ranking.png" alt="Main Ranking Board" /></td>
-      <td width="25%"><img src="image/sample_feed/P2_Issue_Analysis_01.png" alt="AI Issue Analysis 01" /></td>
-      <td width="25%"><img src="image/sample_feed/P3_Issue_Analysis_02.png" alt="AI Issue Analysis 02" /></td>
-      <td width="25%"><img src="image/sample_feed/P4_Issue_Analysis_03.png" alt="AI Issue Analysis 03" /></td>
+      <td width="25%"><img src="docs/assets/sample_feed/P1_Ranking.png" alt="Main Ranking Board" /></td>
+      <td width="25%"><img src="docs/assets/sample_feed/P2_Issue_Analysis_01.png" alt="AI Issue Analysis 01" /></td>
+      <td width="25%"><img src="docs/assets/sample_feed/P3_Issue_Analysis_02.png" alt="AI Issue Analysis 02" /></td>
+      <td width="25%"><img src="docs/assets/sample_feed/P4_Issue_Analysis_03.png" alt="AI Issue Analysis 03" /></td>
     </tr>
     <tr align="center">
       <td><b>P1. 종합 랭킹</b></td>
@@ -98,9 +98,9 @@ graph TD;
       <td><b>P4. 심층 분석 03</b></td>
     </tr>
     <tr>
-      <td width="25%"><img src="image/sample_feed/P5_Issue_Analysis_04.png" alt="AI Issue Analysis 04" /></td>
-      <td width="25%"><img src="image/sample_feed/P6_Group_Summary_01.png" alt="Group Summary 01" /></td>
-      <td width="25%"><img src="image/sample_feed/P7_Group_Summary_02.png" alt="Group Summary 02" /></td>
+      <td width="25%"><img src="docs/assets/sample_feed/P5_Issue_Analysis_04.png" alt="AI Issue Analysis 04" /></td>
+      <td width="25%"><img src="docs/assets/sample_feed/P6_Group_Summary_01.png" alt="Group Summary 01" /></td>
+      <td width="25%"><img src="docs/assets/sample_feed/P7_Group_Summary_02.png" alt="Group Summary 02" /></td>
       <td width="25%"></td>
     </tr>
     <tr align="center">
@@ -116,8 +116,8 @@ graph TD;
   <h3>[인스타그램 실제 발행 사례]</h3>
   <table style="width: 100%; border-collapse: collapse;">
     <tr>
-      <td width="50%"><img src="image/ITssue_Instagram_1.png" alt="게시 예시 1" /></td>
-      <td width="50%"><img src="image/ITssue_Instagram_2.png" alt="게시 예시 2" /></td>
+      <td width="50%"><img src="docs/assets/ITssue_Instagram_1.png" alt="게시 예시 1" /></td>
+      <td width="50%"><img src="docs/assets/ITssue_Instagram_2.png" alt="게시 예시 2" /></td>
     </tr>
     <tr align="center">
       <td><b>Instagram Feed 예시 1</b></td>
