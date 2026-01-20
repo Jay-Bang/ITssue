@@ -1,0 +1,176 @@
+<!-- 
+  [ITssue Card Template]
+  Puppeteer 렌더링을 위한 기본 Handlebars 템플릿입니다.
+  Ranking, Issue Detail, Grouped Story 등 다양한 카드 타입을 하나의 HTML 구조로 처리합니다.
+-->
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <style>
+    /* STYLING_PLACEHOLDER */
+  </style>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&family=Inter:wght@700;900&family=Roboto:wght@700;900&display=swap"
+    rel="stylesheet">
+</head>
+
+<body class="{{theme}} {{#if (eq type 'group')}}version-b{{else}}version-a{{/if}}">
+  <div class="card">
+    <div class="header">
+      <div class="brand">ITssue</div>
+      <div class="header-right">
+        <div class="date">{{date}}</div>
+        <div class="board-title">{{boardTitle}}</div>
+      </div>
+    </div>
+
+    {{#if (eq type 'ranking')}}
+    <!-- P1: 랭킹 페이지 -->
+    <div class="ranking-title">
+      {{boardTitle}}<br><span style="color: var(--point-color);">TOP 10</span>
+    </div>
+    <div class="ranking-list">
+      {{#each ranking}}
+      <div class="rank-item">
+        <div class="rank-number">{{this.rank}}</div>
+        <div class="rank-keyword">{{this.keyword}}</div>
+      </div>
+      {{/each}}
+    </div>
+    {{else if (eq type 'group')}}
+    <!-- Version B: 그룹형 스토리텔링 페이지 (형식 통일: P2~P5와 동일) -->
+    <div class="detail-rank">{{rankRange}}</div>
+    {{#if groupTitle}}
+    <div class="detail-keyword group-title-scale"><span>{{groupTitle}}</span></div>
+    {{/if}}
+
+    <div class="issue-group-list">
+      {{#each issues}}
+      <div class="grouped-issue">
+        <div class="issue-title">
+          <span class="issue-rank">{{this.rank}}위</span>
+          {{this.keyword}}
+        </div>
+        <div class="issue-context">
+          {{#each this.summaryLines}}
+          <div class="group-summary-item">• {{this}}</div>
+          {{/each}}
+        </div>
+      </div>
+      {{/each}}
+    </div>
+    <div class="footer">
+      <div>itssue.trend</div>
+    </div>
+    {{else if (eq type 'issue-detail')}}
+    <!-- Version A: 이슈 상세 페이지 (페이지당 1개 이슈) -->
+    <div class="detail-rank">TOP {{rank}}</div>
+    <div class="detail-keyword"><span>{{keyword}}</span></div>
+    <div class="sub-keywords-top">
+      {{#each subKeywords}}
+      <span class="tag-mini">#{{this}}</span>
+      {{/each}}
+    </div>
+    <div class="summary-box">
+      {{#each summary}}
+      <div class="summary-item">{{this}}</div>
+      {{/each}}
+    </div>
+    <div class="footer">
+      <div>itssue.trend</div>
+    </div>
+    {{/if}}
+
+  </div>
+
+  <script>
+    /**
+     * [Dynamic Scaling: Keywords] 
+     * 키워드가 너무 길어 영역(180px)을 벗어날 경우 폰트 사이즈를 자동으로 줄입니다.
+     */
+    function scaleKeywords() {
+      const keywordSpan = document.querySelector('.detail-keyword span');
+      if (!keywordSpan) return;
+
+      let fontSize = parseInt(window.getComputedStyle(keywordSpan).fontSize);
+      const isGroup = document.body.classList.contains('version-b') &&
+        document.querySelector('.issue-group-list');
+
+      const maxHeight = isGroup ? 100 : 140; // 그룹 페이지는 타이틀 공간이 더 좁음
+
+      while (keywordSpan.scrollHeight > maxHeight && fontSize > 28) {
+        fontSize -= 2;
+        keywordSpan.style.fontSize = fontSize + 'px';
+      }
+    }
+
+    /**
+     * [Dynamic Scaling: Group Items (Version B)]
+     * 그룹 페이지(7~10위 등)에서 전체 리스트 높이가 카드 영역을 초과할 경우 폰트 사이즈를 자동으로 줄입니다.
+     */
+    function scaleGroupItems() {
+      const groupList = document.querySelector('.issue-group-list');
+      if (!groupList) return;
+
+      const contexts = groupList.querySelectorAll('.issue-context');
+      if (contexts.length === 0) return;
+
+      let fontSize = 24; // @style.css .issue-context 최신 기본값
+      const maxHeight = 640; // 푸터 침범을 방지하기 위한 안전 임계값
+
+      // 리스트 실제 높이가 가용 높이를 넘는 동안 폰트를 줄임
+      while (groupList.scrollHeight > maxHeight && fontSize > 16) {
+        fontSize -= 1;
+        contexts.forEach(ctx => {
+          ctx.style.fontSize = fontSize + 'px';
+        });
+
+        // 제목 크기도 비례해서 축소
+        const titles = groupList.querySelectorAll('.issue-title');
+        titles.forEach(title => {
+          title.style.fontSize = (fontSize + 10) + 'px';
+        });
+      }
+    }
+
+    /**
+     * [Dynamic Scaling: Summaries]
+     * 요약 박스 내부의 텍스트가 박스 높이(540px)를 초과할 경우 폰트 사이즈를 자동으로 줄입니다.
+     */
+    function scaleSummaries() {
+      const summaryBox = document.querySelector('.summary-box');
+      if (!summaryBox) return;
+
+      const summaryItems = summaryBox.querySelectorAll('.summary-item');
+      let fontSize = 32;
+      const maxContentHeight = 620;
+      const safetyBuffer = 80; // [Safety] 하단 여백이 넉넉히 남도록 버퍼 상향
+
+      // 박스 내부 실제 높이가 (가용 높이 - 버퍼)를 넘는 동안 폰트를 줄임
+      while (summaryBox.scrollHeight > (maxContentHeight - safetyBuffer) && fontSize > 18) {
+        fontSize -= 1;
+        summaryItems.forEach(item => {
+          item.style.fontSize = fontSize + 'px';
+          item.style.lineHeight = '1.45';
+          item.style.marginBottom = (fontSize / 1.6) + 'px';
+        });
+      }
+    }
+
+    function runAllScaling() {
+      scaleKeywords();
+      scaleSummaries();
+      scaleGroupItems();
+    }
+
+    // DOM 로드 및 폰트 로드 완료 후 실행
+    window.addEventListener('load', runAllScaling);
+    if (document.fonts) {
+      document.fonts.ready.then(runAllScaling);
+    }
+  </script>
+</body>
+
+</html>

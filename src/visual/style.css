@@ -1,0 +1,423 @@
+/* [ITssue 인스타그램 디자인 시스템] 
+   본 파일은 Puppeteer를 통한 카드 뉴스 이미지 생성 시 사용되는 전용 스타일시트입니다.
+*/
+
+/* 1. 디자인 토큰 및 테마 구성 */
+:root {
+  /* 기본값: 다크 테마 (Dark Theme) */
+  --bg-color: #0F172A;
+  --card-bg: #1E293B;
+  --point-color: #38BDF8;
+  --text-main: #F1F5F9;
+  --text-sub: #94A3B8;
+  --neon-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
+  --border-color: rgba(255, 255, 255, 0.05);
+  --radius: 40px;
+  --font-main: 'Pretendard', sans-serif;
+  --letter-spacing: -0.05em;
+  --card-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+}
+
+body.light {
+  /* 밝은 컨셉: 라이트 테마 (Light Theme) */
+  --bg-color: #F1F5F9;
+  --card-bg: #FFFFFF;
+  --point-color: #0284C7;
+  --text-main: #0F172A;
+  --text-sub: #64748B;
+  --neon-shadow: none;
+  --border-color: rgba(0, 0, 0, 0.05);
+}
+
+body.violet-bloom {
+  --bg-color: #fdfdfd;
+  --card-bg: #FFFFFF;
+  --point-color: #7033ff;
+  --text-main: #000000;
+  --text-sub: #525252;
+  --border-color: #e7e7ee;
+  --neon-shadow: none;
+  --radius: 80px;
+  /* 둥근 라운드 처리 */
+  --font-main: 'Pretendard', sans-serif;
+  --letter-spacing: -0.025em;
+  --card-shadow: 0 10px 30px rgba(112, 51, 255, 0.1);
+}
+
+body.cosmic-night {
+  --bg-color: #f5f5ff;
+  --card-bg: #FFFFFF;
+  --point-color: #6e56cf;
+  --text-main: #2a2a4a;
+  --text-sub: #6c6c8a;
+  --border-color: #e0e0f0;
+  --neon-shadow: none;
+  --radius: 20px;
+  /* 고밀도/전문적 느낌 */
+  --font-main: 'Pretendard', sans-serif;
+  --letter-spacing: -0.01em;
+  --card-shadow: 0 20px 40px rgba(110, 86, 207, 0.15);
+}
+
+body.tangerine {
+  --bg-color: #e8ebed;
+  --card-bg: #FFFFFF;
+  --point-color: #e05d38;
+  --text-main: #333333;
+  --text-sub: #6b7280;
+  --border-color: #dcdfe2;
+  --neon-shadow: none;
+  --radius: 40px;
+  --font-main: 'Pretendard', sans-serif;
+  --letter-spacing: -0.04em;
+  --card-shadow: 0 4px 20px rgba(224, 93, 56, 0.1);
+}
+
+body.bold-tech {
+  --bg-color: #ffffff;
+  --card-bg: #FFFFFF;
+  --point-color: #8b5cf6;
+  --text-main: #312e81;
+  --text-sub: #7c3aed;
+  --border-color: #e0e7ff;
+  --neon-shadow: none;
+  --radius: 8px;
+  /* 각진 레이아웃 */
+  --font-main: 'Pretendard', sans-serif;
+  --letter-spacing: -0.06em;
+  /* 볼드한 느낌을 위한 매우 좁은 자간 */
+  --card-shadow: 0 0 40px rgba(139, 92, 246, 0.2);
+}
+
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.css');
+
+body {
+  margin: 0;
+  padding: 0;
+  width: 1080px;
+  height: 1080px;
+  background-color: var(--bg-color);
+  font-family: var(--font-main);
+  letter-spacing: var(--letter-spacing);
+  color: var(--text-main);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+.card {
+  width: 1000px;
+  height: 1000px;
+  background-color: var(--card-bg);
+  border-radius: var(--radius);
+  padding: 60px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: var(--card-shadow);
+  border: 1px solid var(--border-color);
+  transition: all 0.3s ease;
+  overflow: hidden;
+  /* [Fix] 내부 요소가 둥근 모서리를 튀어나가지 않도록 조절 */
+}
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 40px;
+}
+
+.header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.brand {
+  font-size: 42px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  color: var(--point-color);
+  text-shadow: var(--neon-shadow);
+}
+
+.date {
+  font-size: 24px;
+  color: var(--text-sub);
+  font-weight: 500;
+}
+
+.board-title {
+  font-size: 18px;
+  color: var(--point-color);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.9;
+}
+
+/* P1: 랭킹 페이지 스타일 */
+.ranking-title {
+  font-size: 64px;
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 50px;
+  word-break: keep-all;
+}
+
+.ranking-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: repeat(5, 1fr);
+  grid-auto-flow: column;
+  gap: 20px;
+  flex-grow: 1;
+}
+
+.rank-item {
+  display: flex;
+  align-items: center;
+  background: var(--bg-color);
+  padding: 20px;
+  border-radius: 20px;
+  border: 1px solid var(--border-color);
+}
+
+.rank-number {
+  font-size: 32px;
+  font-weight: 900;
+  color: var(--point-color);
+  margin-right: 20px;
+  min-width: 40px;
+}
+
+.rank-keyword {
+  font-size: 28px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* P2~P11: 상세 페이지 스타일 */
+.detail-rank {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--point-color);
+  margin-bottom: 40px;
+}
+
+.detail-keyword {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  /* [Flow] 높이를 auto로 설정하여 텍스트 바로 아래에 태그가 붙도록 수정 */
+  height: auto;
+  margin-bottom: 5px;
+  /* [Group] 태그와의 간격을 밀착 수준으로 좁힘 */
+  box-sizing: border-box;
+}
+
+.detail-keyword span {
+  font-size: 82px;
+  font-weight: 900;
+  color: var(--text-main);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.1;
+  word-break: keep-all;
+}
+
+.sub-keywords-top {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 12px;
+  margin-bottom: 40px;
+  /* [Balance] 간격 조정 (40px) */
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.tag-mini {
+  font-size: 28px;
+  color: var(--text-sub);
+  background: var(--bg-color);
+  padding: 4px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  font-weight: 500;
+}
+
+.summary-box {
+  background: rgba(56, 189, 248, 0.05);
+  position: relative;
+  /* [Gradient] 가상 요소를 위한 기준점 */
+  padding: 40px 40px 80px 40px;
+  /* [Spacing] 하단 여백을 충분히 주어 시각적 균형감 확보 */
+  margin-left: -48px;
+  border-radius: 0 24px 24px 0;
+  /* [Flow] 푸터와 겹치지 않으면서 가속성 좋은 높이 */
+  max-height: 620px;
+  flex: 1;
+  min-height: 300px;
+  margin-bottom: 25px;
+  box-sizing: border-box;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.summary-box::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 8px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--point-color), transparent);
+  /* [Gradient] 위에서 아래로 흐르는 수직 포인트 바 */
+}
+
+.summary-box::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 8px;
+  background: linear-gradient(90deg, var(--point-color), transparent);
+  /* [Signature] 요약 박스 하단에 맞춘 수평 시그니처 바 */
+}
+
+/* .signature-bar 제거 (summary-box::after로 통합) */
+
+.summary-item {
+  font-size: 32px;
+  line-height: 1.6;
+  margin-bottom: 25px;
+  font-weight: 500;
+  color: var(--text-main);
+  word-break: keep-all;
+}
+
+/* Version B: 그룹형 스토리텔링 스타일 */
+.version-b .detail-keyword span {
+  font-size: 60px;
+  /* 64px -> 60px 축소 */
+  margin-bottom: 20px;
+  /* 30px -> 20px 축소 */
+  display: block;
+}
+
+.version-b .issue-group-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  /* 20px -> 15px 축소 */
+  flex: 1;
+  /* 남은 영역을 모두 차지 */
+  margin-bottom: 20px;
+  /* 푸터와의 최소 간격 */
+}
+
+.version-b .grouped-issue {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 15px 25px;
+  /* 20px 30px -> 15px 25px 축소 */
+  border-radius: 24px;
+  border: 1px solid var(--border-color);
+  transition: transform 0.2s ease;
+  flex: 1;
+  /* 3개 요소가 공간을 균등하게 분할 */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  /* 내용이 짧을 때 수직 중앙 정렬 */
+}
+
+.version-b .issue-title {
+  font-size: 34px;
+  /* 36px -> 34px 소폭 축소 */
+  font-weight: 800;
+  margin-bottom: 8px;
+  /* 10px -> 8px 축소 */
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.version-b .issue-rank {
+  font-size: 24px;
+  background: var(--point-color);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-weight: 700;
+}
+
+.version-b .issue-context {
+  font-size: 24px;
+  /* 26px -> 24px 소폭 축소 */
+  line-height: 1.4;
+  color: var(--text-sub);
+  word-break: keep-all;
+}
+
+.version-b .group-summary-item {
+  margin-bottom: 4px;
+}
+
+.version-b .group-summary-item:last-child {
+  margin-bottom: 0;
+}
+
+/* Version B용 공통 푸터 조정 */
+.version-b .footer {
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
+}
+
+.footer {
+  margin-top: auto;
+  /* [Flow] 슬림한 푸터 레이아웃 */
+  height: 20px;
+  font-size: 20px;
+  color: var(--text-sub);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--border-color);
+  padding-top: 0;
+  box-sizing: border-box;
+}
+
+.sub-keywords {
+  display: flex;
+  gap: 10px;
+}
+
+.tag {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 6px 16px;
+  border-radius: 10px;
+}
+
+/* 하단 시그니처 그라데이션 바 */
+.signature-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 8px;
+  background: linear-gradient(90deg, var(--point-color), transparent);
+}

@@ -1,0 +1,33 @@
+{
+  "name": "itssue",
+  "version": "1.0.0-ai",
+  "description": "ITssue Advanced AI Trend Analysis & Instagram Automation",
+  "main": "index.js",
+  "scripts": {
+    "prestart": "echo 'AI Engine Starting...'",
+    "start": "ts-node src/index.ts",
+    "board": "ts-node src/analysis/orchestrator.ts",
+    "board:noon": "npm run board -- NOON",
+    "board:night": "npm run board -- NIGHT",
+    "board:custom": "npm run board -- CUSTOM",
+    "board:render": "ts-node src/analysis/manual-renderer.ts",
+    "collect": "ts-node src/collector/trend-collector.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@supabase/supabase-js": "^2.89.0",
+    "@types/fs-extra": "^11.0.4",
+    "@types/handlebars": "^4.0.40",
+    "@types/node": "^25.0.3",
+    "@types/node-cron": "^3.0.11",
+    "axios": "^1.13.2",
+    "dotenv": "^17.2.3",
+    "fs-extra": "^11.3.3",
+    "handlebars": "^4.7.8",
+    "node-cron": "^4.2.1",
+    "puppeteer": "^24.34.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}
