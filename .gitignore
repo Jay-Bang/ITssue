@@ -13,7 +13,6 @@ dist-ssr/
 
 # Project Generated Outputs
 output/
-image/
 *.log
 
 # Debug logs
