@@ -6,7 +6,7 @@
   "scripts": {
     "prestart": "echo 'AI Engine Starting...'",
     "start": "ts-node src/index.ts",
-    "board": "ts-node src/analysis/orchestrator.ts",
+    "board": "ts-node src/index.ts",
     "board:noon": "npm run board -- NOON",
     "board:night": "npm run board -- NIGHT",
     "board:custom": "npm run board -- CUSTOM",
@@ -14,6 +14,7 @@
     "collect": "ts-node src/collector/trend-collector.ts",
     "build": "tsc",
     "debug": "ts-node scripts/debug.ts",
+    "daemon": "ts-node src/daemon.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {

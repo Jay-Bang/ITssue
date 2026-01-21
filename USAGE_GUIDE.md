@@ -111,3 +111,43 @@ npm run collect
 
 - **빌드**: `npm run build`
 - **타입 체크**: `npx tsc --noEmit`
+
+---
+
+## ☁️ 6. 서버 배포 및 자동화 (GCP)
+
+구글 클라우드 플랫폼(GCP)의 **e2-micro (무료 등급)** 서버를 활용하여 24시간 자동화 시스템을 구축하는 방법입니다.
+
+### 1️⃣ 서버 초기 세팅 (One-Click Setup)
+서버에 접속한 후 프로젝트를 클론하고, 다음 스크립트를 실행하면 필요한 모든 환경(Node.js, Swap Memory, Puppeteer Deps, PM2)이 자동으로 설치됩니다.
+
+```bash
+# 1. 스크립트 실행 권한 부여
+chmod +x scripts/setup_gcp_server.sh
+
+# 2. 설치 스크립트 실행 (약 5~10분 소요)
+./scripts/setup_gcp_server.sh
+```
+
+### 2️⃣ 환경 변수 설정
+`.env` 파일을 생성하고 API 키를 입력합니다.
+```bash
+cp .env.example .env
+nano .env
+```
+
+### 3️⃣ 자동화 데몬 시작
+`src/daemon.ts`를 PM2로 실행하여 백그라운드에서 스케줄러가 돌도록 합니다.
+
+```bash
+# 데몬 시작
+pm2 start npm --name "itssue-daemon" -- run daemon
+
+# 서버 재부팅 시 자동 실행 등록
+pm2 save
+pm2 startup
+```
+
+이제 서버가 24시간 켜져 있으며, 매일 정해진 시간(12:00, 22:00 KST)에 자동으로 보드를 분석하고 발행합니다.
+로그 확인: `pm2 logs itssue-daemon`
+
