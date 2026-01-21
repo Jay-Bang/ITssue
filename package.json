@@ -13,6 +13,7 @@
     "board:render": "ts-node src/analysis/manual-renderer.ts",
     "collect": "ts-node src/collector/trend-collector.ts",
     "build": "tsc",
+    "debug": "ts-node scripts/debug.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {

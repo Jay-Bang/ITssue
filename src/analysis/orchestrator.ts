@@ -213,18 +213,21 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
  * [Safety] 서버의 UTC 시간과 한국의 KST(+9) 시간을 매핑하여 '정확한 24시간' 또는 '특정 정시' 범위를 산출합니다.
  */
 function calculateTimeWindow(type: BoardType, now: Date, customStart?: Date, customEnd?: Date): TimeWindow {
+    // [Step] 커스텀 요청 시 최우선 적용 (CUSTOM 타입일 때만)
+    if (type === 'CUSTOM' && customStart && customEnd) return { start: customStart, end: customEnd };
+
+    // [Logic] NOON/NIGHT 타입에서 customStart가 주어지면 해당 날짜를 기준(Target Date)으로 분석 수행
+    const targetDate = (type !== 'CUSTOM' && customStart) ? customStart : now;
+
     // 9시간 오프셋 적용 (KST 기준 계산을 위해)
     const kstShift = 9 * 60 * 60 * 1000;
-    const kstNow = new Date(now.getTime() + kstShift);
+    const kstNow = new Date(targetDate.getTime() + kstShift);
     const kYear = kstNow.getUTCFullYear();
     const kMonth = kstNow.getUTCMonth();
     const kDate = kstNow.getUTCDate();
 
     let start: Date;
     let end: Date;
-
-    // [Step] 커스텀 요청 시 최우선 적용
-    if (customStart && customEnd) return { start: customStart, end: customEnd };
 
     switch (type) {
         case 'NOON':

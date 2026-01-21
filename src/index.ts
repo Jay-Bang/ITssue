@@ -34,9 +34,36 @@ async function main() {
 
     const shouldPublish = args.includes('--publish');
 
+    // [New Feature] CLI Date Parsing (Universal)
+    // [Logic] 입력된 날짜 개수에 따라 Target Date(1개) 또는 Date Range(2개)를 결정합니다.
+    let startKST: Date | undefined;
+    let endKST: Date | undefined;
+
+    // Filter out flags and the type argument itself to find date strings
+    const potentialDates = args.filter(arg => !arg.startsWith('--') && arg.toUpperCase() !== 'CUSTOM' && arg.toUpperCase() !== 'NOON' && arg.toUpperCase() !== 'NIGHT');
+
+    if (potentialDates.length > 0) {
+        const d1 = new Date(potentialDates[0]);
+        if (!isNaN(d1.getTime())) {
+            startKST = d1;
+
+            if (potentialDates.length >= 2) {
+                const d2 = new Date(potentialDates[1]);
+                if (!isNaN(d2.getTime())) {
+                    endKST = d2;
+                    Logger.info(`📅 Date Range Detected: ${startKST.toISOString()} ~ ${endKST.toISOString()}`);
+                }
+            } else {
+                Logger.info(`📅 Target Date Detected: ${startKST.toISOString()}`);
+            }
+        } else {
+            Logger.warn('⚠️ Invalid date format provided. Ignoring dates.');
+        }
+    }
+
     Logger.info(`📋 Board Type: ${type}, Publish: ${shouldPublish ? 'Yes' : 'No'}`);
 
-    await runOrchestrator(type, shouldPublish);
+    await runOrchestrator(type, shouldPublish, startKST, endKST);
 }
 
 main().catch(err => {
