@@ -26,14 +26,6 @@ import * as Handlebars from 'handlebars';
 import * as path from 'path';
 import * as fs from 'fs-extra';
 
-interface RenderIssue {
-    rank: number;
-    keyword: string;
-    summary: string[];
-    subKeywords: string[];
-    score: number;
-}
-
 const TOP_N_ISSUES = 10;
 
 export async function runOrchestrator(type: BoardType, shouldPublish: boolean = false, customStart?: Date, customEnd?: Date) {
@@ -123,13 +115,14 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
         }
 
         // [Step 7] 이슈 데이터 렌더링 최적화 및 카드 뉴스 생성
-        const renderIssues: RenderIssue[] = topIssues.map((iss, idx) => {
+        const renderIssues: FinalIssueBoard[] = topIssues.map((iss, idx) => {
             const sum = summaries.find(s => s.representative_keyword === iss.representative_keyword);
             return {
+                ...sum!,
                 rank: idx + 1,
-                keyword: iss.representative_keyword,
-                summary: sum?.instagram_summary || ["정보 없음", "", ""],
-                subKeywords: sum?.tags || [],
+                representative_keyword: iss.representative_keyword,
+                instagram_summary: sum?.instagram_summary || ["정보 없음", "", ""],
+                tags: sum?.tags || [],
                 score: iss.score
             };
         });
@@ -265,22 +258,37 @@ async function generateInstagramCaption(type: BoardType, date: string, summaries
     });
 }
 
-async function renderFullSet(issues: RenderIssue[], date: string, theme: string, dir: string, isSummaryMode: boolean, boardTitle: string) {
-    const p1Data = { type: 'ranking' as const, date, theme, boardTitle, ranking: issues.map(i => ({ rank: i.rank, keyword: i.keyword })) };
+/**
+ * [Logic] 카드 뉴스 이미지 세트 생성기
+ * [Description] P1(랭킹), P2~P5(상위 이슈 상세), P6~P7(하위 이슈 그룹) 이미지를 순차적으로 렌더링합니다.
+ */
+async function renderFullSet(issues: FinalIssueBoard[], date: string, theme: string, dir: string, isSummaryMode: boolean, boardTitle: string) {
+    const p1Data = { type: 'ranking' as const, date, theme, boardTitle, ranking: issues.map(i => ({ rank: i.rank!, keyword: i.representative_keyword })) };
     await renderCard(p1Data, { outputPath: path.join(dir, 'P1_Ranking.png') });
 
     const top4 = issues.slice(0, 4);
     for (const issue of top4) {
-        const detailData = { type: 'issue-detail' as const, date, theme, boardTitle, ...issue };
-        const safeName = issue.keyword.replace(/[\/\\?%*:|"<>]/g, '_').replace(/\s+/g, '_');
-        await renderCard(detailData, { outputPath: path.join(dir, `P${issue.rank + 1}_${safeName}.png`) });
+        const detailData = {
+            type: 'issue-detail' as const,
+            date, theme, boardTitle,
+            rank: issue.rank!,
+            keyword: issue.representative_keyword,
+            subKeywords: issue.tags,
+            summary: issue.instagram_summary
+        };
+        const safeName = issue.representative_keyword.replace(/[\/\\?%*:|"<>]/g, '_').replace(/\s+/g, '_');
+        await renderCard(detailData, { outputPath: path.join(dir, `P${issue.rank! + 1}_${safeName}.png`) });
     }
 
     const group5to7 = issues.slice(4, 7);
     if (group5to7.length > 0) {
         const groupData = {
             type: 'group' as const, date, theme, boardTitle, rankRange: "TOP 5 ~ TOP 7",
-            issues: group5to7.map(iss => ({ rank: iss.rank, keyword: iss.keyword, summaryLines: iss.summary.slice(0, 2) }))
+            issues: group5to7.map(iss => ({
+                rank: iss.rank!,
+                keyword: iss.representative_keyword,
+                summaryLines: iss.instagram_summary.slice(0, 2)
+            }))
         };
         await renderCard(groupData, { outputPath: path.join(dir, 'P6_Group5-7.png') });
     }
@@ -289,7 +297,11 @@ async function renderFullSet(issues: RenderIssue[], date: string, theme: string,
     if (group8to10.length > 0) {
         const groupData = {
             type: 'group' as const, date, theme, boardTitle, rankRange: "TOP 8 ~ TOP 10",
-            issues: group8to10.map(iss => ({ rank: iss.rank, keyword: iss.keyword, summaryLines: iss.summary.slice(0, 2) }))
+            issues: group8to10.map(iss => ({
+                rank: iss.rank!,
+                keyword: iss.representative_keyword,
+                summaryLines: iss.instagram_summary.slice(0, 2)
+            }))
         };
         await renderCard(groupData, { outputPath: path.join(dir, 'P7_Group8-10.png') });
     }

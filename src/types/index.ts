@@ -7,7 +7,7 @@
 /**
  * 이슈 엔티티 (랭킹 엔진 및 병합 게이트 출력)
  * 
- * 특정 키워드에 대한 집계 결과와 병합 정보를 담는 핵심 데이터 구조
+ * [Description] 특정 키워드에 대한 집계 결과와 병합 정보를 담는 핵심 데이터 구조입니다.
  */
 export interface IssueEntity {
     representative_keyword: string;    // 대표 키워드 (병합 후 최종 키워드)
@@ -26,11 +26,12 @@ export interface IssueEntity {
 /**
  * 최종 이슈 보드 (AI 요약 완료 후 렌더링 입력)
  * 
- * Instagram 포스팅에 즉시 사용 가능한 형태로 가공된 데이터
+ * [Description] Instagram 포스팅에 즉시 사용 가능한 형태로 가공된 데이터입니다.
  */
 export interface FinalIssueBoard {
     representative_keyword: string;    // 대표 키워드
     news_titles: string[];             // 관련 뉴스 제목 배열
+    rank?: number;                     // [NEW] 이슈 순위 (1~10)
     merge_reasons?: string[];          // 병합 사유
     instagram_summary: string[];       // AI 생성 3문장 요약 (정중한 어조)
     tags: string[];                    // 해시태그 배열

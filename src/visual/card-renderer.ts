@@ -1,6 +1,12 @@
+/**
+ * [Visual Card Renderer]
+ * 
+ * [Description] Puppeteer를 기반으로 HTML/CSS를 고해상도 카드 뉴스 이미지로 변환합니다.
+ */
 import puppeteer, { Browser } from 'puppeteer';
 import * as Handlebars from 'handlebars';
 import { Logger } from '../lib/logger';
+import { FinalIssueBoard } from '../types';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 
@@ -15,12 +21,16 @@ export interface RankingCardData extends BaseCardData {
     ranking: Array<{ rank: number | string; keyword: string }>;
 }
 
+/**
+ * [Description] 개별 이슈의 상세 정보(요약, 태그)를 담는 카드 데이터입니다.
+ * FinalIssueBoard 타입을 확장하여 사용합니다.
+ */
 export interface IssueDetailCardData extends BaseCardData {
     type: 'issue-detail';
     rank: number | string;
     keyword: string;
-    subKeywords: string[];
-    summary: string[];
+    subKeywords: string[];  // FinalIssueBoard.tags 와 매핑
+    summary: string[];      // FinalIssueBoard.instagram_summary 와 매핑
 }
 
 export interface GroupCardData extends BaseCardData {
