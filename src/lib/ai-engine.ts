@@ -7,7 +7,7 @@ dotenv.config();
 /**
  * [Advanced AI Engine]
  * 
- * [Description] 구글 제미나이(Gemini) 모델을 기반으로 텍스트 및 JSON 분석을 수행하며, Multi-Key Rotation을 지원합니다.
+ * [Description] 고성능 Cloud AI 모델을 기반으로 텍스트 및 JSON 분석을 수행하며, Multi-Key Rotation을 지원합니다.
  * 
  * [Design Intent]
  * - API 할당량(Free Tier) 제한을 극복하기 위해 여러 API 키를 자동으로 순환 사용.
@@ -47,7 +47,7 @@ export class AIEngine {
 
     /**
      * [Logic] 환경 변수에서 API 키 로드
-     * [Design Intent] 한 명의 사용자가 여러 개의 구글 계정으로 생성한 API 키를 모두 활용할 수 있도록 두 가지 포맷을 지원합니다.
+     * [Design Intent] 한 명의 사용자가 여러 개의 서비스 계정으로 생성한 API 키를 모두 활용할 수 있도록 두 가지 포맷을 지원합니다.
      * 1. 쉼표로 구분된 단일 환경 변수 (CLOUD_AI_KEY="key1,key2...")
      * 2. 개별 환경 변수 번호링 (CLOUD_AI_KEY_1, CLOUD_AI_KEY_2...)
      */

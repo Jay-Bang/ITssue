@@ -5,7 +5,7 @@ import { ai } from '../lib/ai-engine';
 /**
  * [AI Summary Generator (Pass 3)]
  * 
- * [Description] 병합된 최종 이슈들에 대해 구글 제미나이의 Search Grounding 기능을 활용하여 심층 요약 및 태그를 생성합니다.
+ * [Description] 병합된 최종 이슈들에 대해 Cloud AI 서비스의 Search Grounding 기능을 활용하여 심층 요약 및 태그를 생성합니다.
  * 
  * [Design Intent]
  * - 단순 뉴스 요약을 넘어 실시간 웹 검색을 통한 사건의 본질적 원인 분석.
@@ -32,7 +32,7 @@ export async function generateAISummaries(issues: IssueEntity[]): Promise<FinalI
         const keyword = issue.representative_keyword;
 
         // [Optimization] API 쿼터 보호를 위한 Throttle (지연 실행)
-        // [Logic] 구글 제미나이 Free Tier의 분당 요청 제한(RPM)을 초과하지 않도록 
+        // [Logic] AI 서비스의 분당 요청 제한(RPM)을 초과하지 않도록 
         // 각 이슈 분석 사이에 의도적인 지연 시간(10초)을 삽입합니다.
         if (i > 0) {
             Logger.info(`⏱️ Waiting ${GENERATION_DELAY_MS / 1000}s for API quota... (${i + 1}/${issues.length})`);
