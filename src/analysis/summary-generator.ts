@@ -84,6 +84,13 @@ export async function generateAISummaries(issues: IssueEntity[]): Promise<FinalI
 
                 const parsed = JSON.parse(jsonStr);
 
+                // [Sanitization] AI 응답에서 마크다운 기호 제거 (**, *)
+                // 인스타그램 카드 뉴스나 캡션에 마크다운 기호가 노출되지 않도록 함
+                const rawSummary: string[] = parsed.summary || [];
+                const sanitizedSummary = rawSummary.map((line: string) =>
+                    line.replace(/\*\*/g, '').replace(/\*/g, '').trim()
+                );
+
                 // [Tag Sanitization] AI가 생성한 태그에 #이 포함되어 있으면 제거
                 const rawTags: string[] = parsed.tags || [];
                 const sanitizedTags = rawTags.map(tag => tag.replace(/^#/, '').trim());
@@ -93,7 +100,7 @@ export async function generateAISummaries(issues: IssueEntity[]): Promise<FinalI
                     representative_keyword: issue.representative_keyword,
                     news_titles: issue.news_titles,
                     merge_reasons: issue.merge_reasons || [],
-                    instagram_summary: parsed.summary || [],
+                    instagram_summary: sanitizedSummary,
                     tags: sanitizedTags,
                     merged_keywords: issue.merged_keywords || [],
                     // [Pass-through] 랭킹 단계에서 계산된 중요도 메트릭 유지
