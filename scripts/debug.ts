@@ -51,8 +51,24 @@ Usage:
 
 /**
  * [Logic] 오케스트레이터의 calculateTimeWindow 로직을 모방하여 디버깅용 윈도우 생성
+ * [Enhanced] ISO 문자열 2개가 들어오면 Custom Range로 처리
  */
-function getWindow(dateStr?: string, typeStr: string = 'NOON'): { window: TimeWindow, label: string } {
+function getWindow(arg1?: string, arg2?: string): { window: TimeWindow, label: string } {
+    // 1. Custom Time Range Check (ISO 8601 format check: "YYYY-MM-DDTHH:mm:ss")
+    const isISODate = (str?: string) => str && str.includes('T') && !isNaN(Date.parse(str));
+
+    if (arg1 && arg2 && isISODate(arg1) && isISODate(arg2)) {
+        const start = new Date(arg1);
+        const end = new Date(arg2);
+        return {
+            window: { start, end },
+            label: `Custom Range`
+        };
+    }
+
+    // 2. Preset Mode (Date + Type)
+    const dateStr = arg1;
+    const typeStr = arg2 || 'NOON';
     const type = (typeStr.toUpperCase() === 'NIGHT' ? 'NIGHT' : 'NOON') as 'NOON' | 'NIGHT';
 
     // Default to today if no date provided
@@ -97,8 +113,8 @@ function getWindow(dateStr?: string, typeStr: string = 'NOON'): { window: TimeWi
     };
 }
 
-async function debugRanking(dateStr?: string, typeStr: string = 'NOON') {
-    const { window, label } = getWindow(dateStr, typeStr);
+async function debugRanking(arg1?: string, arg2?: string) {
+    const { window, label } = getWindow(arg1, arg2);
 
     Logger.info(`🧪 [DEBUG: Ranking] Target: ${label}`);
     Logger.info(`   Window (UTC): ${window.start.toISOString()} ~ ${window.end.toISOString()}`);
@@ -112,10 +128,11 @@ async function debugRanking(dateStr?: string, typeStr: string = 'NOON') {
     });
 }
 
-async function debugMerger(dateStr?: string, typeStr: string = 'NOON') {
-    const { window, label } = getWindow(dateStr, typeStr);
+async function debugMerger(arg1?: string, arg2?: string) {
+    const { window, label } = getWindow(arg1, arg2);
 
     Logger.info(`🧪 [DEBUG: Merger] Target: ${label}`);
+    Logger.info(`   Window (UTC): ${window.start.toISOString()} ~ ${window.end.toISOString()}`);
 
     // [Corrected] Using functional import. runMergeGate internally runs ranking if needed, or we pass window.
     // However, runMergeGate actually takes 'window' and calls ranking internally.

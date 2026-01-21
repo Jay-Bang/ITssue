@@ -66,6 +66,16 @@ npm run debug rank 2026-01-20 NOON
 npm run debug merge 2026-01-20 NOON
 ```
 
+### ⏱️ 정밀 시간 범위 테스트 (New!)
+원하는 시간대(ISO String)를 직접 지정하여 테스트할 수 있습니다.
+```bash
+# 예: 2026-01-20 오전 9시 ~ 11시 사이의 랭킹 확인
+npm run debug rank 2026-01-20T09:00:00 2026-01-20T11:00:00
+
+# 해당 구간의 병합 결과 확인
+npm run debug merge 2026-01-20T09:00:00 2026-01-20T11:00:00
+```
+
 ### 🤖 AI 요약 테스트 (AI Summary)
 ```bash
 # Gemini AI 요약 생성 테스트
