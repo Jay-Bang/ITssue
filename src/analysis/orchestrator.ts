@@ -38,7 +38,7 @@ const TOP_N_ISSUES = 10;
 
 export async function runOrchestrator(type: BoardType, shouldPublish: boolean = false, customStart?: Date, customEnd?: Date) {
     const totalStart = Date.now();
-    Logger.info(`🌟 [ITssue-AI] starting [${type}] Generation Pipeline...`);
+    Logger.info(`[Pipeline] 🌟 Starting Generation Pipeline [${type}]...`);
 
     try {
         // [Step 1] 분석 시간대(Time Window) 계산 및 출력 경로 설정
@@ -101,17 +101,17 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
         // [Step 5] Supabase 감사 로그(Audit Log) 등록
         let boardId: string | null = null;
         try {
-            Logger.info("📝 Registering audit log to Supabase...");
+            Logger.info("[Database] 📝 Registering audit log...");
             boardId = await recordAuditLog(type, window, summaries, topIssues);
-            Logger.success(`Audit Log registered. (Board ID: ${boardId})`);
+            Logger.success(`[Database] Audit Log registered. (ID: ${boardId})`);
         } catch (e) {
-            Logger.warn("Failed to register audit log to Supabase", e);
+            Logger.warn("[Database] Failed to register audit log", e);
         }
 
         // [Step 6] 인스타그램 캡션 자동 생성 및 파일 저장
         let generatedCaption = '';
         try {
-            Logger.info("✍️ Generating Instagram caption...");
+            Logger.info("[AI] ✍️ Generating Instagram caption...");
             // [Logic] Handlebars 템플릿을 사용하여 정규화된 캡션 형식 생성
             generatedCaption = await generateInstagramCaption(type, dateStr, summaries);
             const captionPath = path.join(outputDir, `caption_${type}_${dateStr}.txt`);

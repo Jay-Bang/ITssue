@@ -37,7 +37,7 @@ function normalizeKstTimestamp(raw: string): string {
  * 4. 원본 응답 저장 후 개별 키워드 단위로 Flatten하여 스냅샷 테이블에 적재.
  */
 export async function fetchAndStoreTrends() {
-    Logger.info(`Starting trend fetch...`);
+    Logger.info(`[Collector] Starting trend fetch...`);
 
     try {
         // 1. Fetch from External API
@@ -61,11 +61,11 @@ export async function fetchAndStoreTrends() {
             .eq('timestamp', timestamp);
 
         if (checkError) {
-            Logger.error('Supabase raw_trends check error', checkError);
+            Logger.error('[Database] Trend check error', checkError);
             return;
         }
         if (existingData && existingData.length > 0) {
-            Logger.info(`Skip: Data for ${timestamp} already exists.`);
+            Logger.info(`[Collector] Skip: Data for ${timestamp} already exists.`);
             return;
         }
 
@@ -77,12 +77,12 @@ export async function fetchAndStoreTrends() {
             .single();
 
         if (rawError) {
-            Logger.error('Supabase raw_trends insert error', rawError);
+            Logger.error('[Database] raw_trends insert error', rawError);
             return;
         }
 
         const rawTrendId = rawData.id;
-        Logger.success(`Successfully stored raw trends (ID: ${rawTrendId}) for ${timestamp}`);
+        Logger.success(`[Collector] Successfully stored raw trends (ID: ${rawTrendId})`);
 
         // [Step 5] 데이터 평탄화(Flattening) 및 개별 키워드 저장
         if (ranked_keywords && Array.isArray(ranked_keywords)) {

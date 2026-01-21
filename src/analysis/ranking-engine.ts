@@ -18,7 +18,7 @@ import { Logger } from '../lib/logger';
  * 4. 이슈별 엔티티(`IssueEntity`) 생성 및 점수순 정렬.
  */
 export async function runRankingEngine(options: TimeWindow): Promise<IssueEntity[]> {
-    Logger.info(`🚀 Phase 2: 랭킹 엔진 시작 (순수 집계 & 전수 반환)`);
+    Logger.info(`[Ranking] 🚀 Phase 2: Engine Started`);
 
     const { start, end } = options;
 
@@ -39,7 +39,7 @@ export async function runRankingEngine(options: TimeWindow): Promise<IssueEntity
     let page = 0;
     const PAGE_SIZE = 1000;
 
-    Logger.info(`📡 Fetching data from Supabase...`);
+    Logger.info(`[Ranking] 📡 Fetching data from Database...`);
     Logger.time('Supabase Fetch');
 
     while (true) {
