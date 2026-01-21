@@ -1,6 +1,13 @@
-/* [ITssue 인스타그램 디자인 시스템] 
-   본 파일은 Puppeteer를 통한 카드 뉴스 이미지 생성 시 사용되는 전용 스타일시트입니다.
-*/
+/**
+ * [Dynamic Design System (CSS)]
+ * 
+ * [Description] Puppeteer를 통한 카드 뉴스 이미지 생성 시 사용되는 전용 디자인 시스템 및 스타일 가이드입니다.
+ * 
+ * [Design Intent]
+ * - CSS 변수(--var)를 활용한 테마(Dark, Light, Violet 등)의 유연한 전환 지원.
+ * - 다양한 텍스트 길이에 대응할 수 있는 유동적(Fluid) 레이아웃 설계.
+ * - 인스타그램 피드 최적화(1080x1080) 및 프리미엄 시각 경험(Gradients, Shadows) 제공.
+ */
 
 /* 1. 디자인 토큰 및 테마 구성 */
 :root {

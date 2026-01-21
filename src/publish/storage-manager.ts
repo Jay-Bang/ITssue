@@ -4,17 +4,18 @@ import * as fs from 'fs-extra';
 import * as path from 'path';
 
 /**
- * 인스타그램용 이미지들을 Supabase Storage에 업로드합니다.
+ * [Supabase Storage Manager]
  * 
- * [동작 방식]
- * 1. 지정된 출력 디렉토리에서 'Version_B' (인스타그램용 테마) 이미지들을 스캔합니다.
- * 2. 필터링: 'Ranking', 'P2' ~ 'P7' (실제 포스팅에 필요한 이미지들만 선별)
- * 3. Supabase Storage의 'instagram-feeds' 버킷에 업로드합니다.
- * 4. 업로드된 파일들의 공용 URL(Public URL)을 배열로 반환합니다.
+ * [Description] 로컬에서 렌더링된 카드 뉴스 이미지들을 Supabase Storage에 업로드하고 공용 URL을 관리합니다.
  * 
- * @param dir - 업로드할 이미지가 있는 로컬 디렉토리 경로
- * @param outputTag - Storage 경로 구성을 위한 고유 태그 (예: 2026.01.17_CUSTOM_...)
- * @returns 업로드된 이미지들의 파일명과 공용 URL 객체 배열
+ * [Design Intent]
+ * - 인스타그램 발행에 필요한 특정 테마 및 페이지(P1~P7) 이미지들만 선별적으로 업로드.
+ * - 파일명 정규화(Sanitization)를 통해 Storage 키의 안정성 확보.
+ * 
+ * [Key Logic Flow]
+ * 1. 출력 디렉토리 내의 PNG 파일 스캔 및 필터링.
+ * 2. Supabase Storage 버킷(`instagram-feeds`)으로 바이너리 업로드.
+ * 3. 업로드된 각 파일의 Public URL 생성 및 배열 반환.
  */
 export async function uploadInstagramImages(dir: string, outputTag: string): Promise<{ fileName: string, publicUrl: string }[]> {
     const files = await fs.readdir(dir);

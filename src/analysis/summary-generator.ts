@@ -3,12 +3,20 @@ import { IssueEntity, FinalIssueBoard } from '../types';
 import { ai } from '../lib/ai-engine';
 
 /**
- * Phase 3-G: Intelligent Search Grounding 전용 요약 생성기
+ * [AI Summary Generator (Pass 3)]
  * 
- * [설계 의도]
- * 1. 실시간 검색 기반(Grounding): 뉴스 제목에 의존하지 않고, 실시간 웹 검색을 통해 사건의 본질과 최신 현황을 직접 파악합니다.
- * 2. 원인 분석 중심: "무슨 일이 있었다"를 넘어 "왜 이슈가 되었는가"에 대한 통찰을 제공합니다.
- * 3. 쿼터 관리: Free Tier의 속도 제한을 방지하기 위해 각 요청 사이에 지연 시간(Throttle)을 둡니다.
+ * [Description] 병합된 최종 이슈들에 대해 구글 제미나이의 Search Grounding 기능을 활용하여 심층 요약 및 태그를 생성합니다.
+ * 
+ * [Design Intent]
+ * - 단순 뉴스 요약을 넘어 실시간 웹 검색을 통한 사건의 본질적 원인 분석.
+ * - Instagram 포스팅에 최적화된 문체(정중한 3문장) 및 관련 해시태그 생성.
+ * - API Quota 보호를 위한 Throttle 및 Retry 로직 통합.
+ * 
+ * [Key Logic Flow]
+ * 1. 각 이슈에 대해 실시간 검색 기반의 맞춤형 프롬프트 생성.
+ * 2. API 쿼터 분산을 위한 일정한 지연 시간(`GENERATION_DELAY_MS`) 적용.
+ * 3. AI 응답에서 JSON 데이터 추출 및 태그 정규화(Sanitization).
+ * 4. 실패 시 Fallback 메시지 생성을 통한 파이프라인 연속성 보장.
  */
 
 const GENERATION_DELAY_MS = 10000; // API 쿼터 보호를 위한 10초 대기
@@ -23,7 +31,9 @@ export async function generateAISummaries(issues: IssueEntity[]): Promise<FinalI
         const issue = issues[i];
         const keyword = issue.representative_keyword;
 
-        // [Throttle] 두 번째 요청부터 지연 시간 적용
+        // [Optimization] API 쿼터 보호를 위한 Throttle (지연 실행)
+        // [Logic] 구글 제미나이 Free Tier의 분당 요청 제한(RPM)을 초과하지 않도록 
+        // 각 이슈 분석 사이에 의도적인 지연 시간(10초)을 삽입합니다.
         if (i > 0) {
             Logger.info(`⏱️ Waiting ${GENERATION_DELAY_MS / 1000}s for API quota... (${i + 1}/${issues.length})`);
             await new Promise(resolve => setTimeout(resolve, GENERATION_DELAY_MS));
@@ -61,7 +71,9 @@ export async function generateAISummaries(issues: IssueEntity[]): Promise<FinalI
 
                 const text = await ai.generateWithSearch(prompt);
 
-                // [Robust JSON Parsing]
+                // [Logic] Robust JSON Parsing (강력한 추출 로직)
+                // AI 응답 텍스트 내에 JSON 외의 설명 문구가 포함되더라도, 
+                // 가장 바깥쪽의 중괄호(`{`, `}`) 범위를 찾아 순수 JSON 데이터만 추출합니다.
                 let jsonStr = text.replace(/```json|```/g, '').trim();
                 const firstOpen = jsonStr.indexOf('{');
                 const lastClose = jsonStr.lastIndexOf('}');
@@ -76,6 +88,7 @@ export async function generateAISummaries(issues: IssueEntity[]): Promise<FinalI
                 const rawTags: string[] = parsed.tags || [];
                 const sanitizedTags = rawTags.map(tag => tag.replace(/^#/, '').trim());
 
+                // [Step] 수집된 메트릭 및 요약 정보 통합
                 results.push({
                     representative_keyword: issue.representative_keyword,
                     news_titles: issue.news_titles,
@@ -83,7 +96,7 @@ export async function generateAISummaries(issues: IssueEntity[]): Promise<FinalI
                     instagram_summary: parsed.summary || [],
                     tags: sanitizedTags,
                     merged_keywords: issue.merged_keywords || [],
-                    // [Metric Pass-through]
+                    // [Pass-through] 랭킹 단계에서 계산된 중요도 메트릭 유지
                     score: issue.score,
                     snapshot_count: issue.snapshot_count,
                     first_seen_at: issue.first_seen_at,
@@ -92,7 +105,7 @@ export async function generateAISummaries(issues: IssueEntity[]): Promise<FinalI
 
                 Logger.success(`✅ AI analysis complete for [${keyword}]`);
                 success = true;
-                break; // 성공 시 루프 탈출
+                break; // 성공 시 재시도 루프 중단
 
             } catch (error: any) {
                 Logger.warn(`⚠️ [AI] Attempt ${attempt} failed for [${keyword}]: ${error.message}`);

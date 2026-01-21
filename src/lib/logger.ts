@@ -1,13 +1,11 @@
 /**
- * Logger 유틸리티
+ * [Logger Utility]
  * 
- * [역할]
- * 프로젝트 전역에서 사용할 일관된 로깅 인터페이스를 제공합니다.
+ * [Description] 프로젝트 전역에서 사용할 일관된 로깅 인터페이스를 제공합니다.
  * 
- * [특징]
- * - 이모지를 활용한 가독성 향상
- * - 시간 측정 기능 (time/timeEnd)
- * - 로그 레벨별 구분 (info, success, warn, error)
+ * [Design Intent]
+ * - 이모지(Emoji)를 활용하여 터미널 로그의 가독성 극대화.
+ * - 성능 측정(Time measurement) 기능을 통합하여 병목 지점 파악 지원.
  */
 export const Logger = {
     /** 일반 정보 로그 출력 */

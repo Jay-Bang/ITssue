@@ -3,19 +3,19 @@ import { IssueEntity, TimeWindow } from '../types';
 import { Logger } from '../lib/logger';
 
 /**
- * Phase 2: 랭킹 엔진 v2 (순수 집계)
+ * [Ranking Engine (Pass 1)]
  * 
- * [데이터 입력]
- * - trend_snapshots 테이블에서 특정 기간 동안 수집된 검색어 순위 스냅샷을 조회
- * - 같은 키워드가 여러 시점에 수집되면서 각 시점의 대표 뉴스 제목들이 배열로 축적됨
+ * [Description] 수집된 트렌드 스냅샷을 기반으로 이슈의 영향력을 정량적으로 집계합니다.
  * 
- * [랭킹 철학]
- * "정직한 집계(Honest Aggregation): 눈속임 없는 순수 누적 점수제"
+ * [Design Intent]
+ * - "Honest Aggregation": 눈속임 없는 순수 누적 점수제 채택.
+ * - 시간 감쇠나 상한선 없이, 집계 기간 내 노출 빈도와 순위가 높을수록 높은 점수 부여.
  * 
- * 1. 단순 채점: 1위=20점, 2위=19점, ..., 20위=1점. (21위 이하는 0점)
- * 2. 시간 감쇠 없음(No Time Decay): 아침에 발생한 1위와 저녁에 발생한 1위는 동일한 가치를 가짐.
- * 3. 상한선 없음(No Capping): 집계 기간 내의 모든 스냅샷을 합산. (오래 상위권에 머물수록 점수 높음)
- * 4. 전수 반환(Full Return): 병합 전 컷오프를 하지 않음. (통계 왜곡 방지)
+ * [Key Logic Flow]
+ * 1. 지정된 Time Window 내의 모든 스냅샷을 Supabase에서 조회 (Pagination 처리).
+ * 2. 키워드별 그룹화 및 노출 시간 기반 정렬.
+ * 3. 순위별 가점 부여 (1위=20점, ..., 20위=1점) 및 점수 합산.
+ * 4. 이슈별 엔티티(`IssueEntity`) 생성 및 점수순 정렬.
  */
 export async function runRankingEngine(options: TimeWindow): Promise<IssueEntity[]> {
     Logger.info(`🚀 Phase 2: 랭킹 엔진 시작 (순수 집계 & 전수 반환)`);
@@ -32,7 +32,9 @@ export async function runRankingEngine(options: TimeWindow): Promise<IssueEntity
 
     Logger.info(`📅 Analysis Period (UTC Range): ${startStr} ~ ${endStr}`);
 
-    // 1. 특정 시간 범위 내의 스냅샷 조회 (전수 조회를 위해 페이지네이션 루프 구현)
+    // [Step 1] 특정 시간 범위 내의 모든 스냅샷 조회
+    // [Logic] 대량의 데이터를 수집할 경우를 대비하여 1,000개 단위의 페이지네이션 루프를 구현합니다.
+    // order('id')를 추가하여 페이지네이션 검색 시 데이터 순서의 결정성(Determinism)을 확보합니다.
     let allRows: any[] = [];
     let page = 0;
     const PAGE_SIZE = 1000;
@@ -47,7 +49,7 @@ export async function runRankingEngine(options: TimeWindow): Promise<IssueEntity
             .gte('timestamp', startStr)
             .lte('timestamp', endStr)
             .order('timestamp', { ascending: true })
-            .order('id', { ascending: true })
+            .order('id', { ascending: true }) // [Safety] 동일 타임스탬프 내 순서 고정
             .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
         if (error) {
@@ -94,13 +96,19 @@ export async function runRankingEngine(options: TimeWindow): Promise<IssueEntity
 
         const newsTitles = Array.from(new Set(sortedRows.map(r => r.news_title).filter(Boolean)));
 
+        // [Step 3] Scoring Engine (순수 가중치 합산)
+        // [Logic] "Honest Aggregation": 인위적인 보정 없이 수집된 모든 시점의 순위 데이터를 점수화합니다.
         let score = 0;
         sortedRows.forEach(r => {
             if (typeof r.rank !== 'number' || r.rank === null) {
+                // [Safety] 데이터 무결성 확인: 순위 데이터가 없는 경우 건너뜀
                 Logger.warn(`[Data Integrity] Invalid rank detected for keyword "${keyword}" (ID: ${r.id}). Value: ${r.rank}`);
                 return;
             }
-            // 1위=20점, 20위=1점, 21위~=0점
+
+            // [Algorithm] 역순위 가점 방식
+            // - 1위에게 최고점(20점)을 부여하고, 매 순위마다 1점씩 차등 감점.
+            // - 20위 밖의 순위는 0점으로 처리하여 유의미한 트렌드만 점수에 반영.
             const rankScore = Math.max(0, 21 - r.rank);
             score += rankScore;
         });
@@ -108,7 +116,7 @@ export async function runRankingEngine(options: TimeWindow): Promise<IssueEntity
         issueEntities.push({
             representative_keyword: keyword,
             news_titles: newsTitles as string[],
-            snapshot_count: rows.length,
+            snapshot_count: rows.length, // 노출 빈도(Frequency) 기록
             first_seen_at: sortedRows[0].timestamp,
             last_seen_at: sortedRows[sortedRows.length - 1].timestamp,
             score: score,

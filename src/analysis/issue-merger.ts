@@ -21,34 +21,49 @@ interface MergableIssue extends IssueEntity {
 }
 
 /**
- * Phase 2.6: 이슈 병합 게이트 V2 (Pure Rule-based)
+ * [Issue Merger Gate (Pass 2)]
  * 
- * [병합 철학]
- * "관계는 그래프로, 점수는 합산으로."
+ * [Description] 유사한 주제의 파편화된 검색어들을 하나의 대표 이슈 그룹으로 병합하고 통계를 통합합니다.
  * 
- * 1. Union-Find 알고리즘을 사용하여 A-B, B-C 관계를 A-B-C 그룹으로 완전 병합.
- * 2. 점수는 그룹 내 모든 이슈의 단순 합산 (Sum).
- * 3. 컷오프 없이 전수 반환.
+ * [Design Intent]
+ * - "관계는 그래프로, 점수는 합산으로": 단순 매칭을 넘어 Union-Find를 활용한 네트워크 그래프 병합.
+ * - 언어적 유사도(Jaccard)와 부분집합 관계(Overlap)를 결합하여 통계적 정합성 확보.
+ * 
+ * [Key Logic Flow]
+ * 1. 수집된 이슈들의 뉴스 제목을 토큰화(`Tokenize`)하여 어휘 분석 준비.
+ * 2. 시간 범위 내의 모든 이슈 쌍(Pair)에 대해 유사도 측정 및 병합 여부 판단 (Pure Rule-based).
+ * 3. Union-Find 알고리즘을 통한 이슈 그룹화.
+ * 4. 그룹 내 최고 점수 키워드를 `Representative Keyword`로 선정 및 모든 데이터 집계.
  */
 
-// Union-Find (Disjoint Set) 알고리즘 헬퍼 클래스
+// [Logic] Union-Find (Disjoint Set) 알고리즘 헬퍼 클래스
+// 별개의 원소들을 효율적인 상호 배타적 집합으로 관리하며, 병합 작업을 최소 비용으로 수행합니다.
 class UnionFind {
     private parent: number[];
 
     constructor(size: number) {
+        // 모든 원소는 자기 자신을 부모로 하여 초기화 (독립 집합)
         this.parent = Array.from({ length: size }, (_, i) => i);
     }
 
+    /**
+     * [Optimization] 경로 압축 (Path Compression)
+     * 탐색 과정에서 만나는 모든 노드가 직접 루트를 가리키게 하여, 이후 탐색 시간을 O(α(N))으로 단축합니다.
+     */
     find(i: number): number {
         if (this.parent[i] === i) return i;
-        return this.parent[i] = this.find(this.parent[i]); // 경로 압축 (Path compression)
+        return this.parent[i] = this.find(this.parent[i]);
     }
 
+    /**
+     * [Step] 두 원소를 하나의 그룹으로 병합
+     * 한 쪽의 루트 노드를 다른 쪽의 루트 아래에 연결하여 집합을 통합합니다.
+     */
     union(i: number, j: number): void {
         const rootI = this.find(i);
         const rootJ = this.find(j);
         if (rootI !== rootJ) {
-            this.parent[rootJ] = rootI; // 단순 병합 (Simple union)
+            this.parent[rootJ] = rootI;
         }
     }
 }
@@ -61,26 +76,35 @@ interface MergeCandidate {
     overlapRatio: number;
 }
 
-// [Hanja Fix] 주요 성씨 및 빈번한 한자를 한글로 정규화
+// [Logic] 한자 기반 성씨 및 지명 정규화
+// 뉴스 헤드라인에서 자수 절약을 위해 흔하게 쓰이는 한자를 한글로 변환하여 매칭 확률을 높입니다.
 function normalizeHanja(text: string): string {
     const hanjaMap: Record<string, string> = {
         '李': '이', '朴': '박', '崔': '최', '鄭': '정', '姜': '강',
-        '趙': '조', '尹': '윤', '張': '장', '林': '임', '韓': '한',
-        '吳': '오', '徐': '서', '申': '신', '權': '권', '安': '안',
-        '黃': '황', '金': '김', '柳': '유', '高': '고'
+        '趙': '조', '尹': '윤', '張': '장', '林': '임', '吳': '오',
+        '徐': '서', '申': '신', '權': '권', '安': '안', '黃': '황',
+        '金': '김', '柳': '유', '高': '고',
+        '韓': '한', '美': '미', '日': '일', '中': '중', '北': '북', // 주요 국가
+        '與': '여', '野': '야', '軍': '군', '檢': '검', '警': '경'  // 정치/사회 약어 추가
     };
     return text.replace(/[\u4e00-\u9fff]/g, char => hanjaMap[char] || char);
 }
 
-// 간단한 한글 조사 제거 (단순화된 버전)
+/**
+ * [Logic] 한국어 특화 토큰화 (Tokenizer)
+ * [Optimization] 불필요한 조사와 공백을 제거하고 핵심 명사 위주로 토큰 세트를 구축합니다.
+ */
 function tokenize(text: string): Set<string> {
-    // [Hanja Fix] 한자 범위(\u4e00-\u9fff) 포함 및 정규화 적용
-    const normalized = normalizeHanja(text);
+    const normalized = normalizeHanja(text); // 한자 -> 한글 치환 우선 실행
+    // 한글, 영문, 숫자를 제외한 모든 특수문자를 공백 처리
     const rawTokens = normalized.replace(/[^\w\s가-힣\u4e00-\u9fff]/g, ' ').split(/[\s,]+/);
     const validTokens = new Set<string>();
 
     rawTokens.forEach(t => {
+        // [Safety] 2글자 미만의 단어는 노이즈로 판단하여 제외
         if (t.length < 2) return;
+
+        // [Logic] 기초적인 조사 제거 (은, 는, 이, 가, 을, 를 등)
         const clean = t.replace(/(은|는|이|가|을|를|의|에|로|으로|와|과)$/, '');
         if (clean.length >= 2) validTokens.add(clean);
     });
@@ -127,9 +151,8 @@ export async function runMergeGate(options: TimeWindow) {
     Logger.timeEnd('Ranking Engine');
     if (!atomIssues || atomIssues.length === 0) return [];
 
-    Logger.info(`Pre-processing data & Searching for merge candidates...`);
-    Logger.time('Tokenization & Mapping');
-
+    // [Step 1] 데이터 확장 및 전처리
+    // 모든 이슈에 대해 뉴스 제목을 토큰화하여 메모리에 캐싱 (유사도 계산 최적화용)
     const extendedIssues: MergableIssue[] = atomIssues.map((issue, idx) => ({
         ...issue,
         tokens: tokenize(issue.news_titles.join(' ')),
@@ -137,7 +160,7 @@ export async function runMergeGate(options: TimeWindow) {
         merge_reasons: []
     }));
 
-    const uf = new UnionFind(extendedIssues.length);
+    const uf = new UnionFind(extendedIssues.length); // 병합 그룹 관리를 위한 구조 초기화
     const candidates: MergeCandidate[] = [];
     Logger.timeEnd('Tokenization & Mapping');
 
@@ -151,41 +174,41 @@ export async function runMergeGate(options: TimeWindow) {
             const issueA = extendedIssues[i];
             const issueB = extendedIssues[j];
 
-            // [Pruning] 시간 겹침 체크 (버퍼 포함)
-            // 사건 B가 사건 A의 종료 시점(Buffer 포함)보다 훨씬 나중에 일어났다면, 
-            // 정렬되어 있으므로 그 이후 사건들은 볼 필요가 없음 (Early Break).
+            // [Optimization] 시간 윈도우 기반 Pruning (버퍼 기반 가지치기)
+            // 사건 B가 사건 A의 종료 시점(Buffer 포함)보다 너무 뒤에 일어났다면, 
+            // 이슈 데이터가 시간순 정렬되어 있으므로 이후의 j번 이슈들도 자동으로 비교 범위 밖이 됨. (Early Break)
             const startA = new Date(issueA.first_seen_at).getTime();
             const endA = new Date(issueA.last_seen_at).getTime();
             const startB = new Date(issueB.first_seen_at).getTime();
             const endB = new Date(issueB.last_seen_at).getTime();
 
-            // 정렬된 특성 이용: B의 시작이 A의 종료+버퍼보다 뒤라면 이후 모든 j는 패스
+            // [Logic] Pruning: B의 시작 시각이 A의 영향권(종료+버퍼) 밖이면 루프 탈출
             if (startB > endA + MERGE_CONFIG.TIME_BUFFER_MS) break;
 
-            // 일반적인 겹침 확인
+            // [Logic] 양방향 시간 겹침 검증 (A와 B가 서로의 버퍼 범위 내에 상주하는가)
             if (!(startA <= endB + MERGE_CONFIG.TIME_BUFFER_MS && startB <= endA + MERGE_CONFIG.TIME_BUFFER_MS)) continue;
 
-            // 2. [Hanja Fix] 평규화된 키워드로 비교 진행
+            // [Logic] 키워드 텍스트 분석 및 고유명사 검증
             const kwA = issueA.representative_keyword;
             const kwB = issueB.representative_keyword;
             const normKwA = normalizeHanja(kwA);
             const normKwB = normalizeHanja(kwB);
 
-            // 2.1 Identity Match (포함 관계)
+            // [Step 2.1] Identity Match: 상호 텍스트 포함 관계 확인
             const isIdentityMatch = normKwA.includes(normKwB) || normKwB.includes(normKwA);
 
-            // 2.2 NER-light Safeguard: 인물/장소 충돌 감지
-            const entitiesA = getCoreEntities(kwA); // 내부에서 normalize 수행
+            // [Safety] 2.2 NER-light Safeguard: 고유명사 간 충돌(False Positive) 방지
+            // 서로 다른 고유명사가 키워드에 각각 포함되어 있다면, 텍스트가 겹치더라도 다른 뉴스일 가능성이 큼.
+            const entitiesA = getCoreEntities(kwA);
             const entitiesB = getCoreEntities(kwB);
 
-            // [Fix] 정규화된 키워드 기준으로 차이 분석
             const diffA = entitiesA.filter(e => !normKwB.includes(e));
             const diffB = entitiesB.filter(e => !normKwA.includes(e));
             const hasEntityConflict = diffA.length > 0 && diffB.length > 0;
 
             if (hasEntityConflict && !isIdentityMatch) continue;
 
-            // 3. 통계적 판단 (Reasoning Tags 적립)
+            // [Step 3] 통계적 판단 및 병합 태그(Reasoning Tags) 적립
             const jaccard = calculateJaccardSimilarity(issueA.tokens, issueB.tokens);
             const overlap = calculateOverlapRatio(issueA.tokens, issueB.tokens);
             const currentReasons: string[] = [];
@@ -194,10 +217,9 @@ export async function runMergeGate(options: TimeWindow) {
             if (jaccard >= MERGE_CONFIG.JACCARD_WEAK) currentReasons.push(jaccard >= MERGE_CONFIG.JACCARD_STRONG ? "JACCARD_STRONG" : "JACCARD_WEAK");
             if (overlap >= MERGE_CONFIG.OVERLAP_WEAK) currentReasons.push(overlap >= MERGE_CONFIG.OVERLAP_STRONG ? "OVERLAP_STRONG" : "OVERLAP_WEAK");
 
-            // [병합 결정]
+            // [Step 4] 병합 결정 및 관계 전파 (Union-Find)
             if (currentReasons.length > 0) {
                 uf.union(i, j);
-                // 태그 전파 (A, B 모두에게 사유 기록)
                 issueA.merge_reasons = Array.from(new Set([...issueA.merge_reasons, ...currentReasons]));
                 issueB.merge_reasons = Array.from(new Set([...issueB.merge_reasons, ...currentReasons]));
             }

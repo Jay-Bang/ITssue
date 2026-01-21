@@ -49,15 +49,16 @@ Handlebars.registerHelper('eq', (a, b) => a === b);
 let browser: Browser | null = null;
 
 /**
- * 브라우저 인스턴스 획득 (Singleton)
- * 
- * - 없으면 새로 띄우고, 연결이 끊어졌으면 재연결합니다.
- * - Docker/Server 환경 호환을 위한 플래그(`--no-sandbox` 등)가 적용되어 있습니다.
+ * [Logic] 브라우저 인스턴스 획득 (Singleton)
+ * [Optimization] 크롬 브라우저 실행(Puppeteer Launch)은 메모리와 CPU 소모가 큰 작업이므로, 
+ * 한 번 띄운 인스턴스를 유지(Keep-alive)하며 다수의 카드 렌더링 요청을 처리합니다.
  */
 async function getBrowser() {
+    // 세션이 없거나 끊어진 경우에만 새로 런칭
     if (!browser || !browser.isConnected()) {
         browser = await puppeteer.launch({
-            args: ['--no-sandbox', '--disable-setuid-sandbox'] // Docker/Server 환경 호환성
+            // [Safety] 리눅스 서버 및 Docker 환경에서의 샌드박스 보안 충돌 방지
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
     }
     return browser;
@@ -77,19 +78,20 @@ export async function closeBrowser() {
 }
 
 /**
- * [Phase 5] 카드 뉴스 이미지 렌더링 함수
+ * [Dynamic Visual Renderer]
  * 
- * HTML 템플릿과 CSS를 조합하여 Puppeteer로 스크린샷을 찍습니다.
+ * [Description] Puppeteer를 사용하여 HTML/CSS 템플릿을 고해상도 인스타그램용 카드 뉴스 이미지로 렌더링합니다.
  * 
- * [Pipeline]
- * 1. Template & Data Prep: Handlebars로 HTML 생성 및 CSS 주입
- * 2. Browser & Render Loop: 페이지 로드, 폰트 대기, 뷰포트 설정
- * 3. Screenshot Capture: PNG 이미지 생성 및 저장
+ * [Design Intent]
+ * - 브라우저 인스턴스 재사용(Singleton)을 통한 성능 최적화.
+ * - 장치 픽셀 비율(deviceScaleFactor) 조정을 통한 고퀄리티 시각 자산 생성.
+ * - 폰트 로딩 대기 및 동적 텍스트 스케일링을 통한 레이아웃 정합성 유지.
  * 
- * [Features]
- * - Retry Logic: 렌더링 실패 시 자동 재시도
- * - Font Ready Wait: 폰트 로딩 완료를 명시적으로 대기하여 글자 깨짐 방지
- * - High DPI Support: deviceScaleFactor 옵션 지원
+ * [Key Logic Flow]
+ * 1. 브라우저 싱글톤 인스턴스 획득 및 새 페이지 생성.
+ * 2. Handlebars 템플릿에 데이터 주입 및 CSS 삽입.
+ * 3. `document.fonts.ready`를 통한 웹 폰트 로딩 완벽 대기.
+ * 4. 뷰포트 설정 후 PNG 스크린샷 캡처 및 자동 저장.
  */
 export async function renderCard(data: CardData, options: RenderOptions) {
     const {
@@ -104,24 +106,23 @@ export async function renderCard(data: CardData, options: RenderOptions) {
     const templatePath = path.join(__dirname, 'template.html');
     const stylePath = path.join(__dirname, 'style.css');
 
-    // 1. 템플릿 로드
+    // [Step 1] 리소스 로드 (HTML/CSS)
     Logger.time('Template & Data Prep');
     const templateHtml = await fs.readFile(templatePath, 'utf-8');
     const styleCss = await fs.readFile(stylePath, 'utf-8');
 
-    // 2. Handlebars 컴파일 및 데이터 가공
+    // [Step 2] Handlebars 데이터 바인딩 및 CSS 주입
     const template = Handlebars.compile(templateHtml);
     const templateData = {
         ...data
     };
     const renderedHtml = template(templateData);
 
-    // 포매터(Prettier 등)가 <style> 안의 Handlebars 문법을 망가뜨리는 것을 방지하기 위해 
-    // 수동으로 CSS를 주입합니다.
+    // [Layout] CSS를 수동으로 주입하여 템플릿 정합성 유지
     const html = renderedHtml.replace('/* STYLING_PLACEHOLDER */', styleCss);
     Logger.timeEnd('Template & Data Prep');
 
-    // 3. 렌더링 루프 (재시도 로직 포함)
+    // [Step 3] 브라우저 렌더링 루프 (Retry 지원)
     let lastError: any = null;
     for (let attempt = 0; attempt <= retry; attempt++) {
         Logger.time('Browser & Render Loop');
@@ -129,27 +130,26 @@ export async function renderCard(data: CardData, options: RenderOptions) {
         const page = await currentBrowser.newPage();
 
         try {
-            if (attempt > 0) {
-                Logger.info(`🔄 [${data.theme}] Retry attempt ${attempt}/${retry}...`);
-            }
-
+            // [Optimization] 뷰포트 및 고해상도 배율 설정
+            // deviceScaleFactor를 높여(기본 2) 망막 디스플레이(Retina)급의 선명한 비트맵 이미지를 생성합니다.
             await page.setViewport({ width, height, deviceScaleFactor });
 
             Logger.time('Page Content Set');
+            // [Step] HTML/CSS 주입 및 로딩 대기
+            // 'networkidle0'을 통해 모든 시각적 에셋(이미지 등)이 로드될 때까지 대기합니다.
             await page.setContent(html, {
                 waitUntil: ['load', 'networkidle0'],
                 timeout
             });
             Logger.timeEnd('Page Content Set');
 
-            // 폰트 로딩 완벽 대기 (Correctness)
-            // 폰트가 로드되기 전에 스크린샷이 찍히면 글자가 깨지거나 기본 폰트로 나올 수 있음.
-            // document.fonts.ready 프로미스를 명시적으로 대기하여 'Flash of Unstyled Text' 방지.
+            // [Safety] 웹 폰트 로딩 완벽 대기 (Flash of Unstyled Text 방지)
+            // 폰트가 렌더링되기 전에 스크린샷이 찍히면 깨진 레이아웃이 출력될 수 있으므로 명시적으로 대기합니다.
             await page.evaluate(`(async () => {
                 await document.fonts.ready;
             })()`);
 
-            // 4. 스크린샷 캡처
+            // [Step 4] 스크린샷 캡처 및 이미지 저장
             Logger.time('Screenshot Capture');
             await fs.ensureDir(path.dirname(outputPath));
             await page.screenshot({

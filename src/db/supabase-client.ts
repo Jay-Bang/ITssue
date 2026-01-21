@@ -5,21 +5,17 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 /**
- * Supabase 클라이언트 초기화
+ * [Supabase Infrastructure]
  * 
- * [역할]
- * 프로젝트 전역에서 사용할 Supabase 클라이언트 인스턴스를 생성합니다.
+ * [Description] 프로젝트 전역에서 사용할 Supabase 클라이언트 인스턴스를 초기화하고 관리합니다.
  * 
- * [환경 변수]
- * - SUPABASE_URL: Supabase 프로젝트 URL (필수)
- * - SUPABASE_SERVICE_KEY: Supabase Service Role Key (필수)
- *   ⚠️ Service Role Key는 서버 환경에서만 사용해야 하며, 클라이언트에 노출되면 안 됩니다.
+ * [Design Intent]
+ * - 서버 사이드 배치 작업 및 데이터 분석을 위해 Service Role Key를 사용한 관리자 권한 확보.
+ * - 프로젝트 전반의 데이터 영속성(Persistence)을 담당.
  * 
- * [사용 테이블]
- * - raw_trends: API 원본 응답 저장
- * - trend_snapshots: 개별 키워드 스냅샷
- * - issue_boards: 분석 결과 보드 메타데이터
- * - issue_board_items: 보드별 상세 이슈 데이터
+ * [Environment Variables]
+ * - SUPABASE_URL: Supabase 프로젝트 API URL
+ * - SUPABASE_SERVICE_KEY: Supabase Service Role Key (⚠️ 클라이언트 노출 주의)
  */
 
 const supabaseUrl = process.env.SUPABASE_URL || '';

@@ -14,9 +14,18 @@ interface RenderIssue {
 }
 
 /**
- * Manual Renderer
- * 역할: 이미 생성된 results_*.json 파일을 읽어 이미지를 다시 생성합니다.
- * 사용법: npx ts-node src/analysis/manual-renderer.ts <json_path> [theme]
+ * [Manual Re-rendering Utility]
+ * 
+ * [Description] 이미 생성된 분석 결과 JSON 파일을 읽어 카드 뉴스 이미지를 다시 생성하고, 필요 시 인스타그램에 재발행합니다.
+ * 
+ * [Design Intent]
+ * - 오케스트레이터 전체를 다시 실행하지 않고도 디자인 수정 사항(CSS/HTML)을 빠르게 반영하기 위함.
+ * - 특정 이슈 보드에 대한 업데이트 버전(Edition) 생성을 지원.
+ * 
+ * [Key Logic Flow]
+ * 1. 대상 JSON 파일 로드 및 데이터 파싱.
+ * 2. 파일명 패턴 분석을 통한 날짜 및 테마 정보 추출.
+ * 3. [Step] 이미지 렌더링 -> [Step] Storage 업로드 -> [Step] Instagram 게시물 생성/교체.
  */
 import { supabase } from '../db/supabase-client';
 import { uploadInstagramImages } from '../publish/storage-manager';
@@ -81,7 +90,7 @@ async function runManualRender() {
     else if (filename.includes('NOON')) type = 'NOON';
     else if (filename.includes('CUSTOM')) type = 'CUSTOM';
 
-    // 1. Data Formatting
+    // [Step 1] 리포트 데이터 포매팅 및 로딩
     const formattedIssues: RenderIssue[] = summaries.map((s: any, idx: number) => ({
         rank: idx + 1,
         keyword: s.representative_keyword,
@@ -91,7 +100,7 @@ async function runManualRender() {
     }));
 
     try {
-        // 2. Rendering
+        // [Step 2] 카드 뉴스 렌더링 실행 (Puppeteer)
         Logger.info(`🎨 Theme: ${SELECTED_THEME}`);
 
         const dirA = path.join(outputDir, `Instagram_Feed_${type}_${dateStr}`);
@@ -107,7 +116,7 @@ async function runManualRender() {
         Logger.success(`Re-rendering Completed! Check folder: ${dirA}`);
         // \n - ${dirB}
 
-        // 3. Publishing (Optional)
+        // [Step 3] 가공 및 재발행 (선택 사항)
         if (shouldPublish) {
             Logger.info("🌐 Syncing with Supabase Storage...");
 
@@ -132,7 +141,7 @@ async function runManualRender() {
 
             Logger.info(`📦 Creating new Edition for Original Board ID: ${boardId}`);
 
-            // 0. 원본 보드 정보 가져오기 (메타데이터 복사를 위함)
+            // [Logic] 3.1 원본 보드 정보 획득 (메타데이터 상속용)
             const { data: originalBoard, error: fetchError } = await supabase
                 .from('issue_boards')
                 .select('*')
@@ -143,8 +152,8 @@ async function runManualRender() {
                 Logger.warn("⚠️ Original board not found. Using default metadata.");
             }
 
-            // 1. 이미지 업로드 (Instagram_Feed 기준 - Summary)
-            // [Cache-busting] 인스타그램 캐싱 문제를 방지하기 위해 타임스탬프를 추가한 고유 경로 사용
+            // [Step 4] 이미지 업로드 및 공용 URL 생성
+            // [Safety] 인스타그램 캐싱 문제를 방지하기 위해 타임스탬프를 추가한 고유 경로 사용
             const storageTag = `${outputFolderName}_rev${Date.now()}`;
             const imageUrls = await uploadInstagramImages(dirA, storageTag);
 

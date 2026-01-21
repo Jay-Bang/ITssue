@@ -21,26 +21,20 @@ function normalizeKstTimestamp(raw: string): string {
 }
 
 /**
- * 실시간 검색어 순위 스냅샷 수집 및 저장 모듈
+ * [Trend Data Collector]
  * 
- * [데이터 소스]
- * - 10분마다 TOP 20 검색어 순위를 수집
- * - 각 검색어마다 대표 뉴스 1개(제목, URL, 썸네일)가 포함됨
+ * [Description] 외부 API로부터 실시간 급상승 검색어 데이터를 수집하여 Supabase에 저장합니다.
  * 
- * [저장 구조]
- * - raw_trends: API 응답 전체를 JSON으로 보관
- * - trend_snapshots: 각 검색어를 개별 행으로 Flatten하여 시계열 분석 가능하게 저장
- */
-/**
- * 실시간 검색어 순위 스냅샷 수집 및 저장 모듈
+ * [Design Intent]
+ * - 10분 주기 스냅샷 수집을 통한 트렌드 시계열 데이터 확보.
+ * - 타임존 정규화(`KST -> UTC`)를 통한 데이터 일관성 유지.
+ * - 원본 JSON(`raw_trends`)과 정규화된 개별 키워드(`trend_snapshots`)를 분리하여 저장.
  * 
- * [데이터 소스]
- * - 10분마다 TOP 20 검색어 순위를 수집
- * - 각 검색어마다 대표 뉴스 1개(제목, URL, 썸네일)가 포함됨
- * 
- * [저장 구조]
- * - raw_trends: API 응답 전체를 JSON으로 보관
- * - trend_snapshots: 각 검색어를 개별 행으로 Flatten하여 시계열 분석 가능하게 저장
+ * [Key Logic Flow]
+ * 1. 외부 Trend API 호출 및 응답 유효성 검사.
+ * 2. 수집 시각 정규화 (`+09:00` 오프셋 명시).
+ * 3. 기수집 데이터 중복 확인 (Idempotency 보장).
+ * 4. 원본 응답 저장 후 개별 키워드 단위로 Flatten하여 스냅샷 테이블에 적재.
  */
 export async function fetchAndStoreTrends() {
     Logger.info(`Starting trend fetch...`);
@@ -55,12 +49,12 @@ export async function fetchAndStoreTrends() {
             return;
         }
 
-        // 2. Timezone Normalization (KST -> UTC)
+        // [Step 2] 시점 정규화 및 수집 유효성 검사
         const { timestamp: rawTimestamp, ranked_keywords } = apiData.data;
         const timestamp = normalizeKstTimestamp(rawTimestamp);
 
-        // 3. Duplication Check (Idempotency)
-        // 이미 해당 시각의 데이터가 수집되었는지 확인하여 중복 적재 방지
+        // [Step 3] 멱등성(Idempotency) 보장: 중복 수집 방지
+        // [Logic] 동일한 시점의 스냅샷이 이미 존재한다면 중복 적재를 방지하여 통계 왜곡을 차단합니다.
         const { data: existingData, error: checkError } = await supabase
             .from('raw_trends')
             .select('id')
@@ -75,8 +69,7 @@ export async function fetchAndStoreTrends() {
             return;
         }
 
-        // 4. Insert Raw Data
-        // API 원본 응답을 raw_trends 테이블에 통째로 저장 (Audit/Debugging 용도)
+        // [Step 4] 원본 데이터 저장 (Raw Trend Audit)
         const { data: rawData, error: rawError } = await supabase
             .from('raw_trends')
             .insert([{ timestamp, raw_data: apiData.data }])
@@ -91,18 +84,17 @@ export async function fetchAndStoreTrends() {
         const rawTrendId = rawData.id;
         Logger.success(`Successfully stored raw trends (ID: ${rawTrendId}) for ${timestamp}`);
 
-        // 5. Flatten & Insert Snapshots
-        // Raw JSON은 분석이 어려우므로, 개별 키워드 단위로 행(Row)을 분리하여 trend_snapshots에 저장
-        // 이 데이터가 추후 Ranking Engine의 입력값이 됨
+        // [Step 5] 데이터 평탄화(Flattening) 및 개별 키워드 저장
         if (ranked_keywords && Array.isArray(ranked_keywords)) {
             const snapshots = ranked_keywords.map((item: any) => ({
-                raw_trend_id: rawTrendId,
+                raw_trend_id: rawTrendId, // 원본 로그와 연결 (Audit Trail)
                 timestamp: timestamp,
                 keyword: item.keyword,
                 rank: item.rank,
                 is_rising: item.isRising,
                 news_title: item.news?.title,
                 news_url: item.news?.url,
+                // [Logic] '썸네일 없음' 문자열이 들어오는 경우 null로 치환하여 DB 가독성 확보
                 thumbnail_url: (item.news?.thumbnail === '썸네일 없음' || !item.news?.thumbnail) ? null : item.news.thumbnail,
             }));
 

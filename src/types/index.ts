@@ -1,5 +1,7 @@
 /**
- * ITssue 프로젝트 공용 타입 정의
+ * [ITssue Core Type Definitions]
+ * 
+ * [Description] 프로젝트 전역에서 사용되는 핵심 데이터 인터페이스 및 타입을 정의합니다.
  */
 
 /**

@@ -5,16 +5,19 @@ import { Logger } from './logger';
 dotenv.config();
 
 /**
- * 고급 AI 기반 엔진 (Multi-Key Rotation 지원)
+ * [Advanced AI Engine]
  * 
- * [설계 의도]
- * 프로젝트의 단순화 및 성능 최적화를 위해 단일 AI 엔진으로 통합합니다.
+ * [Description] 구글 제미나이(Gemini) 모델을 기반으로 텍스트 및 JSON 분석을 수행하며, Multi-Key Rotation을 지원합니다.
  * 
- * [Multi-Key Rotation]
- * - 여러 개의 API 키를 순환하며 사용하여 Rate Limit 우회
- * - 환경 변수 설정 방법:
- *   1. CLOUD_AI_KEY="key1,key2,key3" (쉼표로 구분)
- *   2. CLOUD_AI_KEY_1="key1", CLOUD_AI_KEY_2="key2", ... (개별 설정)
+ * [Design Intent]
+ * - API 할당량(Free Tier) 제한을 극복하기 위해 여러 API 키를 자동으로 순환 사용.
+ * - 네트워크 불안정 및 Rate Limit 상황에 대응하기 위한 견고한 재시도(Retry) 메커니즘 구축.
+ * - Search Grounding 기능을 통합하여 실시간 웹 정보를 AI 분석에 활용.
+ * 
+ * [Key Logic Flow]
+ * 1. 환경 변수에서 여러 개의 CLOUD_AI_KEY 로드 및 중복 제거.
+ * 2. 요청 실패(429 등) 발생 시 다음 키로 자동 전환(`switchToNextKey`).
+ * 3. 모든 키 소진 시 지수 백오프(`withRetry`)를 적용하여 대기 후 재시도.
  */
 export class AIEngine {
     private apiKeys: string[];
@@ -43,14 +46,15 @@ export class AIEngine {
     }
 
     /**
-     * 환경 변수에서 API 키 로드
-     * - CLOUD_AI_KEY="key1,key2,key3" 형식 지원
-     * - CLOUD_AI_KEY_1, CLOUD_AI_KEY_2, ... 형식 지원
+     * [Logic] 환경 변수에서 API 키 로드
+     * [Design Intent] 한 명의 사용자가 여러 개의 구글 계정으로 생성한 API 키를 모두 활용할 수 있도록 두 가지 포맷을 지원합니다.
+     * 1. 쉼표로 구분된 단일 환경 변수 (CLOUD_AI_KEY="key1,key2...")
+     * 2. 개별 환경 변수 번호링 (CLOUD_AI_KEY_1, CLOUD_AI_KEY_2...)
      */
     private loadApiKeys(): string[] {
         const keys: string[] = [];
 
-        // 방법 1: 쉼표로 구분된 단일 환경 변수
+        // 방법 1: 쉼표로 구분된 단일 환경 변수 처리
         const mainKey = process.env.CLOUD_AI_KEY;
         if (mainKey) {
             if (mainKey.includes(',')) {
@@ -107,23 +111,26 @@ export class AIEngine {
 
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
             try {
+                // [Step] AI 요청 실행
                 return await fn();
             } catch (error: any) {
                 lastError = error;
 
-                // Rate Limit 에러 (429) 또는 모델 미발견 (404)인 경우
+                // [Logic] Rate Limit(429) 또는 할당량 초과 상황 대응
                 if (error.status === 429 || error.status === 404) {
-                    // 먼저 다른 키로 전환 시도
+                    // [Strategy A] 현재 시도하지 않은 다른 API 키가 있다면 즉시 전환
                     if (keySwitchAttempts < maxKeySwitches - 1 && this.switchToNextKey()) {
                         keySwitchAttempts++;
                         Logger.info(`[AI] 🔄 Retrying with new API key...`);
-                        continue; // 즉시 재시도 (대기 없이)
+                        continue; // 대기 시간 없이 즉시 재시도
                     }
 
-                    // 모든 키를 시도했으면 대기 후 재시도
+                    // [Strategy B] 모든 키가 소진된 경우, 지수 백오프 기반 대기 후 재시도
                     if (attempt < maxRetries) {
+                        // 기본 대기 시간 + 지수 백오프 + 지터(Jitter)로 네트워크 충돌 방지
                         let delay = Math.pow(2, attempt) * 2000 + Math.random() * 1000;
 
+                        // API 응답에 Retry-After 정보가 포함되어 있다면 해당 값 우선 사용
                         if (error.errorDetails) {
                             const retryInfo = error.errorDetails.find((d: any) => d['@type'] === 'type.googleapis.com/google.rpc.RetryInfo');
                             if (retryInfo?.retryDelay) {
@@ -137,7 +144,7 @@ export class AIEngine {
                         Logger.warn(`[AI] 🚦 All keys exhausted. Waiting ${Math.round(delay)}ms... (Attempt ${attempt + 1}/${maxRetries})`);
                         await this.wait(delay);
 
-                        // 첫 번째 키로 리셋
+                        // [Safety] 대기 후 첫 번째 키로 다시 리셋하여 순환 루프 재시작
                         this.currentKeyIndex = 0;
                         this.genAI = new GoogleGenerativeAI(this.apiKeys[0]);
                         const modelName = process.env.CLOUD_AI_MODEL!;
@@ -179,10 +186,14 @@ export class AIEngine {
         }
     }
 
-    /** Intelligent Search Grounding을 사용한 텍스트 생성 (JSON 모드 지원 및 키 로테이션 버그 수정) */
+    /**
+     * [Logic] Intelligent Search Grounding을 사용한 텍스트 생성
+     * [Design Intent] AI가 학습 시점에 머물지 않고 실시간 웹 정보를 검색하여 최신 이슈에 실재하는 정보를 답변하도록 합니다.
+     */
     async generateWithSearch(prompt: string, responseFormat: 'text' | 'json' = 'json'): Promise<string> {
         return this.withRetry(async () => {
-            // [Multi-Key Rotation] 매 시도마다 현재의 genAI 인스턴스를 사용하여 모델 생성해야 키 변경이 반영됨
+            // [Safety] 매 재시도(Retry) 시마다 현재 활성화된 API 키(`genAI`) 인스턴스를 사용해야 
+            // 키 로테이션 결과가 Search 모델에도 정상 반영됩니다.
             const searchModel = this.genAI.getGenerativeModel({
                 model: process.env.CLOUD_AI_MODEL!,
                 tools: [{

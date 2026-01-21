@@ -1,3 +1,19 @@
+/**
+ * [Pipeline Orchestrator]
+ * 
+ * [Description] 수집부터 배포까지 이어지는 ITssue-AI의 전체 파이프라인을 조율(Orchestration)하고 통합 실행합니다.
+ * 
+ * [Design Intent]
+ * - 모듈 간의 낮은 결합도(Loose Coupling)를 유지하며 전체 프로세스를 제어.
+ * - 정오/일일/커스텀 등 다양한 분석 시간대(Time Window) 관리.
+ * - 분석 결과의 영구 저장(DB/File) 및 이미지 렌더링, 인스타그램 발행 절차 통합.
+ * 
+ * [Key Logic Flow]
+ * 1. 실행 타입(NOON/NIGHT 등)에 따른 분석 기간 계산.
+ * 2. 분석 단계: Ranking Engine -> Issue Merger -> Summary Generator 순차 실행.
+ * 3. 결과물 생성: JSON 리포트 저장 및 인스타그램 캡션 생성.
+ * 4. 시각화 및 배포: 카드뉴스 렌더링 -> Storage 업로드 -> Instagram 발행.
+ */
 import { Logger } from '../lib/logger';
 import { IssueEntity, FinalIssueBoard, BoardType, TimeWindow, AnalysisReport } from '../types';
 import { runMergeGate } from './issue-merger';
@@ -25,9 +41,12 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
     Logger.info(`🌟 [ITssue-AI] starting [${type}] Generation Pipeline...`);
 
     try {
+        // [Step 1] 분석 시간대(Time Window) 계산 및 출력 경로 설정
+        // [Logic] 서버(UTC)와 한국(KST) 시차를 고려하여 정확한 수집 범위를 결정합니다.
         const now = new Date();
         const window = calculateTimeWindow(type, now, customStart, customEnd);
 
+        // 출력 디렉토리 식별을 위한 타임스탬프 태그 생성
         const dateStr = window.end.toISOString().split('T')[0].replace(/-/g, '.');
         const timeSuffix = now.toTimeString().split(' ')[0].replace(/:/g, '');
         const outputTag = type === 'CUSTOM' ? `${dateStr}_CUSTOM_${timeSuffix}` : `${dateStr}_${type}`;
@@ -35,20 +54,25 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
 
         Logger.info(`📅 Analysis Window: ${window.start.toISOString()} ~ ${window.end.toISOString()}`);
 
+        // [Step 2] 이슈 병합 게이트(Issue Merger Gate) 실행
+        // [Logic] 파편화된 원시 검색어 데이터를 유사도 기반으로 군집화하여 유의미한 이슈를 추출합니다.
         const allMergedIssues = await runMergeGate(window);
 
         if (allMergedIssues.length === 0) {
+            // [Safety] 분석 대상 데이터가 없는 경우 파이프라인 안전 종료
             Logger.warn(`⚠️ No issues found for ${type} cycle within the window.`);
             Logger.info(`   Start: ${window.start.toISOString()}`);
             Logger.info(`   End: ${window.end.toISOString()}`);
             return;
         }
 
+        // [Step 3] 상위 이슈 필터링 및 AI 요약 생성
         const topIssues = allMergedIssues
             .sort((a, b) => b.score - a.score)
             .slice(0, TOP_N_ISSUES);
         const summaries = await generateAISummaries(topIssues);
 
+        // [Step 4] 분석 리포트(JSON) 구조화 및 로컬 저장
         const report: AnalysisReport = {
             metadata: {
                 type,
@@ -74,6 +98,7 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
         await fs.writeJson(rawJsonPath, report, { spaces: 2 });
         Logger.info(`💾 Enhanced report saved to: ${rawJsonPath}`);
 
+        // [Step 5] Supabase 감사 로그(Audit Log) 등록
         let boardId: string | null = null;
         try {
             Logger.info("📝 Registering audit log to Supabase...");
@@ -83,17 +108,21 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
             Logger.warn("Failed to register audit log to Supabase", e);
         }
 
+        // [Step 6] 인스타그램 캡션 자동 생성 및 파일 저장
         let generatedCaption = '';
         try {
             Logger.info("✍️ Generating Instagram caption...");
+            // [Logic] Handlebars 템플릿을 사용하여 정규화된 캡션 형식 생성
             generatedCaption = await generateInstagramCaption(type, dateStr, summaries);
             const captionPath = path.join(outputDir, `caption_${type}_${dateStr}.txt`);
             await fs.writeFile(captionPath, generatedCaption, 'utf-8');
             Logger.success(`Caption saved to: ${captionPath}`);
         } catch (e) {
+            // [Safety] 캡션 생성 실패 시 에러 로깅 후 이미지 렌더링 단계로 진행 (Partial Success 허용)
             Logger.error("Failed to generate Instagram caption", e);
         }
 
+        // [Step 7] 이슈 데이터 렌더링 최적화 및 카드 뉴스 생성
         const renderIssues: RenderIssue[] = topIssues.map((iss, idx) => {
             const sum = summaries.find(s => s.representative_keyword === iss.representative_keyword);
             return {
@@ -111,14 +140,15 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
 
         await renderFullSet(renderIssues, dateStr, SELECTED_THEME, dirA, true, boardTitles[type]);
 
+        // [Step 8] Supabase Storage 동기화 및 최종 발행
         if (boardId) {
-            Logger.info("\n🌐 Phase 6: Syncing with Supabase Storage...");
+            Logger.info("\n🌐 Syncing with Supabase Storage...");
             try {
-                // 1. 이미지 업로드 (항상 실행)
+                // [Logic] 8.1 이미지 업로드 (항상 실행)
                 const imageUrls = await uploadInstagramImages(dirA, outputTag);
                 const publicUrls = imageUrls.map(img => img.publicUrl);
 
-                // 2. 기본 정보 업데이트 (Storage URL, Caption)
+                // [Logic] 8.2 기본 정보 업데이트 (Storage URL, Caption)
                 const { error: updateError } = await supabase
                     .from('issue_boards')
                     .update({
@@ -134,7 +164,7 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
                 if (updateError) throw updateError;
                 Logger.success(`✨ Supabase Storage & Caption Synced!`);
 
-                // 3. 인스타그램 게시 (옵션)
+                // [Logic] 8.3 인스타그램 최종 게시 (옵션)
                 if (shouldPublish) {
                     Logger.info("🚀 Publishing to Instagram...");
                     const igPublisher = new InstagramPublisher();
@@ -169,7 +199,12 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
     }
 }
 
+/**
+ * [Logic] 분석 대상 시간 범위(Time Window) 계산기
+ * [Safety] 서버의 UTC 시간과 한국의 KST(+9) 시간을 매핑하여 '정확한 24시간' 또는 '특정 정시' 범위를 산출합니다.
+ */
 function calculateTimeWindow(type: BoardType, now: Date, customStart?: Date, customEnd?: Date): TimeWindow {
+    // 9시간 오프셋 적용 (KST 기준 계산을 위해)
     const kstShift = 9 * 60 * 60 * 1000;
     const kstNow = new Date(now.getTime() + kstShift);
     const kYear = kstNow.getUTCFullYear();
@@ -179,22 +214,22 @@ function calculateTimeWindow(type: BoardType, now: Date, customStart?: Date, cus
     let start: Date;
     let end: Date;
 
+    // [Step] 커스텀 요청 시 최우선 적용
     if (customStart && customEnd) return { start: customStart, end: customEnd };
 
     switch (type) {
         case 'NOON':
+            // [Logic] 정오 이슈: 당일 12:00 KST (03:00 UTC)까지의 데이터
             end = new Date(Date.UTC(kYear, kMonth, kDate, 3, 0, 0, 0));
             start = new Date(end.getTime());
-            start.setUTCDate(start.getUTCDate() - 1);
-            start.setUTCHours(13, 0, 0, 0);
+            start.setUTCDate(start.getUTCDate() - 1); // 24시간 전 시점부터
+            start.setUTCHours(13, 0, 0, 0); // KST 기준 전일 22:00부터 수집 (야간 데이터 포함)
             break;
         case 'NIGHT':
-            // 22:00 KST (13:00 UTC) 기준
+            // [Logic] 일일 이슈: 당일 22:00 KST (13:00 UTC)까지의 24시간 데이터
             end = new Date(Date.UTC(kYear, kMonth, kDate, 13, 0, 0, 0));
-            // 만약 현재 시각이 오늘 22:00 전이라면, '오늘 22:00'까지의 데이터를 뽑기 위해 그대로 둠.
-            // (사용자가 직접 실행하는 경우 대비)
             start = new Date(end.getTime());
-            start.setUTCDate(start.getUTCDate() - 1); // 24시간 전
+            start.setUTCDate(start.getUTCDate() - 1); // 정확히 24시간 전
             break;
         default:
             throw new Error(`Unsupported board type: ${type}`);

@@ -6,19 +6,18 @@ import { BoardType } from './types';
 dotenv.config();
 
 /**
- * ITssue-AI Entry Point
+ * [ITssue-AI Entry Point]
  * 
- * [역할]
- * 프로젝트의 메인 진입점으로, 커맨드라인 인자를 파싱하여 오케스트레이터를 실행합니다.
+ * [Description] 트렌드 분석 파이프라인의 실행을 관리하는 메인 엔트리 포인트입니다.
  * 
- * [사용법]
- * - `npm start` 또는 `ts-node src/index.ts [BOARD_TYPE] [--publish]`
- * - BOARD_TYPE: NOON | NIGHT | CUSTOM (기본값: NOON)
- * - --publish: 인스타그램 자동 게시 플래그 (선택)
+ * [Design Intent]
+ * - 커맨드라인 인자를 통해 정오/일일/커스텀 보드 생성 및 발행 여부를 유연하게 제어.
+ * - 프로젝트의 모든 자율 운영 로직이 시작되는 최상격 계층.
  * 
- * [예시]
- * - `npm start NIGHT --publish`: 일일 보드 생성 및 인스타그램 게시
- * - `npm start NOON`: 정오 보드 생성만 수행 (게시 안 함)
+ * [Usage]
+ * - `npm start [BOARD_TYPE] [--publish]`
+ * - BOARD_TYPE: NOON | NIGHT | CUSTOM (Default: NOON)
+ * - --publish: 인스타그램 자동 게시 플래그 (Optional)
  */
 async function main() {
     Logger.info('🚀 ITssue-AI Edition starting...');
