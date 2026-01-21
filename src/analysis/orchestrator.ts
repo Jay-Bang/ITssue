@@ -158,10 +158,11 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
                 Logger.success(`✨ Supabase Storage & Caption Synced!`);
 
                 // [Logic] 8.3 인스타그램 최종 게시 (옵션)
+                let igMediaId: string | null = null;
                 if (shouldPublish) {
                     Logger.info("🚀 Publishing to Instagram...");
                     const igPublisher = new InstagramPublisher();
-                    const igMediaId = await igPublisher.publishCarousel(publicUrls, generatedCaption);
+                    igMediaId = await igPublisher.publishCarousel(publicUrls, generatedCaption);
 
                     const { error: igUpdateError } = await supabase
                         .from('issue_boards')
@@ -177,6 +178,21 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
                     if (igUpdateError) throw igUpdateError;
                     Logger.success(`✨ Instagram Publishing Complete! ID: ${igMediaId}`);
                 }
+
+                // [Logic] 8.4 발행 정보 파일 저장 (publish_info.json)
+                // [Description] 향후 수동 재렌더링 시 참조할 수 있도록 발행 메타데이터를 로컬에 저장합니다.
+                const publishInfoPath = path.join(outputDir, `publish_${type}_${dateStr}.json`);
+                const publishInfo = {
+                    boardId,
+                    type,
+                    date: dateStr,
+                    imageUrls,
+                    igMediaId,
+                    processedAt: new Date().toISOString()
+                };
+                await fs.writeJson(publishInfoPath, publishInfo, { spaces: 2 });
+                Logger.info(`📋 Publish info saved to: ${publishInfoPath}`);
+
             } catch (e) {
                 Logger.error("Failed to sync with Supabase or Publish", e);
             }
