@@ -161,3 +161,20 @@ pm2 startup
 이제 서버가 24시간 켜져 있으며, 매일 정해진 시간(12:00, 22:00 KST)에 자동으로 보드를 분석하고 발행합니다.
 로그 확인: `pm2 logs itssue-daemon`
 
+
+---
+
+## 🔔 7. 알림 설정 (Notifications)
+
+파이프라인 실행 완료 시 텔레그램으로 결과 리포트와 이미지 묶음을 받을 수 있습니다.
+
+### 1️⃣ 텔레그램 (Telegram Bot) 설정
+1. [@BotFather](https://t.me/botfather)를 통해 봇을 생성하고 `API Token`을 받습니다.
+2. [@userinfobot](https://t.me/userinfobot)을 통해 본인의 `Chat ID`를 확인합니다.
+3. `.env` 파일에 발급받은 정보를 입력합니다 (따옴표 없이 입력 가능):
+   ```env
+   TELEGRAM_BOT_TOKEN=your_token_here
+   TELEGRAM_CHAT_ID=your_chat_id_here
+   ```
+
+이제 분석이 완료되면 텔레그램으로 이미지 묶음과 인스타그램 캡션이 자동으로 전송됩니다.

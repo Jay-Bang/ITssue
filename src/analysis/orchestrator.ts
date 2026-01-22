@@ -25,6 +25,7 @@ import { InstagramPublisher } from '../publish/instagram-publisher';
 import * as Handlebars from 'handlebars';
 import * as path from 'path';
 import * as fs from 'fs-extra';
+import { NotificationService } from '../lib/notifier';
 
 const TOP_N_ISSUES = 10;
 
@@ -201,6 +202,23 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
         const totalDuration = ((Date.now() - totalStart) / 1000).toFixed(1);
         await closeBrowser();
         Logger.success(`Pipeline finishes (Duration: ${totalDuration}s)`);
+
+        // [Step 9] 알림 전송 (Telegram)
+        try {
+            Logger.info("\n📨 Sending Telegram notification...");
+            const notifier = new NotificationService();
+
+            // 이미지 목록 수집 (Ranking 이미지 우선)
+            const images = (await fs.readdir(dirA))
+                .filter(f => f.endsWith('.png'))
+                .map(f => path.join(dirA, f))
+                .sort((a, b) => a.includes('Ranking') ? -1 : 1);
+
+            // 전송 실행
+            await notifier.sendTelegram(type, dateStr, renderIssues, images, generatedCaption);
+        } catch (e) {
+            Logger.warn("⚠️ Notification failed but pipeline completed.", e);
+        }
 
     } catch (error) {
         Logger.error("Pipeline crashed", error);
