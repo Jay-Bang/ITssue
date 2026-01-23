@@ -114,7 +114,8 @@ async function runManualRender() {
         // await fs.ensureDir(dirB);
 
         // [Config] Version A (Summary/Instagram) - Primary
-        await renderFullSet(formattedIssues, dateStr, SELECTED_THEME, dirA, true, boardTitle, visualVersion);
+        const p1Title = type === 'NOON' ? 'MIDDAY TRENDS' : 'DAILY TRENDS';
+        await renderFullSet(formattedIssues, dateStr, SELECTED_THEME, dirA, true, boardTitle, visualVersion, p1Title);
 
         // await renderFullSet(formattedIssues, dateStr, SELECTED_THEME, dirB, false, boardTitle);
 
@@ -264,12 +265,12 @@ async function runManualRender() {
  * [Logic] 카드 뉴스 이미지 세트 생성기
  * [Description] P1(랭킹), P2~P5(상위 이슈 상세), P6~P7(하위 이슈 그룹) 이미지를 순차적으로 렌더링합니다.
  */
-async function renderFullSet(issues: FinalIssueBoard[], date: string, theme: string, dir: string, isSummaryMode: boolean, boardTitle: string, visualVersion: 'bubblegum' | 'arcade' = 'bubblegum') {
+async function renderFullSet(issues: FinalIssueBoard[], date: string, theme: string, dir: string, isSummaryMode: boolean, boardTitle: string, visualVersion: 'bubblegum' | 'arcade' = 'bubblegum', p1Title?: string) {
     const renderOpts = { visualVersion };
     // P1 Ranking Page
     const p1Data = {
         type: 'ranking' as const,
-        date, theme, boardTitle,
+        date, theme, boardTitle, p1Title,
         ranking: issues.map(i => ({ rank: i.rank!, keyword: i.representative_keyword }))
     };
     await renderCard(p1Data, { ...renderOpts, outputPath: path.join(dir, 'P1_Ranking.png') });

@@ -18,6 +18,7 @@ export interface BaseCardData {
 
 export interface RankingCardData extends BaseCardData {
     type: 'ranking';
+    p1Title?: string; // e.g., "MIDDAY<br>TRENDS" or "DAILY<br>TRENDS"
     ranking: Array<{ rank: number | string; keyword: string }>;
 }
 

@@ -26,7 +26,7 @@
     <div class="arcade-container">
         <!-- Header -->
         <header class="header">
-            <div class="brand-v3">잇슈:ITssue</div>
+            <div class="brand-v3">잇슈 : ITssue</div>
             <div class="meta-v3">
                 <div>{{date}}</div>
                 <div>{{boardTitle}}</div>
@@ -36,7 +36,7 @@
         {{#if (eq type 'ranking')}}
         <!-- P1: Ranking Page (Arcade Leaderboard) -->
         <main class="page-ranking">
-            <h1 class="heading-v3">TRENDING<br>KEYWORDS</h1>
+            <h1 class="heading-v3">{{{or p1Title 'TRENDING<br>KEYWORDS'}}}</h1>
             <div class="ranking-grid-v3" id="r-grid">
                 {{#each ranking}}
                 <div class="arcade-tile">
@@ -95,7 +95,7 @@
 
         <!-- Footer -->
         <footer class="footer">
-            <div>잇슈:ITssue Intelligence Feed</div>
+            <div>잇슈 : ITssue Intelligence Feed</div>
         </footer>
     </div>
 
