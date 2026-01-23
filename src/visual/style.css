@@ -102,7 +102,7 @@ body {
   margin: 0;
   padding: 0;
   width: 1080px;
-  height: 1080px;
+  height: 1350px;
   background-color: var(--bg-color);
   font-family: var(--font-main);
   letter-spacing: var(--letter-spacing);
@@ -115,7 +115,7 @@ body {
 
 .card {
   width: 1000px;
-  height: 1000px;
+  height: 1270px;
   background-color: var(--card-bg);
   border-radius: var(--radius);
   padding: 60px;
@@ -146,34 +146,34 @@ body {
 }
 
 .brand {
-  font-size: 42px;
+  font-size: 52px;
   font-weight: 800;
-  letter-spacing: -1px;
+  letter-spacing: -1.5px;
   color: var(--point-color);
   text-shadow: var(--neon-shadow);
 }
 
 .date {
-  font-size: 24px;
+  font-size: 28px;
   color: var(--text-sub);
   font-weight: 500;
 }
 
 .board-title {
-  font-size: 18px;
+  font-size: 22px;
   color: var(--point-color);
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   opacity: 0.9;
 }
 
 /* P1: 랭킹 페이지 스타일 */
 .ranking-title {
-  font-size: 64px;
+  font-size: 72px;
   font-weight: 800;
-  line-height: 1.2;
-  margin-bottom: 50px;
+  line-height: 1.15;
+  margin-bottom: 60px;
   word-break: keep-all;
 }
 
@@ -182,7 +182,7 @@ body {
   grid-template-columns: 1fr 1fr;
   grid-template-rows: repeat(5, 1fr);
   grid-auto-flow: column;
-  gap: 20px;
+  gap: 30px;
   flex-grow: 1;
 }
 
@@ -196,27 +196,28 @@ body {
 }
 
 .rank-number {
-  font-size: 32px;
+  font-size: 42px;
   font-weight: 900;
   color: var(--point-color);
-  margin-right: 20px;
-  min-width: 40px;
+  margin-right: 25px;
+  min-width: 50px;
 }
 
 .rank-keyword {
-  font-size: 28px;
-  font-weight: 600;
+  font-size: 34px;
+  font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 1;
 }
 
 /* P2~P11: 상세 페이지 스타일 */
 .detail-rank {
-  font-size: 32px;
+  font-size: 40px;
   font-weight: 800;
   color: var(--point-color);
-  margin-bottom: 40px;
+  margin-bottom: 45px;
 }
 
 .detail-keyword {
@@ -254,13 +255,13 @@ body {
 }
 
 .tag-mini {
-  font-size: 28px;
-  color: var(--text-sub);
-  background: var(--bg-color);
-  padding: 4px 12px;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--point-color);
+  background: rgba(112, 51, 255, 0.12);
+  padding: 6px 16px;
   border-radius: 8px;
-  border: 1px solid var(--border-color);
-  font-weight: 500;
+  box-sizing: border-box;
 }
 
 .summary-box {
@@ -272,7 +273,7 @@ body {
   margin-left: -48px;
   border-radius: 0 24px 24px 0;
   /* [Flow] 푸터와 겹치지 않으면서 가속성 좋은 높이 */
-  max-height: 620px;
+  max-height: 850px;
   flex: 1;
   min-height: 300px;
   margin-bottom: 25px;
@@ -308,8 +309,8 @@ body {
 /* .signature-bar 제거 (summary-box::after로 통합) */
 
 .summary-item {
-  font-size: 32px;
-  line-height: 1.6;
+  font-size: 38px;
+  line-height: 1.55;
   margin-bottom: 25px;
   font-weight: 500;
   color: var(--text-main);
@@ -328,8 +329,7 @@ body {
 .version-b .issue-group-list {
   display: flex;
   flex-direction: column;
-  gap: 15px;
-  /* 20px -> 15px 축소 */
+  gap: 25px;
   flex: 1;
   /* 남은 영역을 모두 차지 */
   margin-bottom: 20px;
@@ -352,14 +352,31 @@ body {
 }
 
 .version-b .issue-title {
-  font-size: 34px;
-  /* 36px -> 34px 소폭 축소 */
+  font-size: 40px;
   font-weight: 800;
-  margin-bottom: 8px;
-  /* 10px -> 8px 축소 */
+  margin-bottom: 4px;
+  /* 태그 추가로 인해 여백 축소 */
+  color: var(--text-main);
   display: flex;
   align-items: center;
   gap: 15px;
+  /* 순위와 키워드 간 간격 확대 */
+}
+
+.grouped-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tag-micro {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--point-color);
+  background: rgba(112, 51, 255, 0.12);
+  padding: 2px 8px;
+  border-radius: 4px;
 }
 
 .version-b .issue-rank {
@@ -372,9 +389,8 @@ body {
 }
 
 .version-b .issue-context {
-  font-size: 24px;
-  /* 26px -> 24px 소폭 축소 */
-  line-height: 1.4;
+  font-size: 30px;
+  line-height: 1.45;
   color: var(--text-sub);
   word-break: keep-all;
 }
@@ -413,11 +429,7 @@ body {
   gap: 10px;
 }
 
-.tag {
-  background: rgba(255, 255, 255, 0.1);
-  padding: 6px 16px;
-  border-radius: 10px;
-}
+/* .tag class removed (standardized to tag-mini/micro) */
 
 /* 하단 시그니처 그라데이션 바 */
 .signature-bar {

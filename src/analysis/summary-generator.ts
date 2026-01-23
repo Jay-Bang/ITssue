@@ -42,25 +42,25 @@ export async function generateAISummaries(issues: IssueEntity[]): Promise<FinalI
         Logger.info(`🔍 [AI] Analyzing keyword: [${keyword}]`);
 
 
+        const isTop3 = i < 3;
+        const sentenceCount = isTop3 ? 2 : 1;
+        const summaryRule = isTop3
+            ? "인스타그램 포스팅에 적합하도록 '정중한 어미(~습니다)'를 사용한 **2문장 요약**으로 작성해주세요."
+            : "인스타그램 포스팅에 적합하도록 '정중한 어미(~습니다)'를 사용한 **딱 1문장**으로 핵심만 요약해주세요.";
+
         const prompt = `
 당신은 트렌드 분석 전문가입니다.
 오늘 날짜(${todayStr})를 기준으로 다음 키워드가 **하루 동안 왜 화제가 되었는지(이슈가 된 핵심 이유)**를 검색하여 분석해주세요.
-인스타그램 포스팅에 적합하도록 '정중한 어미(~습니다)'를 사용한 3문장 요약으로 작성해주세요.
-
-[배경 지식 (중요)]
-- 현재 정권: 이재명 정부 (여당: 더불어민주당)
-- 주요 야당: 국민의힘 (대표: 장동혁)
-위 정국 상황을 정확히 인지하고, 뉴스의 맥락을 파악하여 요약해주세요.
+${summaryRule}
 
 [제약 사항]
 1. 요약문 내에 **당일 날짜(${todayStr})의 표현을 포함하지 마세요. (독자가 이미 날짜를 인지하고 있음)
-2. 여당/야당 구분을 뉴스 제목에 근거하여 정확히 해주세요.
 
 [키워드]: ${keyword}
 
 결과는 반드시 아래 JSON 형식으로만 응답하세요:
 {
-  "summary": ["문장1", "문장2", "문장3"],
+  "summary": [${Array.from({ length: sentenceCount }, (_, i) => `"문장${i + 1}"`).join(', ')}],
   "tags": ["태그1", "태그2", "태그3", "태그4"]
 }
 `;

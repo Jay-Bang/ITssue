@@ -57,6 +57,11 @@
           <span class="issue-rank">{{this.rank}}위</span>
           {{this.keyword}}
         </div>
+        <div class="grouped-tags">
+          {{#each this.subKeywords}}
+          <span class="tag-micro">#{{this}}</span>
+          {{/each}}
+        </div>
         <div class="issue-context">
           {{#each this.summaryLines}}
           <div class="group-summary-item">• {{this}}</div>
@@ -78,9 +83,11 @@
       {{/each}}
     </div>
     <div class="summary-box">
-      {{#each summary}}
-      <div class="summary-item">{{this}}</div>
-      {{/each}}
+      <div class="summary-content">
+        {{#each summary}}
+        <div class="summary-item">{{this}}</div>
+        {{/each}}
+      </div>
     </div>
     <div class="footer">
       <div>itssue.trend</div>
@@ -121,8 +128,8 @@
       const contexts = groupList.querySelectorAll('.issue-context');
       if (contexts.length === 0) return;
 
-      let fontSize = 24; // @style.css .issue-context 최신 기본값
-      const maxHeight = 640; // 푸터 침범을 방지하기 위한 안전 임계값
+      let fontSize = 30; // @style.css .version-b .issue-context 최신 기본값
+      const maxHeight = 900; // 4:5 맞춤형 가용 높이 임계값
 
       // 리스트 실제 높이가 가용 높이를 넘는 동안 폰트를 줄임
       while (groupList.scrollHeight > maxHeight && fontSize > 16) {
@@ -141,32 +148,52 @@
 
     /**
      * [Dynamic Scaling: Summaries]
-     * 요약 박스 내부의 텍스트가 박스 높이(540px)를 초과할 경우 폰트 사이즈를 자동으로 줄입니다.
+     * 요약 박스 내부의 텍스트가 박스 높이를 초과할 경우 폰트 사이즈를 자동으로 줄입니다.
      */
     function scaleSummaries() {
       const summaryBox = document.querySelector('.summary-box');
-      if (!summaryBox) return;
+      const summaryContent = document.querySelector('.summary-content');
+      if (!summaryBox || !summaryContent) return;
 
       const summaryItems = summaryBox.querySelectorAll('.summary-item');
-      let fontSize = 32;
-      const maxContentHeight = 620;
-      const safetyBuffer = 80; // [Safety] 하단 여백이 넉넉히 남도록 버퍼 상향
+      let fontSize = 38;
 
-      // 박스 내부 실제 높이가 (가용 높이 - 버퍼)를 넘는 동안 폰트를 줄임
-      while (summaryBox.scrollHeight > (maxContentHeight - safetyBuffer) && fontSize > 18) {
+      // 박스 내부 가용 높이 (Padding 고려)
+      // style.css: padding: 40px 40px 80px 40px; => 총 세로 패딩 120px
+      const maxAvailableHeight = 850 - 160; // 850 - 120(padding) - 40(safety)
+
+      // 실제 콘텐츠 높이가 가용 높이를 넘는 동안 폰트를 줄임
+      while (summaryContent.scrollHeight > maxAvailableHeight && fontSize > 18) {
         fontSize -= 1;
         summaryItems.forEach(item => {
           item.style.fontSize = fontSize + 'px';
-          item.style.lineHeight = '1.45';
+          item.style.lineHeight = '1.5';
           item.style.marginBottom = (fontSize / 1.6) + 'px';
         });
       }
+    }
+
+    function scaleRankingList() {
+      const items = document.querySelectorAll('.rank-item');
+      items.forEach(item => {
+        const keyword = item.querySelector('.rank-keyword');
+        if (!keyword) return;
+
+        let fontSize = parseInt(window.getComputedStyle(keyword).fontSize);
+        const maxWidth = item.clientWidth - 100; // 번호 영역 제외 가용 너비
+
+        while (keyword.scrollWidth > maxWidth && fontSize > 20) {
+          fontSize -= 1;
+          keyword.style.fontSize = fontSize + 'px';
+        }
+      });
     }
 
     function runAllScaling() {
       scaleKeywords();
       scaleSummaries();
       scaleGroupItems();
+      scaleRankingList();
     }
 
     // DOM 로드 및 폰트 로드 완료 후 실행

@@ -107,7 +107,7 @@ export async function renderCard(data: CardData, options: RenderOptions) {
     const {
         outputPath,
         width = 1080,
-        height = 1080,
+        height = 1350,
         deviceScaleFactor = 2,
         timeout = 15000,
         retry = 1
