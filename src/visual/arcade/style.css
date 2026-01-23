@@ -168,9 +168,6 @@ main {
 }
 
 /* P1: Ranking Page (Leaderboard Grid) */
-.page-ranking {
-    /* Main grid-row: 2 inherited */
-}
 
 .heading-v3 {
     font-family: var(--font-display);
