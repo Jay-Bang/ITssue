@@ -128,6 +128,9 @@ main {
 }
 
 .meta-v3 {
+    position: absolute;
+    top: 110px;
+    right: 0;
     text-align: right;
     font-size: 24px;
     font-weight: 800;
@@ -138,7 +141,6 @@ main {
     flex-direction: column;
     align-items: flex-end;
     gap: 2px;
-    margin-right: 180px;
 }
 
 .meta-v3 div:last-child {
