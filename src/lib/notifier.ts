@@ -63,10 +63,9 @@ export class NotificationService {
 
             // 2. 인스타그램 캡션 전송
             if (caption) {
-                const header = `🔔 *ITssue-AI [${type}] ${date}*\n\n`;
                 await axios.post(`https://api.telegram.org/bot${this.telegramToken}/sendMessage`, {
                     chat_id: this.telegramChatId,
-                    text: `${header}📝 *Instagram Caption:*\n\n${caption}`,
+                    text: caption,
                     parse_mode: 'Markdown'
                 });
             }

@@ -278,8 +278,8 @@ async function generateInstagramCaption(type: BoardType, date: string, summaries
 
     let boardTitle = type === 'NOON' ? '🌤️ 정오 이슈 보드' : '🌙 일일 이슈 보드';
     let introMessage = type === 'NOON'
-        ? '오전의 흐름을 정리하는 가장 완벽한 방법, TOP 10 이슈 리포트입니다.'
-        : '오늘 하루를 정리하는 가장 완벽한 방법, TOP 10 이슈 리포트입니다.';
+        ? '오전의 흐름을 정리하는 가장 완벽한 방법\nTOP 10 이슈 리포트입니다.'
+        : '오늘 하루를 정리하는 가장 완벽한 방법\nTOP 10 이슈 리포트입니다.';
 
     const rankEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
 
