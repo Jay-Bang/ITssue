@@ -3,6 +3,7 @@ import * as fs from 'fs-extra';
 import { renderCard, closeBrowser } from '../visual/card-renderer';
 import { Logger } from '../lib/logger';
 import { InstagramPublisher } from '../publish/instagram-publisher';
+import * as Handlebars from 'handlebars';
 import { FinalIssueBoard, BoardType } from '../types';
 
 /**
@@ -76,10 +77,10 @@ async function runManualRender() {
     const match = filename.match(/^results_(.+)_(20\d{2}\.\d{2}\.\d{2})\.json$/);
 
     let dateStr = '';
-    let type = 'CUSTOM';
+    let type: BoardType = 'CUSTOM';
 
     if (match) {
-        type = match[1];      // e.g. CUSTOM, NOON, NIGHT
+        type = match[1] as BoardType;      // e.g. CUSTOM, NOON, NIGHT
         dateStr = match[2];   // e.g. 2026.01.17
     } else {
         // Fallback or Error handling
@@ -116,6 +117,12 @@ async function runManualRender() {
         // [Config] Version A (Summary/Instagram) - Primary
         const p1Title = type === 'NOON' ? 'MIDDAY TRENDS' : 'DAILY TRENDS';
         await renderFullSet(formattedIssues, dateStr, SELECTED_THEME, dirA, true, boardTitle, visualVersion, p1Title);
+
+        // [Logic] Regenerate caption with new hashtag rotation
+        const newCaption = await generateInstagramCaption(type, dateStr, formattedIssues);
+        const captionPath = path.join(outputDir, `caption_${type}_${dateStr}.txt`);
+        await fs.writeFile(captionPath, newCaption, 'utf-8');
+        Logger.success(`Caption regenerated with rotation: ${captionPath}`);
 
         // await renderFullSet(formattedIssues, dateStr, SELECTED_THEME, dirB, false, boardTitle);
 
@@ -258,6 +265,49 @@ async function runManualRender() {
     } finally {
         await closeBrowser();
     }
+}
+
+const HASHTAG_SETS = [
+    "#ITssue #뉴스 #이슈 #트렌드",
+    "#ITssue #오늘의이슈 #뉴스요약 #트렌드",
+    "#ITssue #실시간이슈 #뉴스 #이슈",
+    "#ITssue #이슈정리 #뉴스 #오늘뉴스",
+    "#ITssue #트렌드분석 #뉴스 #이슈",
+    "#ITssue #뉴스정리 #이슈 #트렌드"
+];
+
+async function generateInstagramCaption(type: BoardType, date: string, summaries: FinalIssueBoard[]): Promise<string> {
+    const templatePath = path.join(__dirname, '../publish/templates/issue_board_caption.txt');
+    const templateSource = await fs.readFile(templatePath, 'utf-8');
+    const template = Handlebars.compile(templateSource);
+
+    let boardTitle = type === 'NOON' ? '🌤️ 정오 이슈 보드' : '🌙 일일 이슈 보드';
+    let introMessage = type === 'NOON'
+        ? '오전의 흐름을 정리하는 가장 완벽한 방법\nTOP 10 이슈 리포트입니다.'
+        : '오늘 하루를 정리하는 가장 완벽한 방법\nTOP 10 이슈 리포트입니다.';
+
+    const rankEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
+
+    const issues = summaries.map((s, idx) => ({
+        rankEmoji: rankEmojis[idx] || `${idx + 1}`,
+        keyword: s.representative_keyword
+    }));
+
+    const allTags = Array.from(new Set(summaries.flatMap(s => s.tags))).slice(0, 10);
+
+    // [Logic] Hashtag Rotation Strategy (6 sets, 3-day cycle)
+    const day = parseInt(date.split('.')[2], 10) || new Date().getDate();
+    const setIdx = (day % 3) * 2 + (type === 'NIGHT' ? 1 : 0);
+    const rotatingTags = HASHTAG_SETS[setIdx];
+
+    return template({
+        boardTitle,
+        introMessage,
+        date,
+        issues: issues,
+        allTags,
+        rotatingTags
+    });
 }
 
 // Re-using the logic from main-orchestrator
