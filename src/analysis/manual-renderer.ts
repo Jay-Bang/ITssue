@@ -28,10 +28,13 @@ async function runManualRender() {
     const args = process.argv.slice(2);
     const jsonPath = args.find(arg => !arg.startsWith('--'));
     const shouldPublish = args.includes('--publish');
+    const isBubblegum = args.includes('--bubblegum') || args.includes('--modern'); // Support both for transition
+    const isArcade = args.includes('--arcade');
+    let visualVersion: 'bubblegum' | 'arcade' = isArcade ? 'arcade' : 'bubblegum';
     const SELECTED_THEME = args.find(arg => !arg.startsWith('--') && arg !== jsonPath) || 'violet-bloom';
 
     if (!jsonPath) {
-        Logger.error('Usage: npm run board:render -- <path_to_json> [theme] [--publish]');
+        Logger.error('Usage: npm run board:render -- <path_to_json> [theme] [--publish] [--bubblegum|--arcade]');
         process.exit(1);
     }
 
@@ -55,8 +58,16 @@ async function runManualRender() {
     const isCustom = absoluteJsonPath.includes('CUSTOM');
 
     let boardTitle = "이슈 보드";
-    if (isNight) boardTitle = "일일 이슈 보드";
-    else if (isNoon) boardTitle = "정오 이슈 보드";
+    if (isNight) {
+        boardTitle = "일일 이슈 보드";
+        // [Logic] 일일(NIGHT) 보드는 bubblegum 스타일 전용
+        if (!isBubblegum && !isArcade) visualVersion = 'bubblegum';
+    }
+    else if (isNoon) {
+        boardTitle = "정오 이슈 보드";
+        // [Logic] 정오(NOON) 보드는 arcade 스타일 전용
+        if (!isBubblegum && !isArcade) visualVersion = 'arcade';
+    }
     else if (isCustom) boardTitle = "커스텀 이슈 보드";
 
     const filename = path.basename(absoluteJsonPath);
@@ -94,15 +105,16 @@ async function runManualRender() {
 
     try {
         // [Step 2] 카드 뉴스 렌더링 실행 (Puppeteer)
-        Logger.info(`🎨 Theme: ${SELECTED_THEME}`);
+        Logger.info(`🎨 Style: ${SELECTED_THEME} | Version: ${visualVersion}`);
 
-        const dirA = path.join(outputDir, `Instagram_Feed_${type}_${dateStr}`);
+        const dirSuffix = `_${visualVersion}`;
+        const dirA = path.join(outputDir, `Instagram_Feed_${type}_${dateStr}${dirSuffix}`);
         // const dirB = path.join(outputDir, `Detail_Feed_${type}_${dateStr}`);
         await fs.ensureDir(dirA);
         // await fs.ensureDir(dirB);
 
         // [Config] Version A (Summary/Instagram) - Primary
-        await renderFullSet(formattedIssues, dateStr, SELECTED_THEME, dirA, true, boardTitle);
+        await renderFullSet(formattedIssues, dateStr, SELECTED_THEME, dirA, true, boardTitle, visualVersion);
 
         // await renderFullSet(formattedIssues, dateStr, SELECTED_THEME, dirB, false, boardTitle);
 
@@ -252,14 +264,15 @@ async function runManualRender() {
  * [Logic] 카드 뉴스 이미지 세트 생성기
  * [Description] P1(랭킹), P2~P5(상위 이슈 상세), P6~P7(하위 이슈 그룹) 이미지를 순차적으로 렌더링합니다.
  */
-async function renderFullSet(issues: FinalIssueBoard[], date: string, theme: string, dir: string, isSummaryMode: boolean, boardTitle: string) {
+async function renderFullSet(issues: FinalIssueBoard[], date: string, theme: string, dir: string, isSummaryMode: boolean, boardTitle: string, visualVersion: 'bubblegum' | 'arcade' = 'bubblegum') {
+    const renderOpts = { visualVersion };
     // P1 Ranking Page
     const p1Data = {
         type: 'ranking' as const,
         date, theme, boardTitle,
         ranking: issues.map(i => ({ rank: i.rank!, keyword: i.representative_keyword }))
     };
-    await renderCard(p1Data, { outputPath: path.join(dir, 'P1_Ranking.png') });
+    await renderCard(p1Data, { ...renderOpts, outputPath: path.join(dir, 'P1_Ranking.png') });
 
     if (!isSummaryMode) {
         for (const issue of issues) {
@@ -272,7 +285,7 @@ async function renderFullSet(issues: FinalIssueBoard[], date: string, theme: str
                 summary: issue.instagram_summary
             };
             const safeName = issue.representative_keyword.replace(/[\/\\?%*:|"<>]/g, '_').replace(/\s+/g, '_');
-            await renderCard(detailData, { outputPath: path.join(dir, `P${issue.rank! + 1}_${safeName}.png`) });
+            await renderCard(detailData, { ...renderOpts, outputPath: path.join(dir, `P${issue.rank! + 1}_${safeName}.png`) });
         }
     } else {
         const top3 = issues.slice(0, 3);
@@ -286,7 +299,7 @@ async function renderFullSet(issues: FinalIssueBoard[], date: string, theme: str
                 summary: issue.instagram_summary
             };
             const safeName = issue.representative_keyword.replace(/[\/\\?%*:|"<>]/g, '_').replace(/\s+/g, '_');
-            await renderCard(detailData, { outputPath: path.join(dir, `P${issue.rank! + 1}_${safeName}.png`) });
+            await renderCard(detailData, { ...renderOpts, outputPath: path.join(dir, `P${issue.rank! + 1}_${safeName}.png`) });
         }
 
         const group4to6 = issues.slice(3, 6);
@@ -300,7 +313,7 @@ async function renderFullSet(issues: FinalIssueBoard[], date: string, theme: str
                     summaryLines: iss.instagram_summary.slice(0, 2)
                 }))
             };
-            await renderCard(groupData, { outputPath: path.join(dir, 'P5_Group4-6.png') });
+            await renderCard(groupData, { ...renderOpts, outputPath: path.join(dir, 'P5_Group4-6.png') });
         }
 
         const group7to10 = issues.slice(6, 10);
@@ -314,7 +327,7 @@ async function renderFullSet(issues: FinalIssueBoard[], date: string, theme: str
                     summaryLines: iss.instagram_summary.slice(0, 2)
                 }))
             };
-            await renderCard(groupData, { outputPath: path.join(dir, 'P6_Group7-10.png') });
+            await renderCard(groupData, { ...renderOpts, outputPath: path.join(dir, 'P6_Group7-10.png') });
         }
     }
 }

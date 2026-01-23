@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <style>
+    /* STYLING_PLACEHOLDER */
+  </style>
+  <link rel="stylesheet" as="style" crossorigin
+    href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.css" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&family=Fira+Code:wght@400;700&display=swap"
+    rel="stylesheet">
+</head>
+
+<body class="{{theme}}">
+
+  <div class="arcade-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="brand-v3">ITssue</div>
+      <div class="meta-v3">
+        <div>{{date}}</div>
+        <div>{{boardTitle}}</div>
+      </div>
+    </header>
+
+    {{#if (eq type 'ranking')}}
+    <!-- P1: Ranking Page (Arcade Leaderboard) -->
+    <main class="page-ranking">
+      <h1 class="heading-v3">TRENDING<br>KEYWORDS</h1>
+      <div class="ranking-grid-v3" id="r-grid">
+        {{#each ranking}}
+        <div class="arcade-tile">
+          <span class="pixel-badge">{{this.rank}}</span>
+          <span class="tile-key">{{this.keyword}}</span>
+        </div>
+        {{/each}}
+      </div>
+    </main>
+
+    {{else if (eq type 'group')}}
+    <!-- Group Page (P5, P6) -->
+    <main class="page-group" id="g-stack">
+      <div class="nav-label"><b>{{rankRange}}</b></div>
+      {{#each issues}}
+      <div class="group-shard">
+        <div class="shard-head">
+          <span class="pixel-badge">{{this.rank}}</span>
+          <div class="shard-key">{{this.keyword}}</div>
+        </div>
+        <div class="shard-tags">
+          {{#each this.subKeywords}}
+          <span class="pixel-tag">#{{this}}</span>
+          {{/each}}
+        </div>
+        <div class="shard-body">
+          {{#each this.summaryLines}}
+          <div class="line">• {{this}}</div>
+          {{/each}}
+        </div>
+      </div>
+      {{/each}}
+    </main>
+
+    {{else if (eq type 'issue-detail')}}
+    <!-- Detail Page (P2-P4) -->
+    <main class="page-detail">
+      <div class="nav-label"><b>TOP {{rank}}</b></div>
+      <h1 class="detail-title">
+        <span>{{keyword}}</span>
+      </h1>
+      <div class="tag-set">
+        {{#each subKeywords}}
+        <span class="pixel-tag">#{{this}}</span>
+        {{/each}}
+      </div>
+      <div class="summary-panel-v3">
+        <div class="summary-content">
+          {{#each summary}}
+          <div class="summary-line">{{this}}</div>
+          {{/each}}
+        </div>
+      </div>
+    </main>
+    {{/if}}
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="brand-footer">ITssue Intelligence Feed</div>
+    </footer>
+  </div>
+
+  <!-- Arcade Scaling Engine (Synced) -->
+  <script>
+    function scaleTitle() {
+      const h = document.querySelector('.detail-title span');
+      if (!h) return;
+      let fontSize = parseInt(window.getComputedStyle(h).fontSize);
+      const maxHeight = 240;
+      while (h.scrollHeight > maxHeight && fontSize > 40) {
+        fontSize -= 2;
+        h.style.fontSize = fontSize + 'px';
+      }
+    }
+
+    function scaleGrid() {
+      const grid = document.getElementById('r-grid');
+      if (!grid) return;
+      const tiles = grid.querySelectorAll('.arcade-tile');
+
+      let currentFontSize = 32;
+      const maxWidth = 340;
+
+      tiles.forEach(tile => {
+        const key = tile.querySelector('.tile-key');
+        if (!key) return;
+
+        let fontSize = 32;
+        key.style.fontSize = fontSize + 'px';
+        while (key.scrollWidth > maxWidth && fontSize > 16) {
+          fontSize -= 1;
+          key.style.fontSize = fontSize + 'px';
+        }
+
+        if (fontSize < currentFontSize) {
+          currentFontSize = fontSize;
+        }
+      });
+
+      tiles.forEach(tile => {
+        const key = tile.querySelector('.tile-key');
+        if (key) key.style.fontSize = currentFontSize + 'px';
+      });
+    }
+
+    function scaleGroupShards() {
+      const stack = document.getElementById('g-stack');
+      if (!stack) return;
+      const shards = stack.querySelectorAll('.group-shard');
+      shards.forEach(shard => {
+        const key = shard.querySelector('.shard-key');
+        const body = shard.querySelector('.shard-body');
+        const targetShardH = (stack.clientHeight / shards.length) - 15;
+
+        if (key) {
+          let kSize = parseFloat(window.getComputedStyle(key).fontSize);
+          while (key.scrollWidth > shard.clientWidth - 90 && kSize > 20) {
+            kSize -= 1;
+            key.style.fontSize = kSize + 'px';
+          }
+        }
+        if (body) {
+          let bSize = parseFloat(window.getComputedStyle(body).fontSize);
+          while (body.scrollHeight > targetShardH * 0.9 && bSize > 16) {
+            bSize -= 0.5;
+            body.style.fontSize = bSize + 'px';
+          }
+          if (shard.scrollHeight < targetShardH * 0.75) {
+            while (shard.scrollHeight < targetShardH * 0.85 && bSize < 44) {
+              bSize += 0.5;
+              body.style.fontSize = bSize + 'px';
+            }
+          }
+        }
+      });
+    }
+
+    function scaleDetailSummary() {
+      const panel = document.querySelector('.summary-panel-v3');
+      if (!panel) return;
+      const content = panel.querySelector('.summary-content');
+      if (!content) return;
+      let fontSize = parseFloat(window.getComputedStyle(content).fontSize);
+      const maxH = panel.clientHeight - 40;
+
+      while (content.scrollHeight > maxH && fontSize > 24) {
+        fontSize -= 1;
+        content.style.fontSize = fontSize + 'px';
+      }
+
+      if (content.scrollHeight < maxH * 0.85) {
+        while (content.scrollHeight < maxH * 0.9 && fontSize < 80) {
+          fontSize += 1;
+          content.style.fontSize = fontSize + 'px';
+        }
+      }
+    }
+
+    function globalOverflowCheck() {
+      const main = document.querySelector('main');
+      if (!main) return;
+      const container = document.querySelector('.arcade-container');
+      if (!container) return;
+
+      const maxH = container.clientHeight + 10;
+      let iterations = 0;
+
+      while (container.scrollHeight > maxH && iterations < 20) {
+        let currentSize = parseFloat(window.getComputedStyle(main).fontSize) || 16;
+        main.style.fontSize = (currentSize * 0.99) + 'px';
+
+        const subElements = main.querySelectorAll('.shard-key, .shard-body, .summary-line, .detail-title');
+        subElements.forEach(el => {
+          let elSize = parseFloat(window.getComputedStyle(el).fontSize);
+          el.style.fontSize = (elSize * 0.99) + 'px';
+        });
+        iterations++;
+      }
+    }
+
+    function fitStack() {
+      const stack = document.getElementById('g-stack');
+      if (!stack) return;
+      const shards = stack.querySelectorAll('.group-shard');
+      if (shards.length >= 4) {
+        shards.forEach(s => s.classList.add('compact'));
+      }
+    }
+
+    function runV3Init() {
+      fitStack();
+      scaleTitle();
+      scaleGrid();
+      scaleGroupShards();
+      scaleDetailSummary();
+      globalOverflowCheck();
+    }
+
+    window.addEventListener('load', runV3Init);
+    if (document.fonts) {
+      document.fonts.ready.then(runV3Init);
+    }
+  </script>
+</body>
+
+</html>

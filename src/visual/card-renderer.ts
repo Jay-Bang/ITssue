@@ -49,10 +49,12 @@ export interface RenderOptions {
     deviceScaleFactor?: number; // 고해상도(Retina 등) 대응 배율
     timeout?: number;
     retry?: number; // 렌더링 실패 시 재시도 횟수
+    visualVersion?: 'bubblegum' | 'arcade'; // 디자인 스타일 (bubblegum, arcade)
 }
 
 // Handlebars 공통 헬퍼 등록
 Handlebars.registerHelper('eq', (a, b) => a === b);
+Handlebars.registerHelper('or', (a, b) => a || b);
 
 // Singleton Pattern for Browser Instance
 // Why? 브라우저 런칭 비용(Overhead)이 크기 때문에, 매 요청마다 띄우지 않고 재사용합니다.
@@ -110,11 +112,12 @@ export async function renderCard(data: CardData, options: RenderOptions) {
         height = 1350,
         deviceScaleFactor = 2,
         timeout = 15000,
-        retry = 1
+        retry = 1,
+        visualVersion = 'bubblegum'
     } = options;
 
-    const templatePath = path.join(__dirname, 'template.html');
-    const stylePath = path.join(__dirname, 'style.css');
+    const templatePath = path.join(__dirname, visualVersion, 'template.html');
+    const stylePath = path.join(__dirname, visualVersion, 'style.css');
 
     // [Step 1] 리소스 로드 (HTML/CSS)
     Logger.time('Template & Data Prep');

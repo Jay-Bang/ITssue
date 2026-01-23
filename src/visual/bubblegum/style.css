@@ -1,0 +1,381 @@
+/**
+ * ITssue-AI Design System [v3: Bubblegum Pop - Dark Edition]
+ * 
+ * [Concept] Playful, Vibrant, Deep Contrast.
+ * [Colors] Based on tweakcn_docs/utils/theme-presets.ts "bubblegum" dark theme.
+ * [Layout] Synchronized with Arcade Layout (v3.1)
+ */
+
+:root {
+  /* Bubblegum Dark Colors */
+  --bg-base: #12242e;
+  /* Deep Navy */
+  --fg-main: #f3e3ea;
+  /* Pinkish White */
+  --card-bg: #1c2e38;
+  /* Slate Blue */
+
+  --accent-yellow: #fbe2a7;
+  /* Primary Accent (Light Yellow) */
+  --accent-pink: #e4a2b1;
+  /* Secondary Accent (Soft Pink) */
+  --accent-magenta: #c67b96;
+  /* Tertiary Accent */
+  --accent-teal: #50afb6;
+  /* Contrast Neon Teal */
+  --muted-color: #e4a2b1;
+
+  --font-header: 'Poppins', 'Outfit', sans-serif;
+  --font-display: 'Outfit', 'Pretendard', sans-serif;
+  --font-mono: 'Fira Code', 'Space Mono', monospace;
+
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-sm: 8px;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@700;800;900&family=Outfit:wght@800;900&family=Space+Mono:wght@400;700&display=swap');
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.css');
+
+body {
+  margin: 0;
+  padding: 0;
+  width: 1080px;
+  height: 1350px;
+  background-color: var(--bg-base);
+  color: var(--fg-main);
+  font-family: var(--font-display);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Deep Atmosphere Overlay */
+body::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 90% 10%, rgba(251, 226, 167, 0.05), transparent 30%),
+    radial-gradient(circle at 10% 90%, rgba(228, 162, 177, 0.05), transparent 30%);
+  z-index: 0;
+}
+
+.arcade-container {
+  width: 1000px;
+  height: 1270px;
+  display: grid;
+  grid-template-rows: 100px 1fr 40px;
+  position: relative;
+  z-index: 10;
+  box-sizing: border-box;
+  overflow: hidden;
+  padding: 0;
+}
+
+main {
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+  padding: 20px 0;
+  overflow: hidden;
+}
+
+/* Header */
+.header {
+  grid-row: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0;
+  border-bottom: 4px solid var(--accent-yellow);
+  height: 100px;
+  margin-bottom: 0;
+  box-sizing: border-box;
+}
+
+/* Footer */
+.footer {
+  grid-row: 3;
+  border-top: 4px solid var(--accent-yellow);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 0;
+  height: 40px;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--muted-color);
+  font-family: var(--font-header);
+  background: transparent;
+  z-index: 0;
+}
+
+.brand-v3 {
+  font-family: var(--font-header);
+  font-size: 64px;
+  font-weight: 950;
+  color: var(--accent-yellow);
+  letter-spacing: -3px;
+  line-height: 1;
+}
+
+.meta-v3 {
+  text-align: right;
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--fg-main);
+  font-family: var(--font-header);
+  line-height: 1.2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.meta-v3 div:last-child {
+  color: var(--accent-pink);
+}
+
+/* Bubblegum Dark UI Components */
+.pixel-badge {
+  font-family: var(--font-header);
+  font-size: 24px;
+  background: var(--accent-pink);
+  color: var(--bg-base);
+  padding: 6px 14px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-md);
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.2);
+}
+
+.tag-v2,
+.tag-v3,
+.pixel-tag {
+  font-family: var(--font-header);
+  font-size: 20px;
+  background: var(--accent-magenta);
+  color: var(--fg-main);
+  padding: 8px 18px;
+  border-radius: var(--radius-md);
+  box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.1);
+}
+
+/* P1: Ranking Page */
+.heading-v3 {
+  font-family: var(--font-header);
+  font-size: 84px;
+  font-weight: 950;
+  line-height: 0.8;
+  color: var(--accent-yellow);
+  margin-top: 0;
+  margin-bottom: 25px;
+  letter-spacing: -4px;
+  text-transform: uppercase;
+}
+
+.ranking-grid-v3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: repeat(5, 1fr);
+  grid-auto-flow: column;
+  gap: 15px;
+  flex: 1;
+  max-height: 100%;
+}
+
+.arcade-tile {
+  background: var(--card-bg);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 30px 35px;
+  display: flex;
+  align-items: center;
+  box-shadow: 5px 5px 0px rgba(0, 0, 0, 0.25);
+  height: 95px;
+  box-sizing: border-box;
+}
+
+.arcade-tile .pixel-badge {
+  margin-right: 30px;
+  width: 65px;
+  height: 52px;
+  justify-content: center;
+  font-size: 36px;
+  /* Synced with Arcade (was 34px) */
+  font-weight: 900;
+}
+
+.tile-key {
+  font-size: 32px;
+  font-weight: 750;
+  color: var(--fg-main);
+  font-family: var(--font-display);
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* P2-P4: Detail */
+.page-detail {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.nav-label {
+  font-size: 32px;
+  /* Synced with Arcade (was 28px) */
+  color: var(--muted-color);
+  margin-top: 10px;
+  margin-bottom: 25px;
+  font-weight: 800;
+  font-family: var(--font-header);
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  /* Synced (was 1px) */
+}
+
+.nav-label b {
+  color: var(--accent-yellow);
+  font-size: 40px;
+  /* Synced with Arcade (was 36px) */
+  margin-left: 5px;
+}
+
+.detail-title {
+  font-family: var(--font-display);
+  font-size: 100px;
+  font-weight: 950;
+  line-height: 0.95;
+  color: var(--fg-main);
+  margin-top: 0;
+  margin-bottom: 15px;
+  letter-spacing: -2px;
+}
+
+/* For dynamic scaling span in template.html */
+.detail-title span {
+  display: inline-block;
+}
+
+.detail-tags,
+.tag-set {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 40px;
+}
+
+.summary-panel-v3 {
+  flex: 1;
+  background: var(--card-bg);
+  border: none;
+  border-radius: var(--radius-lg);
+  padding: 30px 50px;
+  /* Synced (was 35px 55px) */
+  box-shadow: 12px 12px 0px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.summary-line {
+  font-size: 52px;
+  line-height: 1.3;
+  /* Synced (was 1.4) */
+  margin-bottom: 1em;
+  font-weight: 500;
+  color: var(--fg-main);
+  font-family: var(--font-display);
+  word-break: keep-all;
+}
+
+.summary-line:last-child {
+  margin-bottom: 0;
+}
+
+/* P5-P6: Group View */
+.page-group {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 20px;
+}
+
+.group-shard {
+  background: var(--card-bg);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 20px 40px;
+  box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.group-shard.compact {
+  padding: 18px 40px;
+  /* Synced with Arcade refined values */
+}
+
+.group-shard.compact .shard-key {
+  font-size: 44px;
+  /* Synced */
+}
+
+.group-shard.compact .tag-v2,
+.group-shard.compact .tag-v3,
+.group-shard.compact .pixel-tag {
+  font-size: 16px;
+  padding: 5px 12px;
+}
+
+.shard-head {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 12px;
+}
+
+.shard-key {
+  font-family: var(--font-display);
+  font-size: 56px;
+  font-weight: 950;
+  color: var(--fg-main);
+  letter-spacing: -1px;
+}
+
+.shard-tags {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+
+.shard-body {
+  font-size: 32px;
+  line-height: 1.35;
+  color: var(--fg-main);
+}
+
+.compact .shard-body {
+  font-size: 28px;
+}
+
+.brand-footer {
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--accent-yellow);
+}

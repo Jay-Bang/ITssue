@@ -132,7 +132,10 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
         const dirA = path.join(outputDir, `Instagram_Feed_${type}_${dateStr}`);
         await fs.ensureDir(dirA);
 
-        await renderFullSet(renderIssues, dateStr, SELECTED_THEME, dirA, true, boardTitles[type]);
+        // [Logic] 테마별 스타일 지정: NOON(arcade), NIGHT(bubblegum)
+        const visualVersion: 'bubblegum' | 'arcade' = type === 'NOON' ? 'arcade' : 'bubblegum';
+
+        await renderFullSet(renderIssues, dateStr, SELECTED_THEME, dirA, true, boardTitles[type], visualVersion);
 
         // [Step 8] Supabase Storage 동기화 및 최종 발행
         if (boardId) {
@@ -299,9 +302,10 @@ async function generateInstagramCaption(type: BoardType, date: string, summaries
  * [Logic] 카드 뉴스 이미지 세트 생성기
  * [Description] P1(랭킹), P2~P5(상위 이슈 상세), P6~P7(하위 이슈 그룹) 이미지를 순차적으로 렌더링합니다.
  */
-async function renderFullSet(issues: FinalIssueBoard[], date: string, theme: string, dir: string, isSummaryMode: boolean, boardTitle: string) {
+async function renderFullSet(issues: FinalIssueBoard[], date: string, theme: string, dir: string, isSummaryMode: boolean, boardTitle: string, visualVersion: 'bubblegum' | 'arcade' = 'bubblegum') {
+    const renderOpts = { visualVersion };
     const p1Data = { type: 'ranking' as const, date, theme, boardTitle, ranking: issues.map(i => ({ rank: i.rank!, keyword: i.representative_keyword })) };
-    await renderCard(p1Data, { outputPath: path.join(dir, 'P1_Ranking.png') });
+    await renderCard(p1Data, { ...renderOpts, outputPath: path.join(dir, 'P1_Ranking.png') });
 
     const top3 = issues.slice(0, 3);
     for (const issue of top3) {
@@ -314,7 +318,7 @@ async function renderFullSet(issues: FinalIssueBoard[], date: string, theme: str
             summary: issue.instagram_summary
         };
         const safeName = issue.representative_keyword.replace(/[\/\\?%*:|"<>]/g, '_').replace(/\s+/g, '_');
-        await renderCard(detailData, { outputPath: path.join(dir, `P${issue.rank! + 1}_${safeName}.png`) });
+        await renderCard(detailData, { ...renderOpts, outputPath: path.join(dir, `P${issue.rank! + 1}_${safeName}.png`) });
     }
 
     const group4to6 = issues.slice(3, 6);
@@ -328,7 +332,7 @@ async function renderFullSet(issues: FinalIssueBoard[], date: string, theme: str
                 summaryLines: iss.instagram_summary.slice(0, 2)
             }))
         };
-        await renderCard(groupData, { outputPath: path.join(dir, 'P5_Group4-6.png') });
+        await renderCard(groupData, { ...renderOpts, outputPath: path.join(dir, 'P5_Group4-6.png') });
     }
 
     const group7to10 = issues.slice(6, 10);
@@ -342,7 +346,7 @@ async function renderFullSet(issues: FinalIssueBoard[], date: string, theme: str
                 summaryLines: iss.instagram_summary.slice(0, 2)
             }))
         };
-        await renderCard(groupData, { outputPath: path.join(dir, 'P6_Group7-10.png') });
+        await renderCard(groupData, { ...renderOpts, outputPath: path.join(dir, 'P6_Group7-10.png') });
     }
 }
 

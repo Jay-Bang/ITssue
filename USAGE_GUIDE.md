@@ -11,6 +11,7 @@
 
 ```bash
 # [기본] 오늘자 정오 보드 생성 (분석 및 로컬 저장)
+# 테마: Arcade (Retro Arcade Light) 자동 적용
 npm run board:noon
 
 # [과거] 특정 날짜의 정오 보드 생성 (예: 2026-01-20 기준)
@@ -25,6 +26,7 @@ npm run board:noon -- --publish
 
 ```bash
 # [기본] 오늘자 일일 보드 생성
+# 테마: Bubblegum (Bubblegum Dark) 자동 적용
 npm run board:night
 
 # [과거] 특정 날짜의 일일 보드 생성
@@ -94,10 +96,12 @@ npm run debug date
 
 이미 생성된 분석 결과(`results_*.json`)를 디자인만 바꿔서 다시 그릴 때 사용합니다.
 
-### 🖼️ 이미지 단순 재생성
-```bash
+# [기본] 리포트 타입에 맞춰 테마 자동 선택 (NOON -> Arcade, NIGHT -> Bubblegum)
 npm run board:render -- output/2026.01.20_NIGHT/results_NIGHT_2026.01.20.json
-```
+
+# [수동] 테마 명시적 지정
+npm run board:render -- output/2026.01.20_NIGHT/results_NIGHT_2026.01.20.json --bubblegum
+npm run board:render -- output/2026.01.20_NIGHT/results_NIGHT_2026.01.20.json --arcade
 
 ### 🚀 이미지 재생성 후 인스타그램 재발행 ✨
 기존 게시물 정보를 `publish_info.json`에서 읽어와 **기존 게시물을 삭제하고 새 버전으로 교체(재발행)**합니다.

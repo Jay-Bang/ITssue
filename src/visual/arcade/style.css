@@ -1,0 +1,384 @@
+/**
+ * ITssue-AI Design System [v3: Official Retro Arcade - Light Edition]
+ * 
+ * [Concept] Solarized Arcade Light, High Contrast, Paper-Terminal.
+ * [Colors] Based on tweakcn_docs/utils/theme-presets.ts "retro-arcade" light theme.
+ */
+
+:root {
+    /* Official Retro Arcade Colors (Light) */
+    --bg-arcade: #fdf6e3;
+    --fg-arcade: #073642;
+    --card-arcade: #eee8d5;
+    --primary-arcade: #d33682;
+    /* Magenta */
+    --secondary-arcade: #2aa198;
+    /* Cyan */
+    --accent-arcade: #cb4b16;
+    /* Orange */
+    --muted-arcade: #839496;
+
+    --font-arcade: 'Space Mono', 'JetBrains Mono', monospace;
+    --font-display: 'Outfit', 'Pretendard', sans-serif;
+    --radius-sm: 4px;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@800;900&family=Space+Mono:wght@400;700&display=swap');
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.css');
+
+body {
+    margin: 0;
+    padding: 0;
+    width: 1080px;
+    height: 1350px;
+    background-color: var(--bg-arcade);
+    color: var(--fg-arcade);
+    font-family: var(--font-arcade);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Light Solarized Overlay */
+body::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+        radial-gradient(circle at 100% 0%, rgba(211, 54, 130, 0.03), transparent 40%),
+        radial-gradient(circle at 0% 100%, rgba(42, 161, 152, 0.03), transparent 40%);
+    z-index: 0;
+}
+
+.arcade-container {
+    width: 1000px;
+    height: 1270px;
+    display: grid;
+    grid-template-rows: 100px 1fr 40px;
+    /* User Adjusted: Header(100px) | Content(Auto) | Footer(40px) */
+    position: relative;
+    z-index: 10;
+    box-sizing: border-box;
+    overflow: hidden;
+    padding: 0;
+    /* No padding on container, handled by grid items */
+}
+
+main {
+    grid-row: 2;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-height: 0;
+    /* Important for flex children in grid */
+    padding: 20px 0;
+    /* Unified top/bottom padding for content */
+    overflow: hidden;
+    /* Safety for overflow */
+}
+
+/* Header */
+.header {
+    grid-row: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    /* Align to top to match 40px margin */
+    padding: 0;
+    /* Remove all internal padding */
+    border-bottom: 3.5px solid var(--fg-arcade);
+    height: 100px;
+    /* Reduced height to bring h-bar up */
+    margin-bottom: 0;
+    box-sizing: border-box;
+}
+
+/* Footer */
+.footer {
+    grid-row: 3;
+    border-top: 3.5px solid var(--fg-arcade);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    /* Pin text to bottom 40px margin */
+    padding: 0;
+    height: 40px;
+    /* Lowered h-bar by reducing height from 100px to 40px */
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--muted-arcade);
+    font-family: var(--font-arcade);
+    background: transparent;
+    z-index: 0;
+}
+
+.brand-v3 {
+    font-family: var(--font-display);
+    font-size: 64px;
+    font-weight: 950;
+    color: var(--primary-arcade);
+    letter-spacing: -3px;
+    line-height: 1;
+}
+
+.meta-v3 {
+    text-align: right;
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--fg-arcade);
+    font-family: var(--font-arcade);
+    line-height: 1.2;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+}
+
+.meta-v3 div:last-child {
+    color: var(--secondary-arcade);
+}
+
+/* Global UI Components */
+.pixel-badge {
+    font-family: var(--font-arcade);
+    font-size: 24px;
+    background: var(--primary-arcade);
+    color: #fff;
+    padding: 8px 16px;
+    display: inline-flex;
+    align-items: center;
+    border-radius: var(--radius-sm);
+    box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.2);
+}
+
+.pixel-tag {
+    font-family: var(--font-arcade);
+    font-size: 20px;
+    background: var(--secondary-arcade);
+    color: #fff;
+    padding: 8px 18px;
+    border-radius: var(--radius-sm);
+    box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.1);
+}
+
+/* P1: Ranking Page (Leaderboard Grid) */
+.page-ranking {
+    /* Main grid-row: 2 inherited */
+}
+
+.heading-v3 {
+    font-family: var(--font-display);
+    font-size: 84px;
+    /* Slightly reduced for better top balance */
+    font-weight: 950;
+    line-height: 0.8;
+    color: var(--fg-arcade);
+    margin-top: 0;
+    margin-bottom: 25px;
+    letter-spacing: -4px;
+    text-transform: uppercase;
+}
+
+.ranking-grid-v3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: repeat(5, 1fr);
+    grid-auto-flow: column;
+    gap: 15px;
+    flex: 1;
+    /* Fill remaining height */
+    max-height: 100%;
+}
+
+.arcade-tile {
+    background: var(--card-arcade);
+    border: 2px solid var(--muted-arcade);
+    border-radius: var(--radius-sm);
+    padding: 30px 35px;
+    display: flex;
+    align-items: center;
+    box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.1);
+    height: 95px;
+    /* Reduced from 120px/100px */
+    box-sizing: border-box;
+}
+
+.arcade-tile .pixel-badge {
+    margin-right: 30px;
+    width: 65px;
+    height: 52px;
+    justify-content: center;
+    font-size: 36px;
+    /* Larger for clear ranking hierarchy */
+}
+
+.tile-key {
+    font-size: 32px;
+    /* Baseline for scaling */
+    font-weight: 750;
+    color: var(--fg-arcade);
+    font-family: var(--font-display);
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* P2-P4: Detail (Information Panel) */
+.page-detail {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.nav-label {
+    font-size: 32px;
+    color: var(--muted-arcade);
+    margin-top: 10px;
+    margin-bottom: 25px;
+    /* Height is now flexible */
+    font-weight: 800;
+    font-family: var(--font-arcade);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.nav-label b {
+    color: var(--primary-arcade);
+    font-size: 40px;
+    margin-left: 5px;
+}
+
+.detail-title {
+    font-family: var(--font-display);
+    font-size: 100px;
+    /* Reduced from 110px */
+    font-weight: 950;
+    line-height: 0.95;
+    color: var(--fg-arcade);
+    margin-top: 0;
+    margin-bottom: 15px;
+    letter-spacing: -2px;
+}
+
+.tag-set {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 40px;
+}
+
+.summary-panel-v3 {
+    flex: 1;
+    background: var(--card-arcade);
+    border: 3.5px solid var(--primary-arcade);
+    border-radius: var(--radius-sm);
+    padding: 30px 50px;
+    /* Reduced padding to save space */
+    box-shadow: 12px 12px 0px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.summary-line {
+    font-size: 52px;
+    line-height: 1.3;
+    margin-bottom: 1em;
+    /* Gap equal to font size */
+    font-weight: 500;
+    color: var(--fg-arcade);
+    font-family: var(--font-display);
+    word-break: keep-all;
+}
+
+.summary-line:last-child {
+    margin-bottom: 0;
+}
+
+/* P5-P6: Group View */
+.page-group {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    gap: 20px;
+}
+
+.group-shard {
+    background: var(--card-arcade);
+    border: 2.5px solid var(--primary-arcade);
+    border-radius: var(--radius-sm);
+    padding: 20px 40px;
+    /* More compact padding */
+    box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.group-shard.compact {
+    padding: 15px 35px;
+}
+
+.shard-head {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 12px;
+}
+
+.shard-key {
+    font-family: var(--font-display);
+    font-size: 56px;
+    /* Reduced from 64px to prevent overflow */
+    font-weight: 950;
+    color: var(--fg-arcade);
+    letter-spacing: -1px;
+}
+
+.compact .shard-key {
+    font-size: 48px;
+}
+
+.shard-tags {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.shard-body {
+    font-size: 32px;
+    /* Balanced baseline */
+    line-height: 1.35;
+    color: var(--fg-arcade);
+}
+
+.compact .shard-body {
+    font-size: 28px;
+}
+
+.group-shard.compact {
+    padding: 18px 40px;
+}
+
+.group-shard.compact .shard-key {
+    font-size: 44px;
+}
+
+.group-shard.compact .pixel-tag {
+    font-size: 16px;
+    padding: 5px 12px;
+}
+
+
+
+.footer-highlight {
+    color: var(--primary-arcade);
+}
