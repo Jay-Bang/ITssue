@@ -1,9 +1,12 @@
 /**
- * ITssue-AI Design System [v3: Bubblegum Pop - Dark Edition]
+ * [Visual Theme: Bubblegum - Style]
  * 
- * [Concept] Playful, Vibrant, Deep Contrast.
- * [Colors] Based on tweakcn_docs/utils/theme-presets.ts "bubblegum" dark theme.
- * [Layout] Synchronized with Arcade Layout (v3.1)
+ * [Description] ITssue-AI Bubblegum Pop (Dark Edition)의 스타일 시트입니다.
+ * 
+ * [Design Intent]
+ * - 딥 네이비 배경과 네온 옐로우/핑크 액센트를 활용한 트렌디한 야간 테마 구현.
+ * - Arcade(v3.1) 테마와 완벽한 기하학적 동기화를 통해 레이아웃 일관성 유지.
+ * - 가변폭 폰트(Outfit)를 메인으로 채택하여 본문 정보 밀도 및 가독성 최적화.
  */
 
 :root {

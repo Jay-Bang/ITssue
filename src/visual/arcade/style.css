@@ -1,8 +1,12 @@
 /**
- * ITssue-AI Design System [v3: Official Retro Arcade - Light Edition]
+ * [Visual Theme: Arcade - Style]
  * 
- * [Concept] Solarized Arcade Light, High Contrast, Paper-Terminal.
- * [Colors] Based on tweakcn_docs/utils/theme-presets.ts "retro-arcade" light theme.
+ * [Description] ITssue-AI Official Retro Arcade (Light Edition)의 스타일 시트입니다.
+ * 
+ * [Design Intent]
+ * - Solarized Light 팔레트를 베이스로 한 고대비 종이 터미널 감성 구현.
+ * - CSS Grid(100px-1fr-40px)를 활용하여 상하 대칭 및 기하학적 정합성 확보.
+ * - 인스타그램 4:5 비율(1080x1350)에 최적화된 고정 레이아웃 시스템.
  */
 
 :root {

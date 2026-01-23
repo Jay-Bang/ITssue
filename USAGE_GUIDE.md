@@ -78,9 +78,9 @@ npm run debug rank 2026-01-20T09:00:00 2026-01-20T11:00:00
 npm run debug merge 2026-01-20T09:00:00 2026-01-20T11:00:00
 ```
 
-### 🤖 AI 요약 테스트 (AI Summary)
+### 🤖 Cloud AI 요약 테스트 (AI Summary)
 ```bash
-# Gemini AI 요약 생성 테스트
+# Cloud AI 요약 생성 테스트 (Search Grounding 연동)
 npm run debug summary "비트코인"
 ```
 
@@ -92,16 +92,19 @@ npm run debug date
 
 ---
 
-## 🎨 3. 수동 렌더링 및 재발행 (Rendering & Republishing)
+### 🎨 3. 수동 렌더링 및 재발행 (Rendering & Republishing)
 
-이미 생성된 분석 결과(`results_*.json`)를 디자인만 바꿔서 다시 그릴 때 사용합니다.
+이미 생성된 분석 결과(`results_*.json`)를 디자인만 바꿔서 다시 그릴 때 사용합니다. 
+모든 렌더링은 인스타그램 최적 규격인 **4:5 비율 (1080x1350)**로 생성됩니다.
 
+```bash
 # [기본] 리포트 타입에 맞춰 테마 자동 선택 (NOON -> Arcade, NIGHT -> Bubblegum)
 npm run board:render -- output/2026.01.20_NIGHT/results_NIGHT_2026.01.20.json
 
 # [수동] 테마 명시적 지정
 npm run board:render -- output/2026.01.20_NIGHT/results_NIGHT_2026.01.20.json --bubblegum
 npm run board:render -- output/2026.01.20_NIGHT/results_NIGHT_2026.01.20.json --arcade
+```
 
 ### 🚀 이미지 재생성 후 인스타그램 재발행 ✨
 기존 게시물 정보를 `publish_info.json`에서 읽어와 **기존 게시물을 삭제하고 새 버전으로 교체(재발행)**합니다.

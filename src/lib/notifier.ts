@@ -10,6 +10,15 @@ dotenv.config();
  * [Notification Service]
  * 
  * [Description] 분석 결과를 텔레그램을 통해 전송하는 서비스입니다.
+ * 
+ * [Design Intent]
+ * - 이미지 묶음(Media Group)과 텍스트(Capion)를 분리하여 전송함으로써 정보 전달 효율성 극대화.
+ * - 텔레그램 API의 최대 전송 제약(10장)을 엔진 레벨에서 관리.
+ * 
+ * [Key Logic Flow]
+ * 1. 텔레그램 봇 토큰 및 챗 ID 유효성 검증.
+ * 2. [Step] 이미지 파일들을 읽어 `form-data` 스트림 생성 및 Media Group 전송.
+ * 3. [Step] 인스타그램 캡션 데이터를 마크다운 형식으로 가공하여 메시지 전항.
  */
 export class NotificationService {
     private readonly telegramToken = process.env.TELEGRAM_BOT_TOKEN;

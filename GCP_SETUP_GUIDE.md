@@ -85,7 +85,7 @@ cp .env.example .env
 nano .env
 ```
 
-`nano` 편집기가 열리면 `SUPABASE_KEY`, `GEMINI_API_KEY` 등의 값을 입력하세요.
+`nano` 편집기가 열리면 `SUPABASE_SERVICE_KEY`, `CLOUD_AI_KEY`, `CLOUD_AI_MODEL` 등의 값을 입력하세요.
 - **저장 방법**: `Ctrl + O` -> `Enter`
 - **종료 방법**: `Ctrl + X`
 

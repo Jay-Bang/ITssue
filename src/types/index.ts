@@ -2,6 +2,10 @@
  * [ITssue Core Type Definitions]
  * 
  * [Description] 프로젝트 전역에서 사용되는 핵심 데이터 인터페이스 및 타입을 정의합니다.
+ * 
+ * [Design Intent]
+ * - 데이터 흐름(Data Flow)에 따른 단계적 인터페이스 정의 (Snapshot -> Entity -> Board).
+ * - 분석 메타데이터와 결과물을 분리하여 리포팅 및 감사(Audit) 편의성 제공.
  */
 
 /**
