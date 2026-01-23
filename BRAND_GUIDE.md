@@ -27,6 +27,9 @@ ITssue의 심볼은 아날로그 데이터가 디지털 지능으로 승화되�
     - **Crystal Voxels**: AI에 의해 정제된 핵심 인사이트와 트렌드 지능
     - **Glow**: 지식의 발견과 확산 (Magenta & Cyan)
 
+#### Design Specification (Prompt)
+> "A high-end 3D illustration for a brand logo. The main object is a realistic stack of folded newspapers floating in the center. [Left Side - Analog News] The left side shows the distinct texture of paper layers, uneven edges, and greyscale newsprint. [Right Side - Digital Intelligence] The newspaper stack seamlessly morphs and dissolves into glowing translucent crystal voxels (3D pixels) on the right side. The digital parts emit a vibrant neon glow in Magenta (#d33682) and Cyan (#2aa198). [Typography] Floating slightly below the object, the brand name 'ITssue' is written in a bold, modern, white sans-serif 3D font. [Environment] Background: A solid, matte Deep Navy (#12242e) wall."
+
 ### Logo Typography
 브랜드명은 한글과 영문의 균형 있는 병기를 원칙으로 하며, 콜론(:) 전후에 명시적인 공백을 두어 가독성을 확보합니다.
 - **표기법**: `잇슈 : ITssue`
@@ -83,23 +86,13 @@ ITssue는 발행 시간에 따라 두 가지 시각적 페르소나를 가집니
 ## 5. Social Media Strategy (Instagram)
 
 ### Profile (Bio)
-인스타그램 프로필은 서비스의 전문성과 리듬감을 압축하여 전달합니다.
+인스타그램 프로필은 **4줄 규격**에 따라 서비스의 전문성과 리드미컬한 분석 엔진의 정체성을 전달합니다.
 
-#### [Option A] Professional Analysis Focus
-> **잇슈 : ITssue**  
-> 🤖 AI가 실시간으로 분석하는 자율형 트렌드 엔진  
-> 🌤️ 낮 12시 : 오전의 흐름을 읽는 미드데이 리포트  
-> 🌙 밤 10시 : 오늘 하루를 정리하는 파이널 리포트  
-> 🔍 데이터 이면의 지능형 인사이트를 전달합니다.
-
-#### [Option B] Minimalist Concept Focus
-> **잇슈 : ITssue**  
-> 데이터의 파편을 지능의 결정체로.  
-> ──────────────  
-> 🌤 12:00 MIDDAY TRENDS  
-> 🌙 22:00 DAILY RECAP  
-> ──────────────  
-> AI-Powered Trend Intelligence Engine
+#### Final Confirmed Bio
+> `[INIT]` 트렌드 신호 수집 📡  
+> `[OK]` 중요도 분석 및 랭킹 🧠  
+> `[NEXT]` ☀️ 정오 · 🌙 일일 리포트 발행  
+> `잇슈 : ITssue` ⚡
 
 ### Signature Catchphrase
 > **"오늘 하루를 정리하는 가장 완벽한 방법, ITssue."**  
