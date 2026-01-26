@@ -127,9 +127,13 @@ export class InstagramPublisher {
                 itemIds.push(id);
             }
 
-            // [Safety] 인스타그램 이미지 처리 지연 대기
-            Logger.info('⏳ Waiting for Instagram to process images (40s)...');
-            await new Promise(resolve => setTimeout(resolve, 40000));
+            // [Safety] 인스타그램 이미지 처리 지연 대기 (Smart Polling)
+            // 1. 최소 물리적 시간 보장 (20초)
+            Logger.info('⏳ Waiting 20s initial buffer for processing...');
+            await new Promise(resolve => setTimeout(resolve, 20000));
+
+            // 2. 상태 기반 폴링 (Exponential Backoff)
+            await this.waitUntilAllItemsFinished(itemIds);
 
             // [Step 2] 캐러셀 컨테이너(Carousel Container) 생성
             Logger.info('📦 Assembling carousel container...');
@@ -191,5 +195,59 @@ export class InstagramPublisher {
             Logger.error(`[Instagram] Failed to delete media ${mediaId}`, errorDetail);
             return false;
         }
+    }
+
+    /**
+     * 컨테이너 상태 확인 (Smart Check)
+     */
+    private async checkContainerStatus(containerId: string): Promise<string> {
+        const url = `${this.baseUrl}/${containerId}`;
+        try {
+            const response = await axios.get(url, {
+                params: {
+                    fields: 'status_code,status',
+                    access_token: this.accessToken
+                }
+            });
+            return response.data.status_code || 'UNKNOWN';
+        } catch (error: any) {
+            Logger.warn(`[Instagram] Failed to check status for ${containerId}`, error.message);
+            return 'ERROR';
+        }
+    }
+
+    /**
+     * 모든 아이템 컨테이너가 FINISHED 상태가 될 때까지 대기
+     */
+    private async waitUntilAllItemsFinished(itemIds: string[]) {
+        const MAX_TRY = 12;        // 최대 약 60~90초 추가 대기
+        let interval = 5000;       // 시작 5초
+
+        Logger.info(`🕵️ Checking status for ${itemIds.length} items...`);
+
+        for (let i = 0; i < MAX_TRY; i++) {
+            const statuses = await Promise.all(
+                itemIds.map(id => this.checkContainerStatus(id))
+            );
+
+            // 모든 항목이 완료되었는지 확인
+            const allFinished = statuses.every(s => s === 'FINISHED');
+            if (allFinished) {
+                Logger.success("✅ All items processing finished.");
+                return;
+            }
+
+            // 에러가 발생했거나 만료된 항목이 있는지 확인
+            const hasFailure = statuses.some(s => s === 'ERROR' || s === 'EXPIRED');
+            if (hasFailure) {
+                throw new Error('Some item containers failed or expired during processing.');
+            }
+
+            Logger.info(`⏳ Processing... (Attempt ${i + 1}/${MAX_TRY}, waiting ${interval / 1000}s)`);
+            await new Promise(r => setTimeout(r, interval));
+            interval = Math.min(interval * 1.5, 15000); // 지수 백오프 (최대 15초 간격)
+        }
+
+        throw new Error('Timeout waiting for item containers to finish processing.');
     }
 }

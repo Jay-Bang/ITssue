@@ -231,6 +231,23 @@ async function runManualRender() {
             // 4. 이슈 텍스트 데이터 동기화 (새로운 board_id에 연결)
             Logger.info("📝 Syncing issue details (issue_board_items)...");
 
+            // [Step 5] 텔레그램 알림 전송 (비디오 포함)
+            try {
+                Logger.info("\n📨 Sending Telegram notification...");
+                const notifier = new NotificationService();
+
+                // 이미지 목록 수집 (Ranking 이미지 우선)
+                const images = (await fs.readdir(dirA))
+                    .filter(f => f.endsWith('.png'))
+                    .map(f => path.join(dirA, f))
+                    .sort((a, b) => a.includes('Ranking') ? -1 : 1);
+
+                // 전송 실행 (VideoGenerator는 NotificationService 내부에서 호출됨)
+                await notifier.sendTelegram(type, dateStr, formattedIssues, images, newCaption);
+            } catch (notifyError) {
+                Logger.warn("⚠️ Notification failed but rendering completed.", notifyError);
+            }
+
             const boardItems = summaries.map((s: any, idx: number) => ({
                 board_id: newBoardId, // 새 board_id 사용
                 rank: idx + 1,

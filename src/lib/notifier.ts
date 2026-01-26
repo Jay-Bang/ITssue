@@ -3,6 +3,8 @@ import * as fs from 'fs-extra';
 import * as dotenv from 'dotenv';
 import { Logger } from './logger';
 import { FinalIssueBoard } from '../types';
+import { VideoGenerator } from '../visual/video-generator';
+import * as path from 'path';
 
 dotenv.config();
 
@@ -59,6 +61,31 @@ export class NotificationService {
                     maxContentLength: Infinity,
                     maxBodyLength: Infinity
                 });
+            }
+
+            // [Step 1.5] 비디오 프리뷰 생성 및 전송 (FFmpeg)
+            // [Logic] 이미지 묶음을 동영상으로 변환하여 더 생동감 있는 미리보기를 제공합니다.
+            try {
+                if (imagePaths.length > 0) {
+                    const outputDir = path.dirname(imagePaths[0]);
+                    const videoPath = await VideoGenerator.generatePreview(imagePaths, outputDir);
+
+                    const FormData = require('form-data');
+                    const videoForm = new FormData();
+                    videoForm.append('chat_id', this.telegramChatId);
+                    videoForm.append('video', fs.createReadStream(videoPath));
+                    videoForm.append('caption', `🎬 Issue Board Video Preview (${date})`);
+
+                    await axios.post(`https://api.telegram.org/bot${this.telegramToken}/sendVideo`, videoForm, {
+                        headers: videoForm.getHeaders(),
+                        maxContentLength: Infinity,
+                        maxBodyLength: Infinity
+                    });
+
+                    Logger.success('🎥 Telegram video preview sent.');
+                }
+            } catch (videoError: any) {
+                Logger.warn('⚠️ Failed to generate or send video preview (Skipping...)', videoError.message);
             }
 
             // 2. 인스타그램 캡션 전송
