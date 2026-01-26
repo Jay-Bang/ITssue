@@ -46,7 +46,7 @@ export class NotificationService {
                 const targetImages = imagePaths.slice(0, mediaLimit);
 
                 const media = targetImages.map((_, idx) => ({
-                    type: 'photo',
+                    type: 'document',
                     media: `attach://file${idx}`
                 }));
 

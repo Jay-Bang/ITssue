@@ -21,7 +21,7 @@ export async function uploadInstagramImages(dir: string, outputTag: string): Pro
     const files = await fs.readdir(dir);
     // Version_B 이미지만 우선적으로 업로드 (인스타그램 게시용)
     const imagesToUpload = files
-        .filter(f => f.endsWith('.png') && (f.includes('P1_Ranking') || f.includes('P2') || f.includes('P3') || f.includes('P4') || f.includes('P5') || f.includes('P6') || f.includes('P7')))
+        .filter(f => f.endsWith('.png') && /P[1-6]/.test(f))
         .sort();
 
     Logger.info(`🚀 Uploading ${imagesToUpload.length} images to Supabase Storage...`);

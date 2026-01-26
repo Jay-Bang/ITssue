@@ -50,6 +50,7 @@ export class VideoGenerator {
                 '-f', 'concat',
                 '-safe', '0',
                 '-i', listFilePath,
+                '-vf', 'scale=1080:1350,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black', // 4:5 -> 9:16 conversion
                 '-c:v', 'libx264',
                 '-pix_fmt', 'yuv420p',
                 '-r', '30',

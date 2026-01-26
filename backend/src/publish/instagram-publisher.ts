@@ -128,9 +128,9 @@ export class InstagramPublisher {
             }
 
             // [Safety] 인스타그램 이미지 처리 지연 대기 (Smart Polling)
-            // 1. 최소 물리적 시간 보장 (20초)
-            Logger.info('⏳ Waiting 20s initial buffer for processing...');
-            await new Promise(resolve => setTimeout(resolve, 20000));
+            // 1. 최소 물리적 시간 보장 (40초)
+            Logger.info('⏳ Waiting 40s initial buffer for processing...');
+            await new Promise(resolve => setTimeout(resolve, 40000));
 
             // 2. 상태 기반 폴링 (Exponential Backoff)
             await this.waitUntilAllItemsFinished(itemIds);
