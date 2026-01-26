@@ -39,3 +39,7 @@ Thumbs.db
 
 # TypeScript
 *.tsbuildinfo
+
+# Next.js (Admin Dashboard)
+admin/.next/
+admin/out/
