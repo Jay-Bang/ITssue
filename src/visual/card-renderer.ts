@@ -66,13 +66,39 @@ let browser: Browser | null = null;
  * [Optimization] 크롬 브라우저 실행(Puppeteer Launch)은 메모리와 CPU 소모가 큰 작업이므로, 
  * 한 번 띄운 인스턴스를 유지(Keep-alive)하며 다수의 카드 렌더링 요청을 처리합니다.
  */
-async function getBrowser() {
+import { execSync } from 'child_process';
+
+/**
+ * [Logic] 브라우저 인스턴스 획득 (Singleton + Self Healing)
+ * [Optimization] 크롬 브라우저 실행(Puppeteer Launch)은 메모리와 CPU 소모가 큰 작업이므로, 
+ * 한 번 띄운 인스턴스를 유지(Keep-alive)하며 다수의 카드 렌더링 요청을 처리합니다.
+ * [Self-Healing] 만약 Puppeteer 버전 업데이트 등으로 인해 크롬 브라우저를 찾지 못하는 경우,
+ * 자동으로 설치 명령어를 실행하고 재시도합니다.
+ */
+async function getBrowser(retryCount = 0): Promise<Browser> {
     // 세션이 없거나 끊어진 경우에만 새로 런칭
     if (!browser || !browser.isConnected()) {
-        browser = await puppeteer.launch({
-            // [Safety] 리눅스 서버 및 Docker 환경에서의 샌드박스 보안 충돌 방지
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
+        try {
+            browser = await puppeteer.launch({
+                // [Safety] 리눅스 서버 및 Docker 환경에서의 샌드박스 보안 충돌 방지
+                args: ['--no-sandbox', '--disable-setuid-sandbox']
+            });
+        } catch (error: any) {
+            // [Critical Path] 크롬 브라우저 미설치/버전 미스매치 대응
+            if (error.message.includes('Could not find Chrome') && retryCount === 0) {
+                Logger.warn('⚠️ [Self-Healing] Chrome browser not found. Attempting automatic installation...');
+                try {
+                    // Puppeteer 공식 브라우저 설치 명령어 실행
+                    execSync('npx puppeteer browsers install chrome', { stdio: 'inherit' });
+                    Logger.success('✅ [Self-Healing] Chrome installed successfully. Retrying launch...');
+                    return getBrowser(1); // 재시도 (최대 1회)
+                } catch (installError: any) {
+                    Logger.error('❌ [Self-Healing] Failed to install Chrome automatically', installError);
+                    throw error;
+                }
+            }
+            throw error;
+        }
     }
     return browser;
 }

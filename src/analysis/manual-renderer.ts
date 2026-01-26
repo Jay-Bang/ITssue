@@ -22,6 +22,7 @@ import { FinalIssueBoard, BoardType } from '../types';
  */
 import { supabase } from '../db/supabase-client';
 import { uploadInstagramImages } from '../publish/storage-manager';
+import { NotificationService } from '../lib/notifier';
 
 // ... (existing helper logic remains unchanged)
 
@@ -260,8 +261,16 @@ async function runManualRender() {
             Logger.success("Publish info updated with new Board ID and IG Media ID.");
         }
 
-    } catch (error) {
+    } catch (error: any) {
         Logger.error(`Rendering Failed`, error);
+        // [Notification] 렌더링 실패 알림 전송
+        try {
+            const notifier = new NotificationService();
+            const errorMessage = `🚨 **[ITssue Rendering Failed]**\n\n- File: ${path.basename(jsonPath)}\n- Error: ${error.message || error}`;
+            await notifier.sendTelegram('RENDER', '', [], [], errorMessage);
+        } catch (notifyError) {
+            Logger.warn("⚠️ Failed to send crash notification", notifyError);
+        }
     } finally {
         await closeBrowser();
     }

@@ -224,9 +224,18 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
             Logger.warn("⚠️ Notification failed but pipeline completed.", e);
         }
 
-    } catch (error) {
+    } catch (error: any) {
         Logger.error("Pipeline crashed", error);
         await closeBrowser().catch(() => { });
+
+        // [Notification] 파이프라인 실패 알림 전송
+        try {
+            const notifier = new NotificationService();
+            const errorMessage = `❌ **[ITssue Pipeline Crashed]**\n\n- Type: ${type}\n- Error: ${error.message || error}\n\n*자가 치유 시도 후에도 실패한 수동 확인이 필요한 상태입니다.*`;
+            await notifier.sendTelegram(type, "", [], [], errorMessage);
+        } catch (notifyError) {
+            Logger.warn("⚠️ Failed to send crash notification", notifyError);
+        }
     }
 }
 
