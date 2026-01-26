@@ -36,7 +36,7 @@ export class NotificationService {
         }
 
         try {
-            // 1. 이미지 묶음 전송 (Media Group) - 텔레그램 미디어 그룹은 최대 10개까지 지원
+            // [Step 1] 이미지 묶음 전송 (Media Group) - 텔레그램 미디어 그룹은 최대 10개까지 지원
             if (imagePaths.length > 0) {
                 const FormData = require('form-data');
                 const formData = new FormData();
@@ -68,7 +68,8 @@ export class NotificationService {
             try {
                 if (imagePaths.length > 0) {
                     const outputDir = path.dirname(imagePaths[0]);
-                    const videoPath = await VideoGenerator.generatePreview(imagePaths, outputDir);
+                    const videoFilename = `video_${type}_${date}.mp4`;
+                    const videoPath = await VideoGenerator.generatePreview(imagePaths, outputDir, videoFilename);
 
                     const FormData = require('form-data');
                     const videoForm = new FormData();
@@ -88,7 +89,7 @@ export class NotificationService {
                 Logger.warn('⚠️ Failed to generate or send video preview (Skipping...)', videoError.message);
             }
 
-            // 2. 인스타그램 캡션 전송
+            // [Step 2] 인스타그램 캡션 전송
             if (caption) {
                 await axios.post(`https://api.telegram.org/bot${this.telegramToken}/sendMessage`, {
                     chat_id: this.telegramChatId,

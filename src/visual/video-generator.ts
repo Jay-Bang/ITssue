@@ -18,15 +18,16 @@ export class VideoGenerator {
      * 이미지 리스트를 사용하여 MP4 영상 생성
      * @param images - 순서대로 정렬된 이미지 파일 경로 배열
      * @param outputDir - 영상이 저장될 디렉토리
+     * @param outputFilename - (Optional) 생성할 영상 파일명 (기본값: preview_clip.mp4)
      * @returns 생성된 영상 파일의 절대 경로
      */
-    static async generatePreview(images: string[], outputDir: string): Promise<string> {
+    static async generatePreview(images: string[], outputDir: string, outputFilename: string = 'preview_clip.mp4'): Promise<string> {
         if (!images || images.length === 0) {
             throw new Error("No images provided for video generation.");
         }
 
         const listFilePath = path.join(outputDir, 'ffmpeg_input.txt');
-        const outputVideoPath = path.join(outputDir, 'preview_clip.mp4');
+        const outputVideoPath = path.join(outputDir, outputFilename);
 
         // [Step 1] FFmpeg Concat Demuxer용 입력 파일 생성
         // 각 이미지마다 'duration 3'을 지정하여 3초씩 보여주도록 설정
