@@ -2,6 +2,11 @@
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue?logo=typescript&logoColor=white) ![Node.js](https://img.shields.io/badge/Node.js-18+-green?logo=node.js&logoColor=white) ![AI Analysis](https://img.shields.io/badge/AI%20Analysis-Search%20Grounding-orange) ![Puppeteer](https://img.shields.io/badge/Puppeteer-High%20Res%20Rendering-red?logo=puppeteer) ![Supabase](https://img.shields.io/badge/Supabase-Backend-blueviolet?logo=supabase)
 
+<div align="center">
+  <img src="backend/docs/assets/ITssue_Logo.png" width="800" alt="ITssue Logo" />
+</div>
+
+
 ## 1. 프로젝트 개요
 
 **ITssue**는 실시간 트렌드 데이터를 스스로 수집하고, 최신 인공지능(Search Grounding) 기술을 통해 심층 분석하여 자동화된 인사이트 리포트와 시각적 카드뉴스 콘텐츠를 생성/발행하는 **자율형 데이터 파이프라인 엔진**입니다. 
@@ -107,28 +112,24 @@ graph TD;
   <h3>[분석 리포트 & 주요 이슈 카드]</h3>
   <table style="width: 100%; border-collapse: collapse;">
     <tr>
-      <td width="25%"><img src="backend/docs/assets/sample_feed/P1_Ranking.png" alt="Main Ranking Board" /></td>
-      <td width="25%"><img src="backend/docs/assets/sample_feed/P2_Issue_Analysis_01.png" alt="AI Issue Analysis 01" /></td>
-      <td width="25%"><img src="backend/docs/assets/sample_feed/P3_Issue_Analysis_02.png" alt="AI Issue Analysis 02" /></td>
-      <td width="25%"><img src="backend/docs/assets/sample_feed/P4_Issue_Analysis_03.png" alt="AI Issue Analysis 03" /></td>
+      <td width="33%"><img src="backend/docs/assets/sample_feed/P1_NIGHT_2026.01.26.png" alt="Main Ranking Board" /></td>
+      <td width="33%"><img src="backend/docs/assets/sample_feed/P2_NIGHT_2026.01.26.png" alt="Issue Analysis 01" /></td>
+      <td width="33%"><img src="backend/docs/assets/sample_feed/P3_NIGHT_2026.01.26.png" alt="Issue Analysis 02" /></td>
     </tr>
     <tr align="center">
       <td><b>P1. 종합 랭킹</b></td>
       <td><b>P2. 심층 분석 01</b></td>
       <td><b>P3. 심층 분석 02</b></td>
-      <td><b>P4. 심층 분석 03</b></td>
     </tr>
     <tr>
-      <td width="25%"><img src="backend/docs/assets/sample_feed/P5_Issue_Analysis_04.png" alt="AI Issue Analysis 04" /></td>
-      <td width="25%"><img src="backend/docs/assets/sample_feed/P6_Group_Summary_01.png" alt="Group Summary 01" /></td>
-      <td width="25%"><img src="backend/docs/assets/sample_feed/P7_Group_Summary_02.png" alt="Group Summary 02" /></td>
-      <td width="25%"></td>
+      <td width="33%"><img src="backend/docs/assets/sample_feed/P4_NIGHT_2026.01.26.png" alt="Issue Analysis 03" /></td>
+      <td width="33%"><img src="backend/docs/assets/sample_feed/P5_NIGHT_2026.01.26.png" alt="Group Summary 01" /></td>
+      <td width="33%"><img src="backend/docs/assets/sample_feed/P6_NIGHT_2026.01.26.png" alt="Group Summary 02" /></td>
     </tr>
     <tr align="center">
-      <td><b>P5. 심층 분석 04</b></td>
-      <td><b>P6. 그룹 요약 A</b></td>
-      <td><b>P7. 그룹 요약 B</b></td>
-      <td></td>
+      <td><b>P4. 심층 분석 03</b></td>
+      <td><b>P5. 그룹 요약 A</b></td>
+      <td><b>P6. 그룹 요약 B</b></td>
     </tr>
   </table>
 
