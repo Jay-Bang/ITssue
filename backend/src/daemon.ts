@@ -19,6 +19,9 @@ Logger.info('🚀 ITssue Automation Daemon Started');
 Logger.info(`⏰ Timezone: ${TIMEZONE}`);
 Logger.info('📅 Scheduled Jobs: Noon(12:00), Night(22:00)');
 
+// 🕊️ [New] Start Webhook API Server for Admin Panel integration
+import './api/webhook-server';
+
 /**
  * 명령어 실행 헬퍼 함수
  */

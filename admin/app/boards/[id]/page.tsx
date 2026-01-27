@@ -28,6 +28,7 @@ export default function BoardDetailPage() {
     const [items, setItems] = useState<BoardItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [republishing, setRepublishing] = useState(false);
 
     useEffect(() => {
         fetchBoardDetails();
@@ -63,9 +64,40 @@ export default function BoardDetailPage() {
         if (error) {
             alert('Failed to save: ' + error.message);
         } else {
-            alert('✓ Saved successfully!');
+            // alert('✓ Saved successfully!');
+            console.log('✓ Saved successfully!');
         }
         setSaving(false);
+    }
+
+    async function handleRepublish() {
+        if (!confirm('정말 다시 발행하시겠습니까? 기존 인스타그램 게시물이 삭제되고 새 이미지가 업로드됩니다.')) return;
+
+        setRepublishing(true);
+        try {
+            const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || `http://${window.location.hostname}:3000`;
+            const apiKey = process.env.NEXT_PUBLIC_ADMIN_API_KEY || 'itssue-secret-777';
+
+            const response = await fetch(`${backendUrl}/api/republish`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    boardId: boardId,
+                    apiKey: apiKey
+                })
+            });
+
+            if (response.ok) {
+                alert('🚀 재발행 요청이 서버로 전달되었습니다! 잠시 후 인스타그램과 텔레그램을 확인해 주세요.');
+            } else {
+                const err = await response.json();
+                alert('❌ 재발행 요청 실패: ' + (err.error || '알 수 없는 에러'));
+            }
+        } catch (error: any) {
+            alert('❌ 네트워크 에러: ' + error.message);
+        } finally {
+            setRepublishing(false);
+        }
     }
 
     function updateItem(itemId: string, field: 'instagram_summary' | 'tags', value: string | string[]) {
@@ -174,16 +206,25 @@ export default function BoardDetailPage() {
                     ))}
                 </div>
 
-                {/* Future: Republish Button */}
-                <div className="mt-8 bg-gray-100 rounded-lg p-6 text-center">
+                {/* Republish Button */}
+                <div className="mt-8 bg-white rounded-lg shadow p-6 text-center border-2 border-dashed border-indigo-200">
+                    <h2 className="text-xl font-bold text-gray-900 mb-2">🚀 인스타그램 재발행</h2>
+                    <p className="text-sm text-gray-500 mb-6 text-balance">
+                        현재 수정된 내용을 바탕으로 카드 뉴스 이미지를 다시 생성하고<br />
+                        인스타그램 게시물을 교체(삭제 후 재발행)합니다.
+                    </p>
                     <button
-                        disabled
-                        className="px-6 py-3 bg-gray-400 text-white rounded-md cursor-not-allowed"
+                        onClick={handleRepublish}
+                        disabled={republishing}
+                        className={`px-8 py-3 rounded-full font-bold text-white shadow-lg transition-all ${republishing
+                                ? 'bg-gray-400 cursor-not-allowed'
+                                : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 hover:scale-105 active:scale-95'
+                            }`}
                     >
-                        🚀 Republish (Coming Soon)
+                        {republishing ? '🔄 발행 중...' : '지금 바로 재발행하기'}
                     </button>
-                    <p className="mt-2 text-sm text-gray-500">
-                        Server integration required
+                    <p className="mt-4 text-[10px] text-gray-400">
+                        * 서버 사양(e2-micro)에 따라 렌더링에 약 1~2분 정도 소요될 수 있습니다.
                     </p>
                 </div>
 
