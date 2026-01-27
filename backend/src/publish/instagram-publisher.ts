@@ -7,18 +7,12 @@ dotenv.config();
 /**
  * [Instagram Content Publisher]
  * 
- * [Description] Instagram Graph API를 사용하여 분석 결과 이미지를 캐러셀 형태의 피드로 게시합니다.
+ * [Description] Instagram Graph API를 사용하여 분석 결과 이미지를 캐러셀 형태의 피드로 게시하는 도구입니다.
  * 
  * [Design Intent]
- * - 복잡한 Graph API 포스팅 과정을 캡슐화하여 일관된 인터페이스 제공.
- * - 이미지 처리 지연 시간을 고려한 명시적 대기 및 재시도 메커니즘 구축.
- * - 토큰 및 사용자 ID의 안전한 관리를 위한 환경 변수 연동.
- * 
- * [Key Logic Flow]
- * 1. 개별 이미지 컨테이너 생성 (`Item Container`).
- * 2. 생성된 모든 개별 항목을 묶어 캐러셀 컨테이너 생성 (`Carousel Container`).
- * 3. 인스타그램 서버의 이미지 처리 완료 대기.
- * 4. 최종 발행 요청 및 게시물 ID 획득.
+ * - [Safety] 복잡한 Graph API 포스팅 과정을 캡슐화하여 일관된 인터페이스를 제공합니다.
+ * - [Optimization] 이미지 처리 지연 시간을 고려한 명시적 대기(Smart Polling) 및 재시도 메커니즘을 구축했습니다.
+ * - 토큰 및 사용자 ID의 안전한 관리를 위한 환경 변수 연동을 수행합니다.
  */
 export class InstagramPublisher {
     private readonly baseUrl = 'https://graph.facebook.com/v24.0';

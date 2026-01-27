@@ -1,7 +1,12 @@
 /**
  * [Visual Card Renderer]
  * 
- * [Description] Puppeteer를 기반으로 HTML/CSS를 고해상도 카드 뉴스 이미지로 변환합니다.
+ * [Description] Puppeteer(Headless Chrome)를 기반으로 HTML/CSS 템플릿을 고해상도 카드 뉴스 이미지로 변환하는 시각화 엔진입니다.
+ * 
+ * [Design Intent]
+ * - 브라우저 인스턴스 재사용(Singleton)을 통한 성능 최적화 및 리소스 관리.
+ * - 디바이스 픽셀 비율(deviceScaleFactor) 조정을 통한 인스타그램 최적화 고화질 에셋 생성.
+ * - 셀프 힐링(Self-healing) 로직을 통해 서버 환경에서의 브라우저 미설치 이슈에 대응합니다.
  */
 import puppeteer, { Browser } from 'puppeteer';
 import * as Handlebars from 'handlebars';
@@ -57,8 +62,8 @@ export interface RenderOptions {
 Handlebars.registerHelper('eq', (a, b) => a === b);
 Handlebars.registerHelper('or', (a, b) => a || b);
 
-// Singleton Pattern for Browser Instance
-// Why? 브라우저 런칭 비용(Overhead)이 크기 때문에, 매 요청마다 띄우지 않고 재사용합니다.
+// [Logic/Design] Browser Instance Singleton Pattern
+// 브라우저 런칭 비용(Overhead)이 매우 크기 때문에, 인스턴스를 하나만 생성하여 프로세스 전반에서 영속적으로 공유합니다.
 let browser: Browser | null = null;
 
 /**
@@ -70,10 +75,9 @@ import { execSync } from 'child_process';
 
 /**
  * [Logic] 브라우저 인스턴스 획득 (Singleton + Self Healing)
- * [Optimization] 크롬 브라우저 실행(Puppeteer Launch)은 메모리와 CPU 소모가 큰 작업이므로, 
- * 한 번 띄운 인스턴스를 유지(Keep-alive)하며 다수의 카드 렌더링 요청을 처리합니다.
- * [Self-Healing] 만약 Puppeteer 버전 업데이트 등으로 인해 크롬 브라우저를 찾지 못하는 경우,
- * 자동으로 설치 명령어를 실행하고 재시도합니다.
+ * 
+ * [Optimization] 크롬 브라우저 실행은 리소스 소모가 크므로, 기존 인스턴스가 살아있다면 재사용합니다.
+ * [Self-Healing] 환경 설정 미비로 크롬을 찾지 못할 경우, 유저 개입 없이 자동으로 설치를 시도하여 파이프라인 중단을 방지합니다.
  */
 async function getBrowser(retryCount = 0): Promise<Browser> {
     // 세션이 없거나 끊어진 경우에만 새로 런칭
@@ -104,9 +108,8 @@ async function getBrowser(retryCount = 0): Promise<Browser> {
 }
 
 /**
- * 브라우저 리소스 정리
- * 
- * 모든 렌더링 작업이 끝난 후 호출하여 메모리 누수를 방지합니다.
+ * [Cleanup] 브라우저 리소스 정리
+ * 모든 렌더링 작업 종료 후 호출하여 점유 중인 메모리와 프로세스를 해제합니다.
  */
 export async function closeBrowser() {
     if (browser) {
@@ -229,5 +232,102 @@ export async function renderCard(data: CardData, options: RenderOptions) {
     throw lastError;
 }
 
-// 로컬 테스트용 로직 (Violet Bloom 전체 세트 생성)
+/**
+ * [Logic] 카드 뉴스 이미지 세트 생성기 (Shared Utility)
+ * [Description] P1(랭킹), P2~P4(상위 이슈 상세), P5~P6(하위 이슈 그룹) 이미지를 순차적으로 렌더링합니다.
+ * [Optimization] Orchestrator와 RepublishService에서 공통으로 사용하며, 테마 및 시각적 일관성을 보장합니다.
+ */
+export async function renderFullSet(
+    issues: FinalIssueBoard[],
+    date: string,
+    type: string,
+    theme: string,
+    dir: string,
+    boardTitle: string,
+    visualVersion: 'bubblegum' | 'arcade',
+    p1Title?: string,
+    isSummaryMode: boolean = true
+) {
+    const renderOpts: RenderOptions = { visualVersion, outputPath: '' };
+
+    // P1 Ranking Page
+    const p1Data: RankingCardData = {
+        type: 'ranking',
+        date,
+        theme,
+        boardTitle,
+        p1Title,
+        ranking: issues.map(i => ({ rank: i.rank!, keyword: i.representative_keyword }))
+    };
+    await renderCard(p1Data, { ...renderOpts, outputPath: path.join(dir, `P1_${type}_${date}.png`) });
+
+    if (!isSummaryMode) {
+        // [Detail Mode] Render all issues as full detail pages
+        for (const issue of issues) {
+            const detailData: IssueDetailCardData = {
+                type: 'issue-detail',
+                date,
+                theme,
+                boardTitle,
+                rank: issue.rank!,
+                keyword: issue.representative_keyword,
+                subKeywords: issue.tags,
+                summary: issue.instagram_summary
+            };
+            await renderCard(detailData, { ...renderOpts, outputPath: path.join(dir, `P${issue.rank! + 1}_${type}_${date}.png`) });
+        }
+    } else {
+        // [Summary Mode] P2~P4: Top 3 Issue Details
+        const top3 = issues.slice(0, 3);
+        for (const issue of top3) {
+            const detailData: IssueDetailCardData = {
+                type: 'issue-detail',
+                date,
+                theme,
+                boardTitle,
+                rank: issue.rank!,
+                keyword: issue.representative_keyword,
+                subKeywords: issue.tags,
+                summary: issue.instagram_summary
+            };
+            await renderCard(detailData, { ...renderOpts, outputPath: path.join(dir, `P${issue.rank! + 1}_${type}_${date}.png`) });
+        }
+
+        // P5: Group 4-6
+        const group4to6 = issues.slice(3, 6);
+        if (group4to6.length > 0) {
+            const groupData: GroupCardData = {
+                type: 'group',
+                date,
+                theme,
+                boardTitle,
+                rankRange: "TOP 4 ~ TOP 6",
+                issues: group4to6.map(iss => ({
+                    rank: iss.rank!,
+                    keyword: iss.representative_keyword,
+                    summaryLines: iss.instagram_summary.slice(0, 2)
+                }))
+            };
+            await renderCard(groupData, { ...renderOpts, outputPath: path.join(dir, `P5_${type}_${date}.png`) });
+        }
+
+        // P6: Group 7-10
+        const group7to10 = issues.slice(6, 10);
+        if (group7to10.length > 0) {
+            const groupData: GroupCardData = {
+                type: 'group',
+                date,
+                theme,
+                boardTitle,
+                rankRange: "TOP 7 ~ TOP 10",
+                issues: group7to10.map(iss => ({
+                    rank: iss.rank!,
+                    keyword: iss.representative_keyword,
+                    summaryLines: iss.instagram_summary.slice(0, 2)
+                }))
+            };
+            await renderCard(groupData, { ...renderOpts, outputPath: path.join(dir, `P6_${type}_${date}.png`) });
+        }
+    }
+}
 

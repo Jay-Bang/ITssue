@@ -29,38 +29,40 @@ export class VideoGenerator {
         const listFilePath = path.join(outputDir, 'ffmpeg_input.txt');
         const outputVideoPath = path.join(outputDir, outputFilename);
 
-        // [Step 1] FFmpeg Concat Demuxer용 입력 파일 생성
-        // 각 이미지마다 'duration 3'을 지정하여 3초씩 보여주도록 설정
-        // [Fix] 마지막 이미지를 중복 입력할 경우 타임라인이 늘어나는 현상이 있어 제거 (FFmpeg 8.x 기준)
-        const fileContent = images.map(img => `file '${img}'\nduration 3`).join('\n');
+        // [Step 1] FFmpeg Concat Demuxer용 입력 시퀀스 파일 생성
+        // [Logic] 각 이미지 노출 시간을 3초로 지정합니다.
+        // [Fix/Critical] FFmpeg concat demuxer의 특성상 마지막 이미지의 duration이 무시되는 경우가 발생합니다.
+        // 이를 방지하기 위해 마지막 이미지를 한 번 더 선언하는 더미 프레임 기법을 적용했습니다.
+        let fileContent = images.map(img => `file '${img}'\nduration 3`).join('\n');
+        if (images.length > 0) {
+            fileContent += `\nfile '${images[images.length - 1]}'`;
+        }
 
         await fs.writeFile(listFilePath, fileContent);
 
         Logger.info(`🎬 Generating video preview from ${images.length} images...`);
 
         return new Promise((resolve, reject) => {
-            // [Step 2] FFmpeg 실행
-            // -f concat: 연결 모드
-            // -safe 0: 절대 경로 허용
-            // -pix_fmt yuv420p: 대부분의 플레이어 호환성 확보
-            // -c:v libx264: H.264 인코딩
-            // -r 30: 30fps (부드러운 전환을 위해, 실제로는 정지 영상이지만 메타데이터상)
+            // [Step 2] FFmpeg 프로세스 실행 및 인코딩 파라미터 적용
+            // - scale/pad: 4:5 이미지를 9:16 캔버스 중앙에 배치 (Instagram Story 대응)
+            // - c:v libx264: 범용적인 H.264 코덱 사용
+            // - movflags +faststart: 웹 및 모바일 기반 프로그레시브 다운로드/재생 최적화
             const ffmpeg = spawn('ffmpeg', [
-                '-y', // 덮어쓰기 허용
+                '-y', // 기존 파일 덮어쓰기
                 '-f', 'concat',
                 '-safe', '0',
                 '-i', listFilePath,
-                '-vf', 'scale=1080:1350,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black', // 4:5 -> 9:16 conversion
+                '-vf', 'scale=1080:1350,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black',
                 '-c:v', 'libx264',
                 '-pix_fmt', 'yuv420p',
                 '-r', '30',
-                '-movflags', '+faststart', // 웹 재생 최적화
+                '-movflags', '+faststart',
                 outputVideoPath
             ]);
 
             ffmpeg.stderr.on('data', (data) => {
                 // FFmpeg 로그는 stderr로 출력됨 (너무 많아서 에러만 필터링하거나 디버그 모드에서만 볼 수 있음)
-                // console.debug(`ffmpeg: ${data}`);
+                // Logger.info(`ffmpeg: ${data}`);
             });
 
             ffmpeg.on('close', async (code) => {

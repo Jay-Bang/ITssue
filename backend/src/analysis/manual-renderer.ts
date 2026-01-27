@@ -1,31 +1,25 @@
+/**
+ * [manual-renderer.ts]
+ * 
+ * [Description] 분석 결과(JSON)를 기반으로 우회 이미지 재생성 및 재발행 유틸리티
+ * [Architecture] 분석 엔진을 다시 거치지 않고 CSS/HTML 수정본을 즉각적으로 반영하기 위해 사용합니다.
+ */
 import * as path from 'path';
 import * as fs from 'fs-extra';
-import { renderCard, closeBrowser } from '../visual/card-renderer';
+import { renderCard, closeBrowser, renderFullSet } from '../visual/card-renderer';
 import { Logger } from '../lib/logger';
 import { InstagramPublisher } from '../publish/instagram-publisher';
 import * as Handlebars from 'handlebars';
 import { FinalIssueBoard, BoardType } from '../types';
-
-/**
- * [Manual Re-rendering Utility]
- * 
- * [Description] 이미 생성된 분석 결과 JSON 파일을 읽어 카드 뉴스 이미지를 다시 생성하고, 필요 시 인스타그램에 재발행합니다.
- * 
- * [Design Intent]
- * - 오케스트레이터 전체를 다시 실행하지 않고도 디자인 수정 사항(CSS/HTML)을 빠르게 반영하기 위함.
- * - 특정 이슈 보드에 대한 업데이트 버전(Edition) 생성을 지원.
- * 
- * [Key Logic Flow]
- * 1. 대상 JSON 파일 로드 및 데이터 파싱.
- * 2. 파일명 패턴 분석을 통한 날짜 및 테마 정보 추출.
- * 3. [Step] 이미지 렌더링 -> [Step] Storage 업로드 -> [Step] Instagram 게시물 생성/교체.
- */
+import { generateInstagramCaption } from './orchestrator';
 import { supabase } from '../db/supabase-client';
 import { uploadInstagramImages } from '../publish/storage-manager';
 import { NotificationService } from '../lib/notifier';
 
-// ... (existing helper logic remains unchanged)
-
+/**
+ * [Main Logic] 수동 렌더링 및 발행 프로세스 실행부
+ * [Description] 지정된 경로의 JSON 리포트를 로드하여 렌더링 파이프라인을 수동으로 트리거합니다.
+ */
 async function runManualRender() {
     const args = process.argv.slice(2);
     const jsonPath = args.find(arg => !arg.startsWith('--'));
@@ -111,9 +105,7 @@ async function runManualRender() {
 
         const dirSuffix = `_${visualVersion}`;
         const dirA = path.join(outputDir, `Instagram_Feed_${type}_${dateStr}${dirSuffix}`);
-        // const dirB = path.join(outputDir, `Detail_Feed_${type}_${dateStr}`);
         await fs.ensureDir(dirA);
-        // await fs.ensureDir(dirB);
 
         // [Config] Version A (Summary/Instagram) - Primary
         const p1Title = type === 'NOON' ? 'MIDDAY TRENDS' : 'DAILY TRENDS';
@@ -122,7 +114,7 @@ async function runManualRender() {
             'NOON': '정오 이슈 보드',
             'CUSTOM': '커스텀 이슈 보드'
         };
-        await renderFullSet(formattedIssues, dateStr, type, SELECTED_THEME, dirA, true, boardTitles[type], visualVersion, p1Title);
+        await renderFullSet(formattedIssues, dateStr, type, SELECTED_THEME, dirA, boardTitles[type as BoardType] || '이슈 보드', visualVersion, p1Title, true);
 
         // [Logic] Regenerate caption with new hashtag rotation
         const newCaption = await generateInstagramCaption(type, dateStr, formattedIssues);
@@ -130,10 +122,7 @@ async function runManualRender() {
         await fs.writeFile(captionPath, newCaption, 'utf-8');
         Logger.success(`Caption regenerated with rotation: ${captionPath}`);
 
-        // await renderFullSet(formattedIssues, dateStr, SELECTED_THEME, dirB, false, boardTitle);
-
         Logger.success(`Re-rendering Completed! Check folder: ${dirA}`);
-        // \n - ${dirB}
 
         // [Step 3] 가공 및 재발행 (선택 사항)
         if (shouldPublish) {
@@ -171,8 +160,8 @@ async function runManualRender() {
                 Logger.warn("⚠️ Original board not found. Using default metadata.");
             }
 
-            // [Step 4] 이미지 업로드 및 공용 URL 생성
-            // [Safety] 인스타그램 캐싱 문제를 방지하기 위해 타임스탬프를 추가한 고유 경로 사용
+            // [Step 4] 미디어 업로드 및 인스타그램 게시
+            // [Safety] 인스타그램 서버의 이미지 캐싱 이슈를 피하기 위해 타임스탬프 기반의 고유 Storage 경로를 사용합니다.
             const storageTag = `${outputFolderName}_rev${Date.now()}`;
             const imageUrls = await uploadInstagramImages(dirA, storageTag);
 
@@ -295,124 +284,6 @@ async function runManualRender() {
         }
     } finally {
         await closeBrowser();
-    }
-}
-
-const HASHTAG_SETS = [
-    "#ITssue #뉴스 #이슈 #트렌드",
-    "#ITssue #오늘의이슈 #뉴스요약 #트렌드",
-    "#ITssue #실시간이슈 #뉴스 #이슈",
-    "#ITssue #이슈정리 #뉴스 #오늘뉴스",
-    "#ITssue #트렌드분석 #뉴스 #이슈",
-    "#ITssue #뉴스정리 #이슈 #트렌드"
-];
-
-async function generateInstagramCaption(type: BoardType, date: string, summaries: FinalIssueBoard[]): Promise<string> {
-    const templatePath = path.join(__dirname, '../publish/templates/issue_board_caption.txt');
-    const templateSource = await fs.readFile(templatePath, 'utf-8');
-    const template = Handlebars.compile(templateSource);
-
-    let boardTitle = type === 'NOON' ? '🌤️ 정오 이슈 보드' : '🌙 일일 이슈 보드';
-    let introMessage = type === 'NOON'
-        ? '오전의 흐름을 정리하는 가장 완벽한 방법\nTOP 10 이슈 리포트입니다.'
-        : '오늘 하루를 정리하는 가장 완벽한 방법\nTOP 10 이슈 리포트입니다.';
-
-    const rankEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
-
-    const issues = summaries.map((s, idx) => ({
-        rankEmoji: rankEmojis[idx] || `${idx + 1}`,
-        keyword: s.representative_keyword
-    }));
-
-    const allTags = Array.from(new Set(summaries.flatMap(s => s.tags))).slice(0, 10);
-
-    // [Logic] Hashtag Rotation Strategy (6 sets, 3-day cycle)
-    const day = parseInt(date.split('.')[2], 10) || new Date().getDate();
-    const setIdx = (day % 3) * 2 + (type === 'NIGHT' ? 1 : 0);
-    const rotatingTags = HASHTAG_SETS[setIdx];
-
-    return template({
-        boardTitle,
-        introMessage,
-        date,
-        issues: issues,
-        allTags,
-        rotatingTags
-    });
-}
-
-// Re-using the logic from main-orchestrator
-/**
- * [Logic] 카드 뉴스 이미지 세트 생성기
- * [Description] P1(랭킹), P2~P5(상위 이슈 상세), P6~P7(하위 이슈 그룹) 이미지를 순차적으로 렌더링합니다.
- */
-async function renderFullSet(issues: FinalIssueBoard[], date: string, type: string, theme: string, dir: string, isSummaryMode: boolean, boardTitle: string, visualVersion: 'bubblegum' | 'arcade' = 'bubblegum', p1Title?: string) {
-    const renderOpts = { visualVersion };
-    // P1 Ranking Page
-    const p1Data = {
-        type: 'ranking' as const,
-        date, theme, boardTitle, p1Title,
-        ranking: issues.map(i => ({ rank: i.rank!, keyword: i.representative_keyword }))
-    };
-    await renderCard(p1Data, { ...renderOpts, outputPath: path.join(dir, `P1_${type}_${date}.png`) });
-
-    if (!isSummaryMode) {
-        for (const issue of issues) {
-            const detailData = {
-                type: 'issue-detail' as const,
-                date, theme, boardTitle,
-                rank: issue.rank!,
-                keyword: issue.representative_keyword,
-                subKeywords: issue.tags,
-                summary: issue.instagram_summary
-            };
-            // [Change] Remove {safeName} suffix
-            await renderCard(detailData, { ...renderOpts, outputPath: path.join(dir, `P${issue.rank! + 1}_${type}_${date}.png`) });
-        }
-    } else {
-        const top3 = issues.slice(0, 3);
-        for (const issue of top3) {
-            const detailData = {
-                type: 'issue-detail' as const,
-                date, theme, boardTitle,
-                rank: issue.rank!,
-                keyword: issue.representative_keyword,
-                subKeywords: issue.tags,
-                summary: issue.instagram_summary
-            };
-            // [Change] Remove {safeName} suffix
-            await renderCard(detailData, { ...renderOpts, outputPath: path.join(dir, `P${issue.rank! + 1}_${type}_${date}.png`) });
-        }
-
-        const group4to6 = issues.slice(3, 6);
-        if (group4to6.length > 0) {
-            const groupData = {
-                type: 'group' as const, date, theme, boardTitle, rankRange: "TOP 4 ~ TOP 6",
-                issues: group4to6.map(iss => ({
-                    rank: iss.rank!,
-                    keyword: iss.representative_keyword,
-                    subKeywords: iss.tags,
-                    summaryLines: iss.instagram_summary.slice(0, 2)
-                }))
-            };
-            // [Change] Remove _Group4-6 suffix
-            await renderCard(groupData, { ...renderOpts, outputPath: path.join(dir, `P5_${type}_${date}.png`) });
-        }
-
-        const group7to10 = issues.slice(6, 10);
-        if (group7to10.length > 0) {
-            const groupData = {
-                type: 'group' as const, date, theme, boardTitle, rankRange: "TOP 7 ~ TOP 10",
-                issues: group7to10.map(iss => ({
-                    rank: iss.rank!,
-                    keyword: iss.representative_keyword,
-                    subKeywords: iss.tags,
-                    summaryLines: iss.instagram_summary.slice(0, 2)
-                }))
-            };
-            // [Change] Remove _Group7-10 suffix
-            await renderCard(groupData, { ...renderOpts, outputPath: path.join(dir, `P6_${type}_${date}.png`) });
-        }
     }
 }
 

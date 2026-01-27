@@ -1,8 +1,19 @@
 'use client';
 
+/**
+ * [Admin Dashboard: Boards List]
+ * 
+ * [Description] 발행된 모든 이슈 보드들을 목록 형태로 조회하고 관리할 수 있는 메인 대시보드 페이지입니다.
+ * 
+ * [Design Intent]
+ * - [Logic] Supabase에서 최신 보드 데이터를 역순으로 조회하여 실시간 배포 현황을 한눈에 파악.
+ * - [Optimization] 클라이언트 사이드 렌더링('use client')을 통해 즉각적인 필터링 및 네비게이션 지원.
+ */
+
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
+import { Logger } from '@/lib/logger';
 
 interface Board {
   id: string;
@@ -22,17 +33,17 @@ export default function BoardsPage() {
   }, []);
 
   async function fetchBoards() {
-    console.log('Fetching boards...');
+    Logger.info('Fetching boards...');
     const { data, error } = await supabase
       .from('issue_boards')
       .select('id, board_type, target_date, created_at, instagram_post_id')
       .order('target_date', { ascending: false })
       .limit(50);
 
-    console.log('Supabase response:', { data, error });
+    Logger.info('Supabase response:', { data, error });
 
     if (error) {
-      console.error('Error fetching boards:', error);
+      Logger.error('Error fetching boards:', error);
       setError(error.message);
     } else {
       setBoards(data || []);

@@ -17,7 +17,7 @@ async function main() {
     const command = args[0];
 
     if (!command) {
-        console.log(`
+        Logger.info(`
 Usage:
   npm run debug rank [DATE] [TYPE]    - Test Ranking Engine
   npm run debug merge [DATE] [TYPE]   - Test Issue Merger
@@ -124,7 +124,7 @@ async function debugRanking(arg1?: string, arg2?: string) {
 
     Logger.info(`✅ Top 20 Ranked Issues:`);
     rankedIssues.slice(0, 20).forEach((issue: any, idx: number) => {
-        console.log(`${String(idx + 1).padStart(2, '0')}. ${issue.keyword} (${issue.total_score}pt) - Articles: ${issue.articles.length}`);
+        Logger.info(`${String(idx + 1).padStart(2, '0')}. ${issue.keyword} (${issue.total_score}pt) - Articles: ${issue.articles.length}`);
     });
 }
 
@@ -143,9 +143,9 @@ async function debugMerger(arg1?: string, arg2?: string) {
 
     Logger.info(`✅ Merged Issues (Top 10):`);
     mergedIssues.slice(0, 10).forEach((issue: any, idx: number) => {
-        console.log(`\n[${idx + 1}] Representative: "${issue.representative_keyword}" (Score: ${issue.score})`);
-        console.log(`    Merged: [${issue.merged_keywords?.join(', ')}]`);
-        console.log(`    Sources: ${issue.news_titles?.length} articles`);
+        Logger.info(`\n[${idx + 1}] Representative: "${issue.representative_keyword}" (Score: ${issue.score})`);
+        Logger.info(`    Merged: [${issue.merged_keywords?.join(', ')}]`);
+        Logger.info(`    Sources: ${issue.news_titles?.length} articles`);
     });
 }
 
@@ -172,13 +172,13 @@ async function debugSummary(keyword: string) {
     const result = results[0];
 
     if (result) {
-        console.log('\n=============================================');
-        console.log(`📢 Keyword: ${result.representative_keyword}`);
-        console.log('---------------------------------------------');
-        console.log(`📝 3-Line Summary:\n${result.instagram_summary.join('\n')}`);
-        console.log('---------------------------------------------');
-        console.log(`🏷️  Tags: ${result.tags.join(', ')}`);
-        console.log('=============================================\n');
+        Logger.info('\n=============================================');
+        Logger.info(`📢 Keyword: ${result.representative_keyword}`);
+        Logger.info('---------------------------------------------');
+        Logger.info(`📝 3-Line Summary:\n${result.instagram_summary.join('\n')}`);
+        Logger.info('---------------------------------------------');
+        Logger.info(`🏷️  Tags: ${result.tags.join(', ')}`);
+        Logger.info('=============================================\n');
     } else {
         Logger.error('Failed to generate summary.');
     }
@@ -187,22 +187,22 @@ async function debugSummary(keyword: string) {
 function debugDate() {
     Logger.info('🧪 [DEBUG: Date Logic Check]');
     const now = new Date();
-    console.log(`Current: ${now.toISOString()} (System Local)`);
+    Logger.info(`Current: ${now.toISOString()} (System Local)`);
 
     const types = ['NOON', 'NIGHT'];
 
     types.forEach(type => {
         const { window, label } = getWindow(undefined, type);
-        console.log(`\n[${type} Logic] Target: ${label}`);
-        console.log(`   Start (UTC): ${window.start.toISOString()}`);
-        console.log(`   End   (UTC): ${window.end.toISOString()}`);
+        Logger.info(`\n[${type} Logic] Target: ${label}`);
+        Logger.info(`   Start (UTC): ${window.start.toISOString()}`);
+        Logger.info(`   End   (UTC): ${window.end.toISOString()}`);
 
         // KST 변환 확인용
         const kstStart = new Date(window.start.getTime() + 9 * 60 * 60 * 1000).toISOString().replace('Z', '(KST)');
         const kstEnd = new Date(window.end.getTime() + 9 * 60 * 60 * 1000).toISOString().replace('Z', '(KST)');
-        console.log(`   Start (KST): ${kstStart}`);
-        console.log(`   End   (KST): ${kstEnd}`);
+        Logger.info(`   Start (KST): ${kstStart}`);
+        Logger.info(`   End   (KST): ${kstEnd}`);
     });
 }
 
-main().catch(console.error);
+main().catch(err => Logger.error(err));

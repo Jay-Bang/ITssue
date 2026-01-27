@@ -6,8 +6,11 @@ import * as path from 'path';
 /**
  * [ITssue Automation Daemon]
  * 
- * [Description] VPS 환경에서 상주하며 정해진 시간(KST)에 파이프라인을 실행합니다.
- * PM2 등의 프로세스 매니저를 통해 실행하는 것을 권장합니다.
+ * [Description] VPS 환경에서 상주하며 정해진 시간(KST)에 파이프라인을 실행하는 자동화 데몬입니다.
+ * 
+ * [Design Intent]
+ * - PM2 프로세스 매니저와 연동하여 실시간 로그를 보존하고 자동 재시작을 지원합니다.
+ * - 정오/일일 보드 생성뿐만 아니라 관리자 제어용 Webhook 서버를 동시에 구동합니다.
  */
 
 // KST = UTC+9
@@ -19,25 +22,24 @@ Logger.info('🚀 ITssue Automation Daemon Started');
 Logger.info(`⏰ Timezone: ${TIMEZONE}`);
 Logger.info('📅 Scheduled Jobs: Noon(12:00), Night(22:00)');
 
-// 🕊️ [New] Start Webhook API Server for Admin Panel integration
+// [Logic] 관리자 패널(Admin UI) 연동을 위한 Webhook API 서버 시작
 import './api/webhook-server';
 
 /**
- * 명령어 실행 헬퍼 함수 (개선: spawn + pipe)
+ * [Helper] 명령어 실행 제어 함수
  * 
  * [Why spawn instead of exec?]
- * - exec은 버퍼 크기 제한(기본 200KB)이 있어 출력이 많으면 멈춤
- * - spawn은 스트림 기반으로 실시간 출력 가능
+ * - [Logic] exec은 버퍼 크기 제한(200KB)이 있어 대량 출력 시 프로세스가 중단됩니다.
+ * - [Fix] spawn은 스트림 기반으로 동작하여 메모리 및 출력량 제한에서 자유롭습니다.
  * 
  * [Why pipe instead of inherit?]
- * - inherit는 PM2가 로그를 캡처하지 못함 (부모 stdio 직접 사용)
- * - pipe로 설정하고 수동 전달하면 PM2 로그 + 콘솔 출력 모두 가능
+ * - [Optimization] pipe로 설정 후 수동 전달해야 PM2가 로그를 정상적으로 캡처하고 파일로 남길 수 있습니다.
  */
 function runCommand(command: string, label: string) {
     Logger.info(`🔥 [Daemon] Starting Scheduled Job: ${label}`);
     Logger.info(`> ${command}`);
 
-    // 프로젝트 루트 디렉토리 기준 실행
+    // [Step] 프로젝트 루트 디렉토리 결정 및 명령어 파싱
     const projectRoot = path.resolve(__dirname, '..');
 
     const [cmd, ...args] = command.split(' ');
@@ -48,12 +50,11 @@ function runCommand(command: string, label: string) {
         stdio: ['ignore', 'pipe', 'pipe'] // stdin 무시, stdout/stderr 파이프
     });
 
-    // stdout을 실시간으로 전달 (PM2 로그 캡처 가능)
+    // [Step] 실시간 표준 출력(stdout) 및 에러 출력(stderr) 전달
     child.stdout?.on('data', (data) => {
         process.stdout.write(data);
     });
 
-    // stderr을 실시간으로 전달
     child.stderr?.on('data', (data) => {
         process.stderr.write(data);
     });
@@ -71,14 +72,14 @@ function runCommand(command: string, label: string) {
     });
 }
 
-// ☀️ 정오 이슈 보드: 매일 12:00 KST
+// ☀️ [Job] 정오 이슈 보드: 매일 12:00 KST
 cron.schedule('0 12 * * *', () => {
     runCommand('npm run board:noon -- --publish', 'Noon Board');
 }, {
     timezone: TIMEZONE
 });
 
-// 🌙 일일 이슈 보드: 매일 22:00 KST
+// 🌙 [Job] 일일 이슈 보드: 매일 22:00 KST
 cron.schedule('0 22 * * *', () => {
     runCommand('npm run board:night -- --publish', 'Night Board');
 }, {

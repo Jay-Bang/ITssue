@@ -1,5 +1,15 @@
 'use client';
 
+/**
+ * [Admin Dashboard: Root Layout]
+ * 
+ * [Description] 관리자 도구 전체에 공통적으로 적용되는 최상위 레이아웃 및 인증 보호 계층입니다.
+ * 
+ * [Design Intent]
+ * - [Safety] Supabase Auth 세션을 감지하여 비로그인 사용자를 로그인 페이지로 강제 리다이렉트 처리.
+ * - [UX] 전역 글꼴(Geist) 및 스타일 설정을 통해 일관된 브랜드 경험 제공.
+ */
+
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";

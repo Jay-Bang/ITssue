@@ -1,5 +1,15 @@
 'use client';
 
+/**
+ * [Admin Dashboard: Login Page]
+ * 
+ * [Description] 관리자 도구 접근을 위한 인증 페이지입니다.
+ * 
+ * [Design Intent]
+ * - [Safety] Supabase Auth의 이메일/비밀번호 인증 방식을 사용합니다.
+ * - [UX] 인증 성공 시 메인 대시보드로 자동 리다이렉트 및 세션 상태 동기화를 수행합니다.
+ */
+
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';

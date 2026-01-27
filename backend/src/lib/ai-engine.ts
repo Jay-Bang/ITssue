@@ -7,17 +7,12 @@ dotenv.config();
 /**
  * [Advanced AI Engine]
  * 
- * [Description] 고성능 Cloud AI 모델을 기반으로 텍스트 및 JSON 분석을 수행하며, Multi-Key Rotation을 지원합니다.
+ * [Description] Cloud AI 모델(Gemini)을 기반으로 심층적 텍스트 및 JSON 분석을 수행하며, Multi-Key Rotation을 지원하는 핵심 두뇌 계층입니다.
  * 
  * [Design Intent]
- * - API 할당량(Free Tier) 제한을 극복하기 위해 여러 API 키를 자동으로 순환 사용.
- * - 네트워크 불안정 및 Rate Limit 상황에 대응하기 위한 견고한 재시도(Retry) 메커니즘 구축.
- * - Search Grounding 기능을 통합하여 실시간 웹 정보를 AI 분석에 활용.
- * 
- * [Key Logic Flow]
- * 1. 환경 변수에서 여러 개의 CLOUD_AI_KEY 로드 및 중복 제거.
- * 2. 요청 실패(429 등) 발생 시 다음 키로 자동 전환(`switchToNextKey`).
- * 3. 모든 키 소진 시 지수 백오프(`withRetry`)를 적용하여 대기 후 재시도.
+ * - [Strategy] API 할당량(Free Tier) 제한을 극복하기 위해 여러 API 키를 자동으로 순환(Rotation)하여 가동 중단을 방지합니다.
+ * - [Safety] 네트워크 불안정 및 Rate Limit 상황에 대응하기 위한 견고한 지수 백오프(Exponential Backoff) 재시도 메커니즘을 구축했습니다.
+ * - [Logic] Search Grounding 기능을 통합하여 AI가 최신 웹 정보를 기반으로 추론하도록 유도합니다.
  */
 export class AIEngine {
     private apiKeys: string[];

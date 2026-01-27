@@ -1,8 +1,19 @@
 'use client';
 
+/**
+ * [Admin Dashboard: Board Detail & Editor]
+ * 
+ * [Description] 특정 이슈 보드의 세부 내용을 확인하고, AI 요약문이나 태그를 수동으로 수정 및 재발행할 수 있는 편집 페이지입니다.
+ * 
+ * [Design Intent]
+ * - [Logic] 보드 아이템의 순위(Rank)와 컨텐츠를 직접 제어할 수 있는 인터페이스 제공.
+ * - [Connectivity] 수동 수정 후 백엔드 웹훅을 호출하여 인스타그램에 즉시 반영하는 flow 지원.
+ */
+
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useParams, useRouter } from 'next/navigation';
+import { Logger } from '@/lib/logger';
 
 interface BoardItem {
     id: string;
@@ -65,7 +76,7 @@ export default function BoardDetailPage() {
             alert('Failed to save: ' + error.message);
         } else {
             // alert('✓ Saved successfully!');
-            console.log('✓ Saved successfully!');
+            Logger.success('✓ Saved successfully!');
         }
         setSaving(false);
     }

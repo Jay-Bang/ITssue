@@ -3,19 +3,13 @@ import { IssueEntity, TimeWindow } from '../types';
 import { Logger } from '../lib/logger';
 
 /**
- * [Ranking Engine (Pass 1)]
+ * [Ranking Engine]
  * 
- * [Description] 수집된 트렌드 스냅샷을 기반으로 이슈의 영향력을 정량적으로 집계합니다.
+ * [Description] 수집된 트렌드 키워드 데이터를 정량적으로 집계하여 중요도를 산출하는 제1차 분석 엔진입니다.
  * 
  * [Design Intent]
- * - "Honest Aggregation": 눈속임 없는 순수 누적 점수제 채택.
- * - 시간 감쇠나 상한선 없이, 집계 기간 내 노출 빈도와 순위가 높을수록 높은 점수 부여.
- * 
- * [Key Logic Flow]
- * 1. 지정된 Time Window 내의 모든 스냅샷을 Supabase에서 조회 (Pagination 처리).
- * 2. 키워드별 그룹화 및 노출 시간 기반 정렬.
- * 3. 순위별 가점 부여 (1위=20점, ..., 20위=1점) 및 점수 합산.
- * 4. 이슈별 엔티티(`IssueEntity`) 생성 및 점수순 정렬.
+ * - [Logic] "Point-based Accumulation": 인위적인 보정을 최소화하고 노출 빈도와 실시간 순위를 합산하여 트렌드의 강도를 객관적으로 파악합니다.
+ * - [Optimization] 대규모 데이터셋 대응을 위해 페이지네이션 기반의 데이터 인출 아키텍처를 채택했습니다.
  */
 export async function runRankingEngine(options: TimeWindow): Promise<IssueEntity[]> {
     Logger.info(`[Ranking] 🚀 Phase 2: Engine Started`);
@@ -72,7 +66,7 @@ export async function runRankingEngine(options: TimeWindow): Promise<IssueEntity
 
     Logger.success(`Supabase Fetch Success: ${allRows.length} rows loaded.`);
 
-    // 2. 키워드별 그룹화 (Issue Pool 생성)
+    // [Step 2] 키워드별 그룹화 (Keyword Pooling)
     Logger.time('Keyword Grouping');
     const issueMap = new Map<string, any[]>();
 
@@ -106,9 +100,9 @@ export async function runRankingEngine(options: TimeWindow): Promise<IssueEntity
                 return;
             }
 
-            // [Algorithm] 역순위 가점 방식
-            // - 1위에게 최고점(20점)을 부여하고, 매 순위마다 1점씩 차등 감점.
-            // - 20위 밖의 순위는 0점으로 처리하여 유의미한 트렌드만 점수에 반영.
+            // [Algorithm] 이슈 가중치 산출 (Scoring Formula)
+            // - 수식: Max(0, 21 - Rank)
+            // - 의도: 1위(20점)부터 20위(1점)까지 차등 부여하여 상위권 트렌드에 가중치를 둡니다.
             const rankScore = Math.max(0, 21 - r.rank);
             score += rankScore;
         });

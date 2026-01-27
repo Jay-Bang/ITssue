@@ -36,8 +36,8 @@ interface MergableIssue extends IssueEntity {
  * 4. 그룹 내 최고 점수 키워드를 `Representative Keyword`로 선정 및 모든 데이터 집계.
  */
 
-// [Logic] Union-Find (Disjoint Set) 알고리즘 헬퍼 클래스
-// 별개의 원소들을 효율적인 상호 배타적 집합으로 관리하며, 병합 작업을 최소 비용으로 수행합니다.
+// [Logic/Data Structure] Union-Find (Disjoint Set) 알고리즘
+// 별개의 원소들을 상호 배타적 집합으로 관리하며, 병합과 그룹 식별 작업을 최적화된 시간 내에 수행합니다.
 class UnionFind {
     private parent: number[];
 
@@ -76,8 +76,8 @@ interface MergeCandidate {
     overlapRatio: number;
 }
 
-// [Logic] 한자 기반 성씨 및 지명 정규화
-// 뉴스 헤드라인에서 자수 절약을 위해 흔하게 쓰이는 한자를 한글로 변환하여 매칭 확률을 높입니다.
+// [Logic] 한국어 텍스트 정규화: 한자(Hanja) 기반 약어 치환
+// 뉴스 헤드라인에서 자국/타국명 및 정부 부처 등을 나타낼 때 쓰는 한자를 한글로 변환하여 병합 확률을 높입니다.
 function normalizeHanja(text: string): string {
     const hanjaMap: Record<string, string> = {
         '李': '이', '朴': '박', '崔': '최', '鄭': '정', '姜': '강',
@@ -144,7 +144,7 @@ function getCoreEntities(keyword: string): string[] {
     return normalized.match(/[가-힣]{2,}/g) || [];
 }
 
-export async function runMergeGate(options: TimeWindow) {
+export async function runMergeGate(options: TimeWindow): Promise<IssueEntity[]> {
     Logger.info(`🛠️ Phase 2.5: 이슈 병합 게이트 시작 (Pure Rule-based)`);
     Logger.time('Ranking Engine');
     const atomIssues = await runRankingEngine(options);
@@ -162,8 +162,6 @@ export async function runMergeGate(options: TimeWindow) {
 
     const uf = new UnionFind(extendedIssues.length); // 병합 그룹 관리를 위한 구조 초기화
     const candidates: MergeCandidate[] = [];
-    Logger.timeEnd('Tokenization & Mapping');
-
     Logger.info(`   (Sample: ID ${atomIssues[0].raw_snapshot_ids[0]}, Time: ${atomIssues[0].first_seen_at})`);
 
     Logger.time('Pure Rule Judging (V2)');
@@ -174,15 +172,14 @@ export async function runMergeGate(options: TimeWindow) {
             const issueA = extendedIssues[i];
             const issueB = extendedIssues[j];
 
-            // [Optimization] 시간 윈도우 기반 Pruning (버퍼 기반 가지치기)
-            // 사건 B가 사건 A의 종료 시점(Buffer 포함)보다 너무 뒤에 일어났다면, 
-            // 이슈 데이터가 시간순 정렬되어 있으므로 이후의 j번 이슈들도 자동으로 비교 범위 밖이 됨. (Early Break)
             const startA = new Date(issueA.first_seen_at).getTime();
             const endA = new Date(issueA.last_seen_at).getTime();
             const startB = new Date(issueB.first_seen_at).getTime();
             const endB = new Date(issueB.last_seen_at).getTime();
 
-            // [Logic] Pruning: B의 시작 시각이 A의 영향권(종료+버퍼) 밖이면 루프 탈출
+            // [Logic/Optimization] 시간 윈도우 기반 가지치기 (Pruning)
+            // - 의도: 사건 B가 사건 A의 종료 시점(Buffer 포함)보다 너무 뒤에 있다면 비교 대상에서 제외합니다.
+            // - 효과: 이슈가 시간순으로 정렬되어 있어 이후 인덱스의 j들도 자동으로 스킵되어 연산량이 대폭 감소합니다.
             if (startB > endA + MERGE_CONFIG.TIME_BUFFER_MS) break;
 
             // [Logic] 양방향 시간 겹침 검증 (A와 B가 서로의 버퍼 범위 내에 상주하는가)

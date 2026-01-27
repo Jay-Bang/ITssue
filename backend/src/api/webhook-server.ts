@@ -1,3 +1,12 @@
+/**
+ * [Webhook Server]
+ * 
+ * [Description] 외부 관리 도구(Admin Panel)로부터 재발행(Republish) 요청을 수신하는 정적 엔드포인트 서버입니다.
+ * 
+ * [Design Intent]
+ * - [Safety] API Key 인증 기반의 간단하고 가벼운 보안 계층을 제공합니다.
+ * - [Performance] 무거운 분석/발행 작업을 비동기(Background)로 처리하여 클라이언트 타임아웃을 방지합니다.
+ */
 import * as http from 'http';
 import * as dotenv from 'dotenv';
 import { Logger } from '../lib/logger';
@@ -6,7 +15,7 @@ import { republishBoard } from '../lib/republish-service';
 dotenv.config();
 
 const PORT = process.env.WEBHOOK_PORT || 3000;
-const API_KEY = process.env.ADMIN_API_KEY || 'itssue-secret-777'; // Fallback for safety, but user should set it
+const API_KEY = process.env.ADMIN_API_KEY || 'itssue-secret-777';
 
 const server = http.createServer(async (req, res) => {
     // CORS Headers

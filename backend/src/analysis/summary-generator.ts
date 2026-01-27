@@ -3,20 +3,14 @@ import { IssueEntity, FinalIssueBoard } from '../types';
 import { ai } from '../lib/ai-engine';
 
 /**
- * [AI Summary Generator (Pass 3)]
+ * [AI Summary Generator]
  * 
- * [Description] 병합된 최종 이슈들에 대해 Cloud AI 서비스의 Search Grounding 기능을 활용하여 심층 요약 및 태그를 생성합니다.
+ * [Description] 최종 선발된 이슈들에 대해 구글 Gemini의 Search Grounding 기능을 사용하여 심층 분석 및 요약을 생성합니다.
  * 
  * [Design Intent]
- * - 단순 뉴스 요약을 넘어 실시간 웹 검색을 통한 사건의 본질적 원인 분석.
- * - Instagram 포스팅에 최적화된 문체(정중한 3문장) 및 관련 해시태그 생성.
- * - API Quota 보호를 위한 Throttle 및 Retry 로직 통합.
- * 
- * [Key Logic Flow]
- * 1. 각 이슈에 대해 실시간 검색 기반의 맞춤형 프롬프트 생성.
- * 2. API 쿼터 분산을 위한 일정한 지연 시간(`GENERATION_DELAY_MS`) 적용.
- * 3. AI 응답에서 JSON 데이터 추출 및 태그 정규화(Sanitization).
- * 4. 실패 시 Fallback 메시지 생성을 통한 파이프라인 연속성 보장.
+ * - [Logic] 단순 요약을 넘어 실시간 웹 검색을 통해 사건의 '원인'과 '맥락'을 파악하는 고품질 컨텐츠를 생산합니다.
+ * - [Optimization] Instagram 채널의 톤앤매너에 맞춘 공손한 문체와 해시태그를 자동 생성합니다.
+ * - [Safety] API Quota 관리를 위한 Throttling 및 재시도(Retry) 전략을 적용했습니다.
  */
 
 const GENERATION_DELAY_MS = 10000; // API 쿼터 보호를 위한 10초 대기

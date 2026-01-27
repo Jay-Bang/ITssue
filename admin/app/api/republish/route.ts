@@ -1,4 +1,14 @@
+/**
+ * [Admin API: Republish Proxy]
+ * 
+ * [Description] 브라우저(Frontend)와 GCP 백엔드 서버 간의 통신을 중계하는 API Route입니다.
+ * 
+ * [Design Intent]
+ * - [Safety] 클라이언트 사이드에서 백엔드 API 키가 노출되는 것을 방지하기 위해 서버 사이드 프록시 수행.
+ * - [Connectivity] 도메인 간 제약(CORS) 없이 백엔드 웹훅을 안전하게 호출.
+ */
 import { NextResponse } from 'next/server';
+import { Logger } from '@/lib/logger';
 
 export async function POST(request: Request) {
     try {
@@ -24,7 +34,7 @@ export async function POST(request: Request) {
             );
         }
 
-        console.log(`[Proxy] Forwarding republish request for ${boardId} to ${BACKEND_URL}...`);
+        Logger.info(`[Proxy] Forwarding republish request for ${boardId} to ${BACKEND_URL}...`);
 
         // Forward the request to the HTTP GCP Server
         // Server-to-Server communication allows HTTP even if the Frontend is HTTPS
@@ -51,7 +61,7 @@ export async function POST(request: Request) {
         return NextResponse.json(data);
 
     } catch (error: any) {
-        console.error('[Proxy Error]', error);
+        Logger.error('[Proxy Error]', error);
         return NextResponse.json(
             { error: `Proxy Failed: ${error.message}` },
             { status: 500 }

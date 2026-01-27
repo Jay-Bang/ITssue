@@ -1,7 +1,16 @@
+/**
+ * [Republish Service]
+ * 
+ * [Description] 이미 생성된 보드를 수정하거나 수동으로 인스타그램에 다시 게시하기 위한 운영 지원 서비스입니다.
+ * 
+ * [Design Intent]
+ * - [Logic] 데이터 항목(DB)과 시각 에셋(Storage) 간의 정합성을 수동으로 강제 동기화할 수 있는 수단을 제공합니다.
+ * - [Fix] 자동 발행 과정에서 누락된 데이터를 보정하고 SNS 재배포를 수행합니다.
+ */
 import * as path from 'path';
 import * as fs from 'fs-extra';
 import { supabase } from '../db/supabase-client';
-import { renderCard, closeBrowser } from '../visual/card-renderer';
+import { closeBrowser, renderFullSet } from '../visual/card-renderer';
 import { Logger } from '../lib/logger';
 import { InstagramPublisher } from '../publish/instagram-publisher';
 import { uploadInstagramImages } from '../publish/storage-manager';
@@ -13,7 +22,7 @@ export async function republishBoard(boardId: string) {
     Logger.info(`🔄 [RepublishService] Starting republish for Board ID: ${boardId}`);
 
     try {
-        // 1. Fetch Board Info from Supabase
+        // [Step 1] Supabase에서 기존 보드 및 아이템 정보 조회
         const { data: board, error: boardError } = await supabase
             .from('issue_boards')
             .select('*')
@@ -57,7 +66,7 @@ export async function republishBoard(boardId: string) {
         const boardTitle = type === 'NOON' ? '정오 이슈 보드' : '일일 이슈 보드';
         const p1Title = type === 'NOON' ? 'MIDDAY TRENDS' : 'DAILY TRENDS';
 
-        await renderFullSet(formattedIssues, dateStr, type, theme, tempDir, true, boardTitle, visualVersion, p1Title);
+        await renderFullSet(formattedIssues, dateStr, type, theme, tempDir, boardTitle, visualVersion, p1Title);
 
         // 6. Generate Caption
         const caption = await generateInstagramCaption(type, dateStr, formattedIssues);
@@ -133,60 +142,6 @@ export async function republishBoard(boardId: string) {
         throw error;
     } finally {
         await closeBrowser();
-    }
-}
-
-// --- Internal Helper Functions (Copied/Simplified from manual-renderer.ts) ---
-
-async function renderFullSet(issues: FinalIssueBoard[], date: string, type: string, theme: string, dir: string, isSummaryMode: boolean, boardTitle: string, visualVersion: 'bubblegum' | 'arcade', p1Title?: string) {
-    const renderOpts = { visualVersion };
-    // P1 Ranking Page
-    const p1Data = {
-        type: 'ranking' as const,
-        date, theme, boardTitle, p1Title,
-        ranking: issues.map(i => ({ rank: i.rank!, keyword: i.representative_keyword }))
-    };
-    await renderCard(p1Data, { ...renderOpts, outputPath: path.join(dir, `P1_${type}_${date}.png`) });
-
-    const top3 = issues.slice(0, 3);
-    for (const issue of top3) {
-        const detailData = {
-            type: 'issue-detail' as const,
-            date, theme, boardTitle,
-            rank: issue.rank!,
-            keyword: issue.representative_keyword,
-            subKeywords: issue.tags,
-            summary: issue.instagram_summary
-        };
-        await renderCard(detailData, { ...renderOpts, outputPath: path.join(dir, `P${issue.rank! + 1}_${type}_${date}.png`) });
-    }
-
-    const group4to6 = issues.slice(3, 6);
-    if (group4to6.length > 0) {
-        const groupData = {
-            type: 'group' as const, date, theme, boardTitle, rankRange: "TOP 4 ~ TOP 6",
-            issues: group4to6.map(iss => ({
-                rank: iss.rank!,
-                keyword: iss.representative_keyword,
-                subKeywords: iss.tags,
-                summaryLines: iss.instagram_summary.slice(0, 2)
-            }))
-        };
-        await renderCard(groupData, { ...renderOpts, outputPath: path.join(dir, `P5_${type}_${date}.png`) });
-    }
-
-    const group7to10 = issues.slice(6, 10);
-    if (group7to10.length > 0) {
-        const groupData = {
-            type: 'group' as const, date, theme, boardTitle, rankRange: "TOP 7 ~ TOP 10",
-            issues: group7to10.map(iss => ({
-                rank: iss.rank!,
-                keyword: iss.representative_keyword,
-                subKeywords: iss.tags,
-                summaryLines: iss.instagram_summary.slice(0, 2)
-            }))
-        };
-        await renderCard(groupData, { ...renderOpts, outputPath: path.join(dir, `P6_${type}_${date}.png`) });
     }
 }
 
