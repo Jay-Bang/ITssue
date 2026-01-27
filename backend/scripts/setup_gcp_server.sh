@@ -18,9 +18,9 @@ echo "🚀 [Setup] Starting ITssue Server Setup..."
 echo "🔄 [1/7] Updating System Packages..."
 sudo apt-get update && sudo apt-get upgrade -y
 
-# 2. 필수 패키지 설치 (curl, git, unzip)
+# 2. 필수 패키지 설치 (curl, git, unzip, nano)
 echo "📦 [2/7] Installing Basic Tools..."
-sudo apt-get install -y curl git unzip build-essential
+sudo apt-get install -y curl git unzip build-essential nano
 
 # 3. Swap Memory 설정 (2GB) 
 # 중요: 1GB RAM 서버에서 Puppeteer가 튕기지 않게 함
