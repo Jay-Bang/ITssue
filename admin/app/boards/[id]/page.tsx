@@ -75,15 +75,12 @@ export default function BoardDetailPage() {
 
         setRepublishing(true);
         try {
-            const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || `http://${window.location.hostname}:3000`;
-            const apiKey = process.env.NEXT_PUBLIC_ADMIN_API_KEY || 'itssue-secret-777';
-
-            const response = await fetch(`${backendUrl}/api/republish`, {
+            // Use Internal Next.js API Proxy (Handles HTTPS -> HTTP conversion)
+            const response = await fetch(`/api/republish`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    boardId: boardId,
-                    apiKey: apiKey
+                    boardId: boardId
                 })
             });
 
@@ -217,8 +214,8 @@ export default function BoardDetailPage() {
                         onClick={handleRepublish}
                         disabled={republishing}
                         className={`px-8 py-3 rounded-full font-bold text-white shadow-lg transition-all ${republishing
-                                ? 'bg-gray-400 cursor-not-allowed'
-                                : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 hover:scale-105 active:scale-95'
+                            ? 'bg-gray-400 cursor-not-allowed'
+                            : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 hover:scale-105 active:scale-95'
                             }`}
                     >
                         {republishing ? '🔄 발행 중...' : '지금 바로 재발행하기'}
