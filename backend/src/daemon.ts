@@ -22,8 +22,8 @@ Logger.info('🚀 ITssue Automation Daemon Started');
 Logger.info(`⏰ Timezone: ${TIMEZONE}`);
 Logger.info('📅 Scheduled Jobs: Noon(12:00), Night(22:00)');
 
-// [Logic] 관리자 패널(Admin UI) 연동을 위한 Webhook API 서버 시작
-import './api/webhook-server';
+// [Logic] 관리자 패널(Admin UI) 연동을 위한 Webhook API 서버는 현재 standalone 프로세스(itssue-api)로 운영되므로 데몬에서 제외합니다.
+// import './api/webhook-server';
 
 /**
  * [Helper] 명령어 실행 제어 함수
