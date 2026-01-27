@@ -122,7 +122,7 @@ ${summaryRule}
                         representative_keyword: issue.representative_keyword,
                         news_titles: issue.news_titles,
                         merge_reasons: issue.merge_reasons || [],
-                        instagram_summary: ["요약을 생성하지 못했습니다.", "뉴스 원문을 참고해주세요.", ""],
+                        instagram_summary: ["요약을 생성하지 못했습니다.", "뉴스 원문을 참고해주세요."],
                         tags: [],
                         merged_keywords: issue.merged_keywords || [],
                         score: issue.score,

@@ -72,3 +72,7 @@ Thumbs.db
 .puppeteer/
 next-env.d.ts
 admin/next-env.d.ts
+
+# --- Private Documentation ---
+backend/docs/SECRET_ARCHITECTURE.md
+backend/docs/BRAND_GUIDE.md

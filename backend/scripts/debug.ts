@@ -175,7 +175,7 @@ async function debugSummary(keyword: string) {
         Logger.info('\n=============================================');
         Logger.info(`📢 Keyword: ${result.representative_keyword}`);
         Logger.info('---------------------------------------------');
-        Logger.info(`📝 3-Line Summary:\n${result.instagram_summary.join('\n')}`);
+        Logger.info(`📝 AI Summary:\n${result.instagram_summary.join('\n')}`);
         Logger.info('---------------------------------------------');
         Logger.info(`🏷️  Tags: ${result.tags.join(', ')}`);
         Logger.info('=============================================\n');
