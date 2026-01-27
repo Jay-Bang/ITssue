@@ -67,8 +67,8 @@ cron.schedule('0 12 * * *', () => {
     timezone: TIMEZONE
 });
 
-// 🌙 일일 이슈 보드: 매일 22:00 KST
-cron.schedule('0 22 * * *', () => {
+// 🌙 일일 이슈 보드: 매일 22:10 KST (임시 테스트)
+cron.schedule('10 22 * * *', () => {
     runCommand('npm run board:night -- --publish', 'Night Board');
 }, {
     timezone: TIMEZONE
