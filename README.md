@@ -32,7 +32,8 @@
 - **Dynamic Visual Rendering:** Puppeteer를 활용하여 인스타그램 피드 점유율이 가장 높은 **4:5 비율(1080x1350)**의 카드뉴스를 자동 생성합니다. 텍스트 길이에 따라 폰트 크기를 실시간 조절하는 자바스크립트 엔진이 포함되어 있습니다.
 - **Theme Synchronization Engine:** 발행 시각(정오/야간)에 따라 최적의 테마(**Arcade/Bubblegum**)를 자동으로 배정하며, 두 테마 간 레이아웃 정합성을 1:1로 유지하여 브랜드 일관성을 확보합니다.
 - **Full-Auto Publishing:** 분석 데이터와 렌더링된 이미지를 Supabase Storage와 연동하고, Instagram Graph API를 통해 캡션 포함 캐러셀(Carousel) 형태로 자동 게시합니다.
-- **Enterprise-Grade Code Quality:** 중앙 집중형 타입 시스템, 표준화된 주석 체계, 브랜드 중립적 코드베이스로 상업적 활용과 장기 유지보수를 고려한 설계를 적용했습니다.
+- **Unified Admin Dashboard:** 발행된 이슈를 실시간 모니터링하고, 수동으로 데이터를 수정하거나 재발행할 수 있는 전용 관리자 도구(Next.js)를 제공합니다.
+- **High-Quality Code Architecture:** 중앙 집중형 타입 시스템, 표준화된 주석 체계, 프로젝트 전역 로깅 시스템(Logger)을 통해 프로젝트의 완성도와 유지보수성을 극대화했습니다.
 
 ## 3. 기술 아키텍처 및 구현
 
@@ -41,12 +42,13 @@
 ```mermaid
 graph TD;
     subgraph "데이터 획득 계층"
-        A["Trend API (10분 주기)"] -- 스냅샷 수집 --> B[("Supabase DB")];
+        A["Supabase Edge Function<br>(10분 주기)"] -- 스냅샷 수집 --> B[("Supabase DB")];
     end
-    subgraph "인텔리전스 분석 계층"
+    subgraph "분석 및 관리 계층"
         B -- 데이터 로드 --> C["Ranking Engine<br>(Honest Aggregation)"];
         C -- 점수 합산 --> D["Issue Merger<br>(Jaccard/Overlap 분석)"];
         D -- 병합된 엔티티 --> E["Summary Generator<br>(Search Grounding)"];
+        I["Admin Dashboard<br>(Next.js)"] -.->|수동 수정 및 재발행| B;
     end
     subgraph "시각화 및 배포 계층"
         E -- 분석 결과 --> F["Visual Renderer<br>(Puppeteer)"];
@@ -76,22 +78,21 @@ graph TD;
 
 ## 5. 코드 품질 및 유지보수성
 
-프로젝트 전반에 걸쳐 엔터프라이즈급 코드 품질 기준을 적용하여 장기적인 유지보수와 상업적 활용을 고려했습니다.
+프로젝트 전반에 걸쳐 체계적인 코드 가이드라인을 적용하여 장기적인 유지보수성을 고려했습니다.
 
 ### 📐 중앙 집중형 타입 시스템
 - **단일 진실 공급원(Single Source of Truth)**: `src/types/index.ts`를 중심으로 모든 데이터 인터페이스를 통합 관리합니다.
 - **중복 제거**: 여러 모듈에 흩어져 있던 로컬 인터페이스를 제거하고 `FinalIssueBoard`, `IssueEntity` 등 핵심 타입으로 통일했습니다.
 - **타입 안전성**: TypeScript 컴파일러(`tsc`)를 통한 정적 타입 검증으로 런타임 에러를 사전에 방지합니다.
 
-### 📝 표준화된 주석 체계
+### 📝 표준화된 주석 및 로깅 시스템
 - **구조화된 문서화**: `[Step]`, `[Logic]`, `[Safety]`, `[Optimization]` 태그를 활용하여 코드의 의도와 설계 철학을 명확히 전달합니다.
+- **전역 로깅 표준화**: `Logger` 유틸리티를 통해 `[INFO]`, `[PASS]`, `[FAIL]`, `[WARN]` 등 일관된 접두어와 상태별 컬러 로깅을 적용하여 모니터링 가독성을 극대화했습니다.
 - **알고리즘 상세 설명**: Union-Find 경로 압축, Jaccard 유사도 계산, Multi-Key Rotation 등 복잡한 로직의 동작 원리를 주석으로 상세히 기록했습니다.
-- **안전 장치 명시**: 타임존 처리, 데이터 무결성 검증, API 쿼터 보호 등 시스템 안정성을 위한 세부 메커니즘을 문서화했습니다.
 
-### 🏢 상업적 안전성
-- **브랜드 중립화**: 코드 및 로그 메시지에서 특정 AI 서비스 브랜드명을 제거하고 'Cloud AI', 'AI Service' 등 범용 용어로 대체했습니다.
-- **모듈별 로그 표준화**: `[AI]`, `[Pipeline]`, `[Collector]`, `[Database]` 등 일관된 접두어를 사용하여 로그 가독성을 극대화했습니다.
-- **라이선스 준수**: 모든 의존성 라이브러리의 라이선스를 검토하여 상업적 활용에 문제가 없도록 구성했습니다.
+### 🔒 보안 (Security)
+- **보안 강화**: Admin API Key를 통한 웹훅 인증, 서버사이드 프록시(Proxy)를 통한 API 키 은닉 등 시스템 보안 장치를 마련했습니다.
+- **라이선스 준수**: 오픈소스 라이브러리의 라이선스를 준수하며 프로젝트를 구성했습니다.
 
 ---
 
