@@ -82,7 +82,10 @@ export async function republishBoard(boardId: string) {
 
         const igMediaId = await igPublisher.publishCarousel(imageUrls.map(img => img.publicUrl), caption);
 
-        // 9. Update Database with new Post ID and Metadata
+        if (!igMediaId) throw new Error('Instagram publishing returned no Media ID.');
+
+        // 9. Update Database with new Post ID and Metadata (CRITICAL)
+        // [Logic] We do this BEFORE notification to ensure data integrity even if Telegram fails.
         const { error: updateError } = await supabase
             .from('issue_boards')
             .update({
@@ -97,10 +100,17 @@ export async function republishBoard(boardId: string) {
             })
             .eq('id', boardId);
 
-        if (updateError) throw updateError;
+        if (updateError) {
+            Logger.error(`❌ DB Update Failed for Board: ${boardId}`, updateError);
+            throw updateError;
+        }
 
-        // 10. Notify Telegram
+        Logger.success(`✅ Database updated with new IG_MEDIA_ID: ${igMediaId}`);
+
+        // 10. Notify Telegram (NON-CRITICAL)
+        // [Safety] Wrap in try-catch so notification timeouts don't crash the whole process.
         try {
+            Logger.info("📨 Sending Telegram notification...");
             const notifier = new NotificationService();
             const images = (await fs.readdir(tempDir))
                 .filter(f => f.endsWith('.png'))
@@ -108,11 +118,12 @@ export async function republishBoard(boardId: string) {
                 .sort();
 
             await notifier.sendTelegram(type, dateStr, formattedIssues, images, caption);
-        } catch (notifyError) {
-            Logger.warn("Notification failed but republishing completed.", notifyError);
+            Logger.success("✅ Telegram notification sent.");
+        } catch (notifyError: any) {
+            Logger.warn(`⚠️ Telegram Notification failed (Non-critical): ${notifyError.message || notifyError}`);
         }
 
-        Logger.success(`✅ Republishing completed for Board: ${boardId}`);
+        Logger.success(`🎉 Entire republishing flow completed for Board: ${boardId}`);
         await fs.remove(tempDir); // Cleanup
 
         return { success: true, igMediaId };
