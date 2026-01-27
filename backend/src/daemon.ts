@@ -1,5 +1,5 @@
 import * as cron from 'node-cron';
-import { exec } from 'child_process';
+import { spawn } from 'child_process';
 import { Logger } from './lib/logger';
 import * as path from 'path';
 
@@ -23,7 +23,12 @@ Logger.info('📅 Scheduled Jobs: Noon(12:00), Night(22:00)');
 import './api/webhook-server';
 
 /**
- * 명령어 실행 헬퍼 함수
+ * 명령어 실행 헬퍼 함수 (개선: spawn 사용)
+ * 
+ * [Why spawn instead of exec?]
+ * - exec은 버퍼 크기 제한(기본 200KB)이 있어 출력이 많으면 멈춤
+ * - spawn은 스트림 기반으로 실시간 출력 가능
+ * - npm run 같은 중첩 프로세스 처리에 더 안정적
  */
 function runCommand(command: string, label: string) {
     Logger.info(`🔥 [Daemon] Starting Scheduled Job: ${label}`);
@@ -32,19 +37,26 @@ function runCommand(command: string, label: string) {
     // 프로젝트 루트 디렉토리 기준 실행
     const projectRoot = path.resolve(__dirname, '..');
 
-    exec(command, { cwd: projectRoot }, (error, stdout, stderr) => {
-        if (error) {
-            Logger.error(`❌ [Daemon] Job Failed: ${label}`, error);
-            return;
-        }
-        if (stderr) {
-            // stderr가 있어도 에러가 아닐 수 있음 (경고 메시지 등)
-            // 하지만 분석을 위해 로그에는 남김
-            console.error(`[Stderr] ${stderr}`);
-        }
+    // spawn을 사용하여 실시간 출력 스트리밍
+    const { spawn } = require('child_process');
+    const [cmd, ...args] = command.split(' ');
 
-        console.log(stdout);
-        Logger.info(`✅ [Daemon] Job Completed: ${label}`);
+    const child = spawn(cmd, args, {
+        cwd: projectRoot,
+        shell: true,
+        stdio: 'inherit' // 부모 프로세스의 stdio를 상속받아 실시간 출력
+    });
+
+    child.on('error', (error: Error) => {
+        Logger.error(`❌ [Daemon] Job Failed to Start: ${label}`, error);
+    });
+
+    child.on('exit', (code: number | null, signal: string | null) => {
+        if (code === 0) {
+            Logger.success(`✅ [Daemon] Job Completed: ${label}`);
+        } else {
+            Logger.error(`❌ [Daemon] Job Failed: ${label} (Exit Code: ${code}, Signal: ${signal})`);
+        }
     });
 }
 
