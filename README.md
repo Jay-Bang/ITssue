@@ -93,18 +93,55 @@ graph TD;
 - **모듈별 로그 표준화**: `[AI]`, `[Pipeline]`, `[Collector]`, `[Database]` 등 일관된 접두어를 사용하여 로그 가독성을 극대화했습니다.
 - **라이선스 준수**: 모든 의존성 라이브러리의 라이선스를 검토하여 상업적 활용에 문제가 없도록 구성했습니다.
 
-## 6. 배포 및 운영
+---
+
+## 🚀 6. 핵심 운영 Guide (Core Operations)
+
+ITssue 엔진의 주요 실행 및 디버깅 명령어입니다.
+
+### ☀️ 이슈 보드 수동 생성
+```bash
+# 정오 보드 생성 (Arcade 테마)
+npm run board:noon -- --publish
+
+# 야간 보드 생성 (Bubblegum 테마)
+npm run board:night -- --publish
+
+# 커스텀 날짜 범위 분석 (YYYY-MM-DD)
+npm run board:custom -- 2026-01-20 2026-01-21 --publish
+```
+
+### 🐛 디버깅 및 테스트 도구
+```bash
+# 랭킹 엔진 점수 확인
+npm run debug rank 2026-01-20 NOON
+
+# 이슈 병합(Clustering) 결과 검증
+npm run debug merge 2026-01-20 NOON
+
+# Cloud AI 요약 분석 테스트
+npm run debug summary "분석키워드"
+```
+
+---
+
+## 7. 배포 및 운영
 
 - **Infrastructure:** **Supabase**를 백엔드 서버리스 플랫폼으로 채택하여 DB 관리 및 이미지 스토리지로 활용합니다.
 - **Batch Processing:** 10분 단위의 데이터 수집과 하루 2회(정오, 밤)의 메인 분석 파이프라인을 자동화했습니다.
-- **Monitoring:** 모든 실행 로그는 자체 개발한 `Logger` 모듈을 통해 관리되며, 최종 결과물은 `output/` 디렉토리에 시계열별로 영구히 보존됩니다.
+- **GCP Server Setup**: 제공된 스크립트를 통해 원터치로 환경을 구축할 수 있습니다.
+  - `chmod +x backend/scripts/setup_gcp_server.sh`
+  - `./backend/scripts/setup_gcp_server.sh`
+- **Automation Daemon (PM2)**:
+  - `pm2 start npm --name "itssue-daemon" -- run daemon`
+  - `pm2 save && pm2 startup`
 
-## 7. 향후 개선 방향
+## 8. 향후 개선 방향
 
 - **AI Audit System:** AI가 생성한 요약문을 스스로 검토하여 사실 관계가 틀리거나 비문인 경우 재생성하는 자가 교정 로직 도입 예정.
 - **Multi-Platform:** 인스타그램 외에 스레드(Threads), 트위터(X) 등 여러 소셜 채널로 발행 플랫폼 확장.
 
-## 8. 실행 결과 (Actual Outputs)
+## 9. 실행 결과 (Actual Outputs)
 
 프로젝트를 통해 실제로 생성되어 인스타그램에 업로드되는 고해상도 전체 피드(Full Feed) 예시입니다.
 
