@@ -7,7 +7,15 @@ export async function POST(request: Request) {
 
         // Server-side Environment Variables (Set these in Vercel)
         const BACKEND_URL = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL; // e.g. http://34.x.x.x:3000
-        const API_KEY = process.env.ADMIN_API_KEY || process.env.NEXT_PUBLIC_ADMIN_API_KEY || 'itssue-secret-777';
+        const API_KEY = process.env.ADMIN_API_KEY || process.env.NEXT_PUBLIC_ADMIN_API_KEY;
+
+        if (!API_KEY) {
+            return NextResponse.json(
+                { error: 'Server Configuration Error: ADMIN_API_KEY is missing.' },
+                { status: 500 }
+            );
+        }
+
 
         if (!BACKEND_URL) {
             return NextResponse.json(
