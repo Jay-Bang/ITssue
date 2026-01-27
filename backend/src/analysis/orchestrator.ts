@@ -224,6 +224,16 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
             Logger.warn("⚠️ Notification failed but pipeline completed.", e);
         }
 
+        // [Step 10] 로컬 파일 정리 (Cleanup)
+        // [Logic] Supabase 및 Telegram 전송이 완료되었으므로 로컬 저장 공간 확보를 위해 삭제합니다.
+        try {
+            Logger.info(`🧹 Cleaning up local output directory: ${outputDir}`);
+            await fs.remove(outputDir);
+            Logger.success("✅ Local cleanup completed.");
+        } catch (cleanupError) {
+            Logger.warn("⚠️ Failed to cleanup local output directory.", cleanupError);
+        }
+
     } catch (error: any) {
         Logger.error("Pipeline crashed", error);
         await closeBrowser().catch(() => { });
