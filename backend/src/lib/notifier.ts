@@ -41,77 +41,98 @@ export class NotificationService {
             return;
         }
 
-        try {
-            // [Step 1] 이미지 묶음 전송 (Media Group) - 텔레그램 미디어 그룹은 최대 10개까지 지원
-            if (imagePaths.length > 0) {
-                const FormData = require('form-data');
-                const formData = new FormData();
-                formData.append('chat_id', this.telegramChatId);
+        const MAX_RETRIES = 3;
+        let lastError = null;
 
-                const mediaLimit = 10;
-                // [Fix] 이미지 파일명(P1, P2...) 순으로 정렬하여 랭킹 페이지가 항상 첫 번째로 오게 함
-                const targetImages = [...imagePaths]
-                    .sort((a, b) => path.basename(a).localeCompare(path.basename(b)))
-                    .slice(0, mediaLimit);
-
-                const media = targetImages.map((_, idx) => ({
-                    type: 'document',
-                    media: `attach://file${idx}`
-                }));
-
-                formData.append('media', JSON.stringify(media));
-
-                targetImages.forEach((img, idx) => {
-                    formData.append(`file${idx}`, fs.createReadStream(img));
-                });
-
-                await axios.post(`https://api.telegram.org/bot${this.telegramToken}/sendMediaGroup`, formData, {
-                    headers: formData.getHeaders(),
-                    maxContentLength: Infinity,
-                    maxBodyLength: Infinity
-                });
-            }
-
-            // [Step 1.5] 비디오 프리뷰 생성 및 전송 (FFmpeg)
-            // [Logic] 이미지 묶음을 동영상으로 변환하여 더 생동감 있는 미리보기를 제공합니다.
+        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
             try {
+                if (attempt > 1) {
+                    const delay = attempt * 10000;
+                    Logger.info(`🔄 Retrying Telegram notification (Attempt ${attempt}/${MAX_RETRIES}) in ${delay / 1000}s...`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+
+                // [Step 1] 이미지 묶음 전송 (Media Group) - 텔레그램 미디어 그룹은 최대 10개까지 지원
                 if (imagePaths.length > 0) {
-                    const outputDir = path.dirname(imagePaths[0]);
-                    const videoFilename = `video_${type}_${date}.mp4`;
-                    const videoPath = await VideoGenerator.generatePreview(imagePaths, outputDir, videoFilename);
-
                     const FormData = require('form-data');
-                    const videoForm = new FormData();
-                    videoForm.append('chat_id', this.telegramChatId);
-                    videoForm.append('video', fs.createReadStream(videoPath));
-                    videoForm.append('caption', `🎬 Issue Board Video Preview (${date})`);
+                    const formData = new FormData();
+                    formData.append('chat_id', this.telegramChatId);
 
-                    await axios.post(`https://api.telegram.org/bot${this.telegramToken}/sendVideo`, videoForm, {
-                        headers: videoForm.getHeaders(),
-                        maxContentLength: Infinity,
-                        maxBodyLength: Infinity
+                    const mediaLimit = 10;
+                    // [Fix] 이미지 파일명(P1, P2...) 순으로 정렬하여 랭킹 페이지가 항상 첫 번째로 오게 함
+                    const targetImages = [...imagePaths]
+                        .sort((a, b) => path.basename(a).localeCompare(path.basename(b)))
+                        .slice(0, mediaLimit);
+
+                    const media = targetImages.map((_, idx) => ({
+                        type: 'document',
+                        media: `attach://file${idx}`
+                    }));
+
+                    formData.append('media', JSON.stringify(media));
+
+                    targetImages.forEach((img, idx) => {
+                        formData.append(`file${idx}`, fs.createReadStream(img));
                     });
 
-                    Logger.success('🎥 Telegram video preview sent.');
+                    await axios.post(`https://api.telegram.org/bot${this.telegramToken}/sendMediaGroup`, formData, {
+                        headers: formData.getHeaders(),
+                        maxContentLength: Infinity,
+                        maxBodyLength: Infinity,
+                        timeout: 30000 // 30초 타임아웃
+                    });
                 }
-            } catch (videoError: any) {
-                Logger.warn('⚠️ Failed to generate or send video preview (Skipping...)', videoError.message);
-            }
 
-            // [Step 2] 인스타그램 캡션 전송
-            if (caption) {
-                // [Fix] Markdown 대신 더 튼튼한 HTML 모드 사용 (특수문자 충돌 방지)
-                const safeCaption = this.escapeHtml(caption);
-                await axios.post(`https://api.telegram.org/bot${this.telegramToken}/sendMessage`, {
-                    chat_id: this.telegramChatId,
-                    text: `<b>[ITssue News Report]</b>\n\n${safeCaption}`,
-                    parse_mode: 'HTML'
-                });
-            }
+                // [Step 1.5] 비디오 프리뷰 생성 및 전송 (FFmpeg)
+                try {
+                    if (imagePaths.length > 0) {
+                        const outputDir = path.dirname(imagePaths[0]);
+                        const videoFilename = `video_${type}_${date}.mp4`;
+                        const videoPath = await VideoGenerator.generatePreview(imagePaths, outputDir, videoFilename);
 
-            Logger.success('✅ Telegram notification (MediaGroup + Caption) sent.');
-        } catch (error) {
-            Logger.error('❌ Failed to send Telegram notification', error);
+                        const FormData = require('form-data');
+                        const videoForm = new FormData();
+                        videoForm.append('chat_id', this.telegramChatId);
+                        videoForm.append('video', fs.createReadStream(videoPath));
+                        videoForm.append('caption', `🎬 Issue Board Video Preview (${date})`);
+
+                        await axios.post(`https://api.telegram.org/bot${this.telegramToken}/sendVideo`, videoForm, {
+                            headers: videoForm.getHeaders(),
+                            maxContentLength: Infinity,
+                            maxBodyLength: Infinity,
+                            timeout: 60000 // 비디오는 용량이 크므로 60초
+                        });
+
+                        Logger.success('🎥 Telegram video preview sent.');
+                    }
+                } catch (videoError: any) {
+                    Logger.warn('⚠️ Failed to generate or send video preview (Skipping...)', videoError.message);
+                }
+
+                // [Step 2] 인스타그램 캡션 전송
+                if (caption) {
+                    const safeCaption = this.escapeHtml(caption);
+                    await axios.post(`https://api.telegram.org/bot${this.telegramToken}/sendMessage`, {
+                        chat_id: this.telegramChatId,
+                        text: `<b>[ITssue News Report]</b>\n\n${safeCaption}`,
+                        parse_mode: 'HTML'
+                    }, {
+                        timeout: 10000 // 캡션은 가볍게 10초
+                    });
+                }
+
+                Logger.success('✅ Telegram notification (MediaGroup + Caption) sent.');
+                return; // 성공 시 함수 종료
+
+            } catch (error: any) {
+                lastError = error;
+                Logger.warn(`⚠️ Telegram attempt ${attempt} failed: ${error.message}`);
+
+                // 마지막 시도 후에만 에러 로그 출력
+                if (attempt === MAX_RETRIES) {
+                    Logger.error('❌ Failed to send Telegram notification after all retries', lastError);
+                }
+            }
         }
     }
 }

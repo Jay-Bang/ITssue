@@ -122,9 +122,9 @@ export class InstagramPublisher {
             }
 
             // [Safety] 인스타그램 이미지 처리 지연 대기 (Smart Polling)
-            // 1. 최소 물리적 시간 보장 (40초)
-            Logger.info('⏳ Waiting 40s initial buffer for processing...');
-            await new Promise(resolve => setTimeout(resolve, 40000));
+            // 1. 최소 물리적 시간 보장 (60초로 상향 - 대량 작업 시 안전성 확보)
+            Logger.info('⏳ Waiting 60s initial buffer for processing...');
+            await new Promise(resolve => setTimeout(resolve, 60000));
 
             // 2. 상태 기반 폴링 (Exponential Backoff)
             await this.waitUntilAllItemsFinished(itemIds);
@@ -132,6 +132,11 @@ export class InstagramPublisher {
             // [Step 2] 캐러셀 컨테이너(Carousel Container) 생성
             Logger.info('📦 Assembling carousel container...');
             const carouselContainerId = await this.createCarouselContainer(itemIds, caption);
+
+            // [Safety] 캐러셀 컨테이너 생성 후 즉시 발행 시도 시 인스타그램 서버에서 'Media ID not available' 에러가 
+            // 발생하는 경우가 있어 의도적인 15초 대기 시간을 가집니다.
+            Logger.info('⏳ Waiting 15s for carousel container to stabilize...');
+            await new Promise(resolve => setTimeout(resolve, 15000));
 
             // [Step 3] 최종 미디어 발행 (Publishing with Retries)
             Logger.info('🚀 Publishing to Instagram Feed (with retries)...');
@@ -159,6 +164,15 @@ export class InstagramPublisher {
             return result.id;
 
         } catch (error: any) {
+            const errorDetail = error.response?.data?.error || {};
+            const subcode = errorDetail.error_subcode;
+
+            if (subcode === 2207051) {
+                Logger.error('[Instagram] 🚫 ACTION BLOCKED: Instagram has restricted this activity. Please check your phone app and verify yourself.');
+            } else if (subcode === 2207027) {
+                Logger.error('[Instagram] ⏳ MEDIA NOT READY: Media is still being processed by Instagram servers.');
+            }
+
             Logger.error('[Instagram] Complete publish flow failed.', error.message);
             return null;
         }
