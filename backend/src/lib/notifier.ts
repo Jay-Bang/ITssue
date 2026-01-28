@@ -5,8 +5,17 @@ import { Logger } from './logger';
 import { FinalIssueBoard } from '../types';
 import { VideoGenerator } from '../visual/video-generator';
 import * as path from 'path';
+import * as https from 'https';
 
 dotenv.config();
+
+// [Optimization] 텔레그램 API 통신 전용 에이전트
+// - [Logic] GCP 환경에서 IPv6 우선 시도로 인한 지연(Timeout)을 방지하기 위해 IPv4 전용(`family: 4`)으로 강제합니다.
+// - [Logic] KeepAlive를 켜서 빈번한 전송 시 핸드셰이크 시간을 단축합니다.
+const telegramAgent = new https.Agent({
+    family: 4,
+    keepAlive: true,
+});
 
 /**
  * [Notification Service]
@@ -55,7 +64,8 @@ export class NotificationService {
                 // [Step 1] 이미지 묶음 전송 (Media Group) - 텔레그램 미디어 그룹은 최대 10개까지 지원
                 if (imagePaths.length > 0) {
                     const FormData = require('form-data');
-                    const formData = new FormData();
+                    // [Fix] 전송 데이터 크기 제한 해제 (기본 2MB 초과 시 에러 방지)
+                    const formData = new FormData({ maxDataSize: Infinity });
                     formData.append('chat_id', this.telegramChatId);
 
                     const mediaLimit = 10;
@@ -65,7 +75,7 @@ export class NotificationService {
                         .slice(0, mediaLimit);
 
                     const media = targetImages.map((_, idx) => ({
-                        type: 'document',
+                        type: 'photo', // [Fix] document -> photo: 썸네일 노출 및 전송 효율 최적화
                         media: `attach://file${idx}`
                     }));
 
@@ -77,9 +87,10 @@ export class NotificationService {
 
                     await axios.post(`https://api.telegram.org/bot${this.telegramToken}/sendMediaGroup`, formData, {
                         headers: formData.getHeaders(),
+                        httpsAgent: telegramAgent, // [Fix] IPv4 강제 적용
                         maxContentLength: Infinity,
                         maxBodyLength: Infinity,
-                        timeout: 30000 // 30초 타임아웃
+                        timeout: 45000 // 45초로 넉넉하게 설정
                     });
                 }
 
@@ -91,16 +102,17 @@ export class NotificationService {
                         const videoPath = await VideoGenerator.generatePreview(imagePaths, outputDir, videoFilename);
 
                         const FormData = require('form-data');
-                        const videoForm = new FormData();
+                        const videoForm = new FormData({ maxDataSize: Infinity });
                         videoForm.append('chat_id', this.telegramChatId);
                         videoForm.append('video', fs.createReadStream(videoPath));
                         videoForm.append('caption', `🎬 Issue Board Video Preview (${date})`);
 
                         await axios.post(`https://api.telegram.org/bot${this.telegramToken}/sendVideo`, videoForm, {
                             headers: videoForm.getHeaders(),
+                            httpsAgent: telegramAgent, // [Fix] IPv4 강제 적용
                             maxContentLength: Infinity,
                             maxBodyLength: Infinity,
-                            timeout: 60000 // 비디오는 용량이 크므로 60초
+                            timeout: 90000 // 비디오는 90초
                         });
 
                         Logger.success('🎥 Telegram video preview sent.');
@@ -117,7 +129,8 @@ export class NotificationService {
                         text: `<b>[ITssue News Report]</b>\n\n${safeCaption}`,
                         parse_mode: 'HTML'
                     }, {
-                        timeout: 10000 // 캡션은 가볍게 10초
+                        httpsAgent: telegramAgent, // [Fix] IPv4 강제 적용
+                        timeout: 15000 // 캡션은 15초
                     });
                 }
 
