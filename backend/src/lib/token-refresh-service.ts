@@ -1,6 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 import axios from 'axios';
 import { Logger } from './logger';
+import * as dotenv from 'dotenv';
+
+dotenv.config();
 
 /**
  * [Instagram Token Refresh Service]
