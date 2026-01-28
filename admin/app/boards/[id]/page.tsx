@@ -37,6 +37,7 @@ export default function BoardDetailPage() {
 
     const [board, setBoard] = useState<Board | null>(null);
     const [items, setItems] = useState<BoardItem[]>([]);
+    const [originalItems, setOriginalItems] = useState<BoardItem[]>([]); // To support "Cancel"
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [republishing, setRepublishing] = useState(false);
@@ -62,23 +63,41 @@ export default function BoardDetailPage() {
 
         setBoard(boardData);
         setItems(itemsData || []);
+        setOriginalItems(JSON.parse(JSON.stringify(itemsData || []))); // Deep copy for baseline
         setLoading(false);
     }
 
-    async function handleSave(itemId: string, field: 'instagram_summary' | 'tags', value: string | string[]) {
+    const isModified = (item: BoardItem) => {
+        const original = originalItems.find(o => o.id === item.id);
+        if (!original) return false;
+        return item.instagram_summary !== original.instagram_summary ||
+            JSON.stringify(item.tags) !== JSON.stringify(original.tags);
+    };
+
+    async function handleSaveItem(item: BoardItem) {
         setSaving(true);
         const { error } = await supabase
             .from('issue_board_items')
-            .update({ [field]: value })
-            .eq('id', itemId);
+            .update({
+                instagram_summary: item.instagram_summary,
+                tags: item.tags
+            })
+            .eq('id', item.id);
 
         if (error) {
             alert('Failed to save: ' + error.message);
         } else {
-            // alert('✓ Saved successfully!');
-            Logger.success('✓ Saved successfully!');
+            // Update baseline to current value
+            setOriginalItems(originalItems.map(o => o.id === item.id ? { ...item } : o));
         }
         setSaving(false);
+    }
+
+    function handleCancel(itemId: string) {
+        const original = originalItems.find(o => o.id === itemId);
+        if (original) {
+            setItems(items.map(item => item.id === itemId ? JSON.parse(JSON.stringify(original)) : item));
+        }
     }
 
     async function handleRepublish() {
@@ -180,8 +199,7 @@ export default function BoardDetailPage() {
                                         <textarea
                                             value={item.instagram_summary}
                                             onChange={(e) => updateItem(item.id, 'instagram_summary', e.target.value)}
-                                            onBlur={(e) => handleSave(item.id, 'instagram_summary', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 text-sm sm:text-base bg-white"
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 text-sm sm:text-base bg-white transition-all shadow-inner"
                                             rows={4}
                                         />
                                     </div>
@@ -198,10 +216,6 @@ export default function BoardDetailPage() {
                                                 const newTags = e.target.value.split(',').map(t => t.trim()).filter(Boolean);
                                                 updateItem(item.id, 'tags', newTags);
                                             }}
-                                            onBlur={(e) => {
-                                                const newTags = e.target.value.split(',').map(t => t.trim()).filter(Boolean);
-                                                handleSave(item.id, 'tags', newTags);
-                                            }}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 text-sm bg-white"
                                         />
                                         <div className="mt-2 flex flex-wrap gap-2">
@@ -215,6 +229,28 @@ export default function BoardDetailPage() {
                                             ))}
                                         </div>
                                     </div>
+
+                                    {/* Manual Save/Cancel Buttons */}
+                                    {isModified(item) && (
+                                        <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-end gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                                            <span className="text-xs text-amber-600 font-medium mr-auto flex items-center gap-1">
+                                                <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></span>
+                                                Unsaved changes
+                                            </span>
+                                            <button
+                                                onClick={() => handleCancel(item.id)}
+                                                className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md transition-colors"
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                onClick={() => handleSaveItem(item)}
+                                                className="px-4 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow-sm transition-all active:scale-95"
+                                            >
+                                                Save Item
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

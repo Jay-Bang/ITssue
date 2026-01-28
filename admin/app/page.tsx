@@ -38,6 +38,7 @@ export default function BoardsPage() {
       .from('issue_boards')
       .select('id, board_type, target_date, created_at, instagram_post_id')
       .order('target_date', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(50);
 
     Logger.info('Supabase response:', { data, error });
