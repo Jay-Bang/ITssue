@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { Logger } from '../lib/logger';
+import { createClient } from '@supabase/supabase-js';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
@@ -17,15 +18,46 @@ dotenv.config();
 export class InstagramPublisher {
     private readonly baseUrl = 'https://graph.facebook.com/v24.0';
     private readonly igUserId: string;
-    private readonly accessToken: string;
+    private accessToken: string;
+    private supabase;
 
     constructor() {
         this.igUserId = process.env.IG_USER_ID || '';
-        this.accessToken = process.env.IG_ACCESS_TOKEN || '';
+        this.accessToken = process.env.IG_ACCESS_TOKEN || ''; // Fallback
+        this.supabase = createClient(
+            process.env.SUPABASE_URL || '',
+            process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+        );
 
         if (!this.igUserId || !this.accessToken) {
             Logger.warn('[Instagram] IG_USER_ID or IG_ACCESS_TOKEN is missing in .env');
         }
+
+        // 비동기 토큰 로딩 (Supabase 우선)
+        this.loadAccessToken();
+    }
+
+    /**
+     * Access Token 로딩 (Supabase → .env fallback)
+     */
+    private async loadAccessToken(): Promise<void> {
+        try {
+            const { data, error } = await this.supabase
+                .from('instagram_tokens')
+                .select('access_token')
+                .eq('id', 1)
+                .single();
+
+            if (!error && data?.access_token) {
+                this.accessToken = data.access_token;
+                Logger.info('📦 Using Instagram token from Supabase');
+                return;
+            }
+        } catch (error) {
+            Logger.warn('⚠️ Failed to load token from Supabase, using .env fallback');
+        }
+
+        // Fallback은 이미 constructor에서 설정됨
     }
 
     /**
@@ -68,6 +100,25 @@ export class InstagramPublisher {
             const errorDetail = error.response?.data || error.message;
             Logger.error(`[Instagram] Failed to create carousel container`, errorDetail);
             throw error;
+        }
+    }
+
+    /**
+     * 최근 게시물 목록 조회 (ID 복구용)
+     */
+    private async getRecentMedia(): Promise<Array<{ id: string; timestamp: string; media_type: string }>> {
+        const url = `${this.baseUrl}/${this.igUserId}/media`;
+        try {
+            const response = await axios.get(url, {
+                params: {
+                    fields: 'id,timestamp,media_type',
+                    access_token: this.accessToken
+                }
+            });
+            return response.data.data || [];
+        } catch (error: any) {
+            Logger.error('[Instagram] Failed to fetch recent media', error.message);
+            return [];
         }
     }
 
@@ -168,6 +219,30 @@ export class InstagramPublisher {
             }
 
             Logger.error('[Instagram] Complete publish flow failed.', error.message);
+
+            // [Fallback] API 실패 시 피드에서 ID 복구 시도
+            Logger.warn('⚠️ Attempting to recover media ID from feed...');
+            try {
+                const recentMedia = await this.getRecentMedia();
+                const now = new Date();
+
+                // 1분 이내 + CAROUSEL_ALBUM 타입 매칭
+                const matchedPost = recentMedia.find(post => {
+                    const postTime = new Date(post.timestamp);
+                    const diffMinutes = Math.abs((now.getTime() - postTime.getTime()) / 60000);
+                    return diffMinutes <= 1 && post.media_type === 'CAROUSEL_ALBUM';
+                });
+
+                if (matchedPost) {
+                    Logger.success(`✅ Recovered media ID from feed: ${matchedPost.id}`);
+                    return matchedPost.id;
+                } else {
+                    Logger.warn('⚠️ No matching post found in recent feed');
+                }
+            } catch (recoveryError: any) {
+                Logger.error('[Instagram] ID recovery failed', recoveryError.message);
+            }
+
             return null;
         }
     }

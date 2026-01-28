@@ -86,6 +86,13 @@ cron.schedule('5 22 * * *', () => {
     timezone: TIMEZONE
 });
 
+// 🔄 [Job] Instagram 토큰 갱신: 매월 1일 00:00 KST
+cron.schedule('0 0 1 * *', () => {
+    runCommand('npm run refresh-token', 'Token Refresh');
+}, {
+    timezone: TIMEZONE
+});
+
 // 프로세스 종료 시그널 처리 (Graceful Shutdown)
 process.on('SIGINT', () => {
     Logger.info('🛑 Daemon stopping...');

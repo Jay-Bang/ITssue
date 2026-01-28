@@ -15,6 +15,7 @@
     "build": "tsc",
     "debug": "ts-node scripts/debug.ts",
     "daemon": "ts-node src/daemon.ts",
+    "refresh-token": "ts-node src/lib/token-refresh-service.ts",
     "api": "ts-node src/api/webhook-server.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
