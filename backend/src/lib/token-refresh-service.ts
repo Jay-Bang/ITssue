@@ -19,7 +19,7 @@ export class TokenRefreshService {
     constructor() {
         this.supabase = createClient(
             process.env.SUPABASE_URL!,
-            process.env.SUPABASE_SERVICE_ROLE_KEY!
+            process.env.SUPABASE_SERVICE_KEY!
         );
         this.appId = process.env.FACEBOOK_APP_ID!;
         this.appSecret = process.env.FACEBOOK_APP_SECRET!;

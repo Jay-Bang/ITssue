@@ -26,7 +26,7 @@ export class InstagramPublisher {
         this.accessToken = process.env.IG_ACCESS_TOKEN || ''; // Fallback
         this.supabase = createClient(
             process.env.SUPABASE_URL || '',
-            process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+            process.env.SUPABASE_SERVICE_KEY || ''
         );
 
         if (!this.igUserId || !this.accessToken) {
