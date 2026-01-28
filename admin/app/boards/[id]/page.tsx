@@ -86,10 +86,17 @@ export default function BoardDetailPage() {
 
         setRepublishing(true);
         try {
+            // Get current session token for server-side auth check
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
             // Use Internal Next.js API Proxy (Handles HTTPS -> HTTP conversion)
             const response = await fetch(`/api/republish`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     boardId: boardId
                 })

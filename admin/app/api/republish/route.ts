@@ -9,9 +9,27 @@
  */
 import { NextResponse } from 'next/server';
 import { Logger } from '@/lib/logger';
+import { supabase } from '@/lib/supabase';
 
 export async function POST(request: Request) {
     try {
+        // 1. Check Authentication (Verify Supabase JWT)
+        const authHeader = request.headers.get('Authorization');
+        if (!authHeader) {
+            Logger.warn('[Proxy] Unauthorized access attempt: Missing Authorization header');
+            return NextResponse.json({ error: 'Unauthorized: Missing token' }, { status: 401 });
+        }
+
+        const token = authHeader.replace('Bearer ', '');
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+        if (authError || !user) {
+            Logger.warn('[Proxy] Unauthorized access attempt: Invalid token');
+            return NextResponse.json({ error: 'Unauthorized: Invalid token' }, { status: 401 });
+        }
+
+        Logger.info(`[Proxy] Authenticated user: ${user.email}`);
+
         const body = await request.json();
         const { boardId } = body;
 
