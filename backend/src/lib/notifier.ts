@@ -75,7 +75,7 @@ export class NotificationService {
                         .slice(0, mediaLimit);
 
                     const media = targetImages.map((_, idx) => ({
-                        type: 'photo', // [Fix] document -> photo: 썸네일 노출 및 전송 효율 최적화
+                        type: 'document',
                         media: `attach://file${idx}`
                     }));
 
@@ -90,7 +90,7 @@ export class NotificationService {
                         httpsAgent: telegramAgent, // [Fix] IPv4 강제 적용
                         maxContentLength: Infinity,
                         maxBodyLength: Infinity,
-                        timeout: 45000 // 45초로 넉넉하게 설정
+                        timeout: 10000 // 10초로 넉넉하게 설정
                     });
                 }
 
@@ -112,7 +112,7 @@ export class NotificationService {
                             httpsAgent: telegramAgent, // [Fix] IPv4 강제 적용
                             maxContentLength: Infinity,
                             maxBodyLength: Infinity,
-                            timeout: 90000 // 비디오는 90초
+                            timeout: 20000 // 비디오는 20초
                         });
 
                         Logger.success('🎥 Telegram video preview sent.');
@@ -130,7 +130,7 @@ export class NotificationService {
                         parse_mode: 'HTML'
                     }, {
                         httpsAgent: telegramAgent, // [Fix] IPv4 강제 적용
-                        timeout: 15000 // 캡션은 15초
+                        timeout: 5000 // 캡션은 5초
                     });
                 }
 
