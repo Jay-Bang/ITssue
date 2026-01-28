@@ -124,7 +124,7 @@ async function debugRanking(arg1?: string, arg2?: string) {
 
     Logger.info(`✅ Top 20 Ranked Issues:`);
     rankedIssues.slice(0, 20).forEach((issue: any, idx: number) => {
-        Logger.info(`${String(idx + 1).padStart(2, '0')}. ${issue.keyword} (${issue.total_score}pt) - Articles: ${issue.articles.length}`);
+        Logger.info(`${String(idx + 1).padStart(2, '0')}. ${issue.representative_keyword} (${issue.score}pt) - Articles: ${issue.news_titles.length}`);
     });
 }
 

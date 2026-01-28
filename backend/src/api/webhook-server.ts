@@ -15,7 +15,13 @@ import { republishBoard } from '../lib/republish-service';
 dotenv.config();
 
 const PORT = process.env.WEBHOOK_PORT || 3000;
-const API_KEY = process.env.ADMIN_API_KEY || 'itssue-secret-777';
+const API_KEY = process.env.ADMIN_API_KEY;
+
+if (!API_KEY) {
+    Logger.error('❌ Security Error: ADMIN_API_KEY is not defined in .env');
+    Logger.info('   Please set a secure ADMIN_API_KEY to start the webhook server.');
+    process.exit(1);
+}
 
 const server = http.createServer(async (req, res) => {
     // CORS Headers
@@ -79,5 +85,5 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, () => {
     Logger.info(`📡 ITssue Webhook Server running on port ${PORT}`);
-    Logger.info(`🔒 Security: ADMIN_API_KEY is ${API_KEY === 'itssue-secret-777' ? 'using DEFAULT (Please set in .env)' : 'Active'}`);
+    Logger.info(`🔒 Security: ADMIN_API_KEY is Active`);
 });
