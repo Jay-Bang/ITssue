@@ -38,9 +38,7 @@ export class InstagramPublisher {
                 params: {
                     image_url: imageUrl,
                     is_carousel_item: true, // 캐러셀의 구성 요소임을 명시
-                },
-                headers: {
-                    'Authorization': `Bearer ${this.accessToken}`
+                    access_token: this.accessToken
                 }
             });
             return response.data.id;
@@ -62,9 +60,7 @@ export class InstagramPublisher {
                     media_type: 'CAROUSEL',
                     children: childrenIds.join(','),
                     caption: caption,
-                },
-                headers: {
-                    'Authorization': `Bearer ${this.accessToken}`
+                    access_token: this.accessToken
                 }
             });
             return response.data.id;
@@ -84,9 +80,7 @@ export class InstagramPublisher {
             const response = await axios.post(url, null, {
                 params: {
                     creation_id: creationId,
-                },
-                headers: {
-                    'Authorization': `Bearer ${this.accessToken}`
+                    access_token: this.accessToken
                 }
             });
             return { id: response.data.id };
@@ -188,8 +182,8 @@ export class InstagramPublisher {
         try {
             Logger.info(`🗑️ Attempting to delete Instagram media: ${mediaId}...`);
             const response = await axios.delete(url, {
-                headers: {
-                    'Authorization': `Bearer ${this.accessToken}`
+                params: {
+                    access_token: this.accessToken
                 }
             });
 
