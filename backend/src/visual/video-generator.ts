@@ -31,12 +31,12 @@ export class VideoGenerator {
 
         // [Step 1] FFmpeg Concat Demuxer용 입력 시퀀스 파일 생성
         // [Logic] 각 이미지 노출 시간을 3초로 지정합니다.
-        // [Fix/Critical] FFmpeg concat demuxer의 특성상 마지막 이미지의 duration이 무시되는 경우가 발생합니다.
-        // 이를 방지하기 위해 마지막 이미지를 한 번 더 선언하는 더미 프레임 기법을 적용했습니다.
-        let fileContent = images.map(img => `file '${img}'\nduration 3`).join('\n');
-        if (images.length > 0) {
-            fileContent += `\nfile '${images[images.length - 1]}'`;
-        }
+        const DURATION = 3;
+        const escapePath = (p: string) => p.replace(/'/g, "'\\''");
+
+        const fileContent = images
+            .map(img => `file '${escapePath(img)}'\nduration ${DURATION}`)
+            .join('\n');
 
         await fs.writeFile(listFilePath, fileContent);
 
@@ -55,14 +55,16 @@ export class VideoGenerator {
                 '-vf', 'scale=1080:1350,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black',
                 '-c:v', 'libx264',
                 '-pix_fmt', 'yuv420p',
+                '-crf', '23',
+                '-preset', 'fast',
                 '-r', '30',
                 '-movflags', '+faststart',
                 outputVideoPath
             ]);
 
+            let stderr = '';
             ffmpeg.stderr.on('data', (data) => {
-                // FFmpeg 로그는 stderr로 출력됨 (너무 많아서 에러만 필터링하거나 디버그 모드에서만 볼 수 있음)
-                // Logger.info(`ffmpeg: ${data}`);
+                stderr += data.toString();
             });
 
             ffmpeg.on('close', async (code) => {
@@ -74,7 +76,8 @@ export class VideoGenerator {
                     resolve(outputVideoPath);
                 } else {
                     Logger.error(`❌ FFmpeg exited with code ${code}`);
-                    reject(new Error(`FFmpeg exited with code ${code}`));
+                    Logger.error(stderr);
+                    reject(new Error(stderr || `FFmpeg exited with code ${code}`));
                 }
             });
 
