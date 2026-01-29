@@ -126,7 +126,7 @@ export class NotificationService {
                     const safeCaption = this.escapeHtml(caption);
                     await axios.post(`https://api.telegram.org/bot${this.telegramToken}/sendMessage`, {
                         chat_id: this.telegramChatId,
-                        text: `<b>[ITssue News Report]</b>\n\n${safeCaption}`,
+                        text: safeCaption,
                         parse_mode: 'HTML'
                     }, {
                         httpsAgent: telegramAgent, // [Fix] IPv4 강제 적용
