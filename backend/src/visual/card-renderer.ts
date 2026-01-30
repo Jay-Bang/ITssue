@@ -85,7 +85,12 @@ async function getBrowser(retryCount = 0): Promise<Browser> {
         try {
             browser = await puppeteer.launch({
                 // [Safety] 리눅스 서버 및 Docker 환경에서의 샌드박스 보안 충돌 방지
-                args: ['--no-sandbox', '--disable-setuid-sandbox']
+                // [Networking] --force-ipv4를 통해 GCP 환경에서의 IPv6 연결 지연 및 타임아웃 방지
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--force-ipv4'
+                ]
             });
         } catch (error: any) {
             // [Critical Path] 크롬 브라우저 미설치/버전 미스매치 대응
@@ -141,7 +146,7 @@ export async function renderCard(data: CardData, options: RenderOptions) {
         width = 1080,
         height = 1350,
         deviceScaleFactor = 2,
-        timeout = 15000,
+        timeout = 30000,
         retry = 1,
         visualVersion = 'bubblegum'
     } = options;
@@ -179,9 +184,10 @@ export async function renderCard(data: CardData, options: RenderOptions) {
 
             Logger.time('Page Content Set');
             // [Step] HTML/CSS 주입 및 로딩 대기
-            // 'networkidle0'을 통해 모든 시각적 에셋(이미지 등)이 로드될 때까지 대기합니다.
+            // [Optimization] 'networkidle0'은 외부 폰트/에셋의 네트워크 상황에 따라 타임아웃을 유발할 수 있습니다.
+            // HTML 본문과 구조 로딩('domcontentloaded')까지만 대기한 후, 폰트 로딩은 JS에서 별도로 관리합니다.
             await page.setContent(html, {
-                waitUntil: ['load', 'networkidle0'],
+                waitUntil: ['load', 'domcontentloaded'],
                 timeout
             });
             Logger.timeEnd('Page Content Set');

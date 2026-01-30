@@ -1,7 +1,12 @@
 import { Logger } from './lib/logger';
 import * as dotenv from 'dotenv';
+import * as dns from 'dns';
 import { runOrchestrator } from './analysis/orchestrator';
 import { BoardType } from './types';
+
+// [Critical/Networking] Fix for GCP VM IPv6/IPv4 Connection Issues
+// Force Node.js to prefer IPv4 over IPv6 to avoid connection timeouts when reaching external services like Supabase.
+dns.setDefaultResultOrder('ipv4first');
 
 dotenv.config();
 
