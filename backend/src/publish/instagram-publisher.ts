@@ -187,7 +187,7 @@ export class InstagramPublisher {
             Logger.info('🚀 Publishing to Instagram Feed (with retries)...');
             let result: { id: string } | null = null;
             let retryCount = 0;
-            const maxRetries = 2;
+            const maxRetries = 1;
 
             while (retryCount < maxRetries) {
                 try {
