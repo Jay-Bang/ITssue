@@ -16,10 +16,15 @@ import * as path from 'path';
 // KST = UTC+9
 // node-cron은 시스템 시간을 따르거나 timezone 옵션을 사용할 수 있습니다.
 // 여기서는 명시적으로 'Asia/Seoul' 타임존을 사용합니다.
+// [Critical] 시스템 타임존 설정과 무관하게 Node.js 프로세스의 타임존을 KST로 강제합니다.
+// PM2 데몬이 이전 타임존 정보를 캐싱하고 있을 가능성을 배제하기 위함입니다.
+process.env.TZ = 'Asia/Seoul';
+
 const TIMEZONE = 'Asia/Seoul';
 
 Logger.info('🚀 ITssue Automation Daemon Started');
 Logger.info(`⏰ Timezone: ${TIMEZONE}`);
+Logger.info(`🕰️ Current Server Time: ${new Date().toString()}`);
 Logger.info('📅 Scheduled Jobs: Noon(12:05), Night(22:05)');
 
 // [Logic] 관리자 패널(Admin UI) 연동을 위한 Webhook API 서버는 현재 standalone 프로세스(itssue-api)로 운영되므로 데몬에서 제외합니다.
