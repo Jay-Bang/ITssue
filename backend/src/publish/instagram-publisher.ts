@@ -33,8 +33,17 @@ export class InstagramPublisher {
             Logger.warn('[Instagram] IG_USER_ID or IG_ACCESS_TOKEN is missing in .env');
         }
 
-        // 비동기 토큰 로딩 (Supabase 우선)
-        this.loadAccessToken();
+        // 비동기 토큰 로딩 (필요 시 명시적으로 await 호출 권장)
+        this.initialized = this.loadAccessToken();
+    }
+
+    private initialized: Promise<void>;
+
+    /**
+     * 토큰 로딩이 완료될 때까지 대기하는 헬퍼
+     */
+    async ensureInitialized(): Promise<void> {
+        await this.initialized;
     }
 
     /**
@@ -150,8 +159,10 @@ export class InstagramPublisher {
      * @returns 발행된 게시물의 고유 ID
      */
     async publishCarousel(imageUrls: string[], caption: string): Promise<string | null> {
+        await this.ensureInitialized();
+
         if (!this.igUserId || !this.accessToken) {
-            Logger.error('[Instagram] Cannot publish: Missing credentials.');
+            Logger.error('[Instagram] Cannot publish: Missing credentials (IG_USER_ID or Token).');
             return null;
         }
 

@@ -25,7 +25,7 @@ const TIMEZONE = 'Asia/Seoul';
 Logger.info('🚀 ITssue Automation Daemon Started');
 Logger.info(`⏰ Timezone: ${TIMEZONE}`);
 Logger.info(`🕰️ Current Server Time: ${new Date().toString()}`);
-Logger.info('📅 Scheduled Jobs: Noon(12:05), Night(22:05)');
+Logger.info('📅 Scheduled Jobs: Noon(12:05), Night(22:05), Token Refresh(1st 00:00)');
 
 // [Logic] 관리자 패널(Admin UI) 연동을 위한 Webhook API 서버는 현재 standalone 프로세스(itssue-api)로 운영되므로 데몬에서 제외합니다.
 // import './api/webhook-server';
@@ -93,6 +93,7 @@ cron.schedule('5 22 * * *', () => {
 
 // 🔄 [Job] Instagram 토큰 갱신: 매월 1일 00:00 KST
 cron.schedule('0 0 1 * *', () => {
+    Logger.info('🔄 [Daemon] Monthly Token Refresh Job Triggered');
     runCommand('npm run refresh-token', 'Token Refresh');
 }, {
     timezone: TIMEZONE
