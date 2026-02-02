@@ -219,19 +219,19 @@ export class InstagramPublisher {
             Logger.info('🚀 Publishing to Instagram Feed (with retries)...');
             let result: { id: string } | null = null;
             let retryCount = 0;
-            const maxRetries = 1;
+            const maxRetries = 2; // 총 3회 시도 (기본 1회 + 재시도 2회)
 
-            while (retryCount < maxRetries) {
+            while (retryCount <= maxRetries) {
                 try {
                     result = await this.publishMedia(carouselContainerId);
                     if (result) break;
                 } catch (error: any) {
                     retryCount++;
-                    if (retryCount >= maxRetries) throw error;
+                    if (retryCount > maxRetries) throw error;
 
                     const waitTime = retryCount * 20000; // 20초, 40초 점진적 증가
-                    Logger.warn(`⚠️ Publish failed (Attempt ${retryCount}/${maxRetries}). Retrying in ${waitTime / 1000}s...`);
-                    await new Promise(resolve => setTimeout(resolve, waitTime));
+                    Logger.warn(`⚠️ Publish failed (Attempt ${retryCount}/${maxRetries + 1}). Retrying in ${waitTime / 1000}s...`);
+                    await this.sleep(waitTime);
                 }
             }
 
