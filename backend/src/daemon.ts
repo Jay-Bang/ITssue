@@ -99,6 +99,13 @@ cron.schedule('0 0 1 * *', () => {
     timezone: TIMEZONE
 });
 
+// ❤️ [Job] Heartbeat: 매시 정각마다 데몬 상태 로깅 (생존 확인용)
+cron.schedule('0 * * * *', () => {
+    Logger.info(`❤️ [Daemon] Heartbeat - Alive at ${new Date().toLocaleString('ko-KR', { timeZone: TIMEZONE })}`);
+}, {
+    timezone: TIMEZONE
+});
+
 // 프로세스 종료 시그널 처리 (Graceful Shutdown)
 process.on('SIGINT', () => {
     Logger.info('🛑 Daemon stopping...');
