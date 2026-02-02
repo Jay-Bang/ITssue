@@ -69,25 +69,44 @@ export class InstagramPublisher {
         // Fallback은 이미 constructor에서 설정됨
     }
 
+    private async sleep(ms: number) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
     /**
      * 개별 이미지에 대한 항목 컨테이너 생성
      */
     private async createItemContainer(imageUrl: string): Promise<string> {
         const url = `${this.baseUrl}/${this.igUserId}/media`;
-        try {
-            const response = await axios.post(url, null, {
-                params: {
-                    image_url: imageUrl,
-                    is_carousel_item: true, // 캐러셀의 구성 요소임을 명시
-                    access_token: this.accessToken
+        const maxRetries = 2; // 총 3번 시도 (기본 1회 + 재시도 2회)
+        let attempt = 0;
+
+        while (attempt <= maxRetries) {
+            try {
+                const response = await axios.post(url, null, {
+                    params: {
+                        image_url: imageUrl,
+                        is_carousel_item: true, // 캐러셀의 구성 요소임을 명시
+                        access_token: this.accessToken
+                    }
+                });
+                return response.data.id;
+            } catch (error: any) {
+                attempt++;
+                const errorDetail = error.response?.data?.error || error.response?.data || error.message;
+                const subcode = errorDetail.error_subcode;
+
+                if (attempt > maxRetries) {
+                    Logger.error(`[Instagram] Failed to create item container after ${attempt} attempts: ${imageUrl}`, errorDetail);
+                    throw error;
                 }
-            });
-            return response.data.id;
-        } catch (error: any) {
-            const errorDetail = error.response?.data || error.message;
-            Logger.error(`[Instagram] Failed to create item container for ${imageUrl}`, errorDetail);
-            throw error;
+
+                const waitTime = 5000; // 일관된 5초 대기 후 재시도
+                Logger.warn(`⚠️ [Instagram] Item container creation failed (Attempt ${attempt}/${maxRetries + 1}). Retrying in ${waitTime / 1000}s...`);
+                await this.sleep(waitTime);
+            }
         }
+        throw new Error('Unreachable: Item container creation loop finished without return or throw.');
     }
 
     /**
@@ -106,7 +125,7 @@ export class InstagramPublisher {
             });
             return response.data.id;
         } catch (error: any) {
-            const errorDetail = error.response?.data || error.message;
+            const errorDetail = error.response?.data?.error || error.response?.data || error.message;
             Logger.error(`[Instagram] Failed to create carousel container`, errorDetail);
             throw error;
         }
@@ -145,7 +164,7 @@ export class InstagramPublisher {
             });
             return { id: response.data.id };
         } catch (error: any) {
-            const errorDetail = error.response?.data || error.message;
+            const errorDetail = error.response?.data?.error || error.response?.data || error.message;
             Logger.error(`[Instagram] Failed to publish media`, errorDetail);
             throw error;
         }
@@ -175,6 +194,8 @@ export class InstagramPublisher {
                 Logger.info(`   - Creating container for: ${url.split('/').pop()}`);
                 const id = await this.createItemContainer(url);
                 itemIds.push(id);
+                // [Optimization] 연이은 요청으로 인한 차단 방지를 위한 5초 대기
+                await this.sleep(5000);
             }
 
             // [Safety] 인스타그램 이미지 처리 지연 대기 (Smart Polling)
