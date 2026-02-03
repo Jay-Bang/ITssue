@@ -258,11 +258,11 @@ export class InstagramPublisher {
                 const recentMedia = await this.getRecentMedia();
                 const now = new Date();
 
-                // 1분 이내 + CAROUSEL_ALBUM 타입 매칭
+                // 3분 이내 + CAROUSEL_ALBUM 타입 매칭
                 const matchedPost = recentMedia.find(post => {
                     const postTime = new Date(post.timestamp);
                     const diffMinutes = Math.abs((now.getTime() - postTime.getTime()) / 60000);
-                    return diffMinutes <= 1 && post.media_type === 'CAROUSEL_ALBUM';
+                    return diffMinutes <= 3 && post.media_type === 'CAROUSEL_ALBUM';
                 });
 
                 if (matchedPost) {
