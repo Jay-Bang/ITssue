@@ -41,7 +41,7 @@ export default function BoardsPage() {
       .order('created_at', { ascending: false })
       .limit(50);
 
-    Logger.info('Supabase response:', { data, error });
+    // Logger.info('Supabase response:', { data, error });
 
     if (error) {
       Logger.error('Error fetching boards:', error);
@@ -50,6 +50,31 @@ export default function BoardsPage() {
       setBoards(data || []);
     }
     setLoading(false);
+  }
+
+  async function handleSync(boardId: string) {
+    if (!confirm('Instagram Graph API에서 최신 게시물을 찾아 ID를 동기화하시겠습니까? (최대 10분 이내 매칭)')) return;
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/sync-instagram`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          boardId,
+          apiKey: process.env.NEXT_PUBLIC_ADMIN_API_KEY || 'itssue-admin-secure-key-2026'
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        alert(`✅ 성공: ${data.mediaId}`);
+        fetchBoards(); // Refresh status
+      } else {
+        alert(`❌ 실패: ${data.error}`);
+      }
+    } catch (e: any) {
+      alert(`시스템 에러: ${e.message}`);
+    }
   }
 
   if (loading) {
@@ -123,9 +148,28 @@ export default function BoardsPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {board.instagram_post_id ? (
-                        <span className="text-green-600 font-medium">✓ Published</span>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-green-600 font-medium">✓ Published</span>
+                          <a
+                            href={`https://www.instagram.com/p/${board.instagram_post_id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-gray-400 hover:text-gray-600"
+                          >
+                            ↗
+                          </a>
+                        </div>
                       ) : (
-                        <span className="text-gray-400 font-medium">Draft</span>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-gray-400 font-medium">Draft</span>
+                          <button
+                            onClick={() => handleSync(board.id)}
+                            className="text-gray-400 hover:text-green-600 p-1 rounded-full hover:bg-green-50 transition-colors"
+                            title="Sync Instagram ID"
+                          >
+                            ↻
+                          </button>
+                        </div>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">

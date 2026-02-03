@@ -171,6 +171,34 @@ export class InstagramPublisher {
     }
 
     /**
+     * [Admin Feature] 특정 타임스탬프와 일치하는 게시물을 찾아 ID를 복구 (수동 동기화용)
+     */
+    async findAndRecoverPost(targetDate: Date): Promise<string | null> {
+        await this.ensureInitialized();
+
+        try {
+            const recentMedia = await this.getRecentMedia();
+            const targetTime = targetDate.getTime();
+
+            // 10분 이내 + CAROUSEL_ALBUM 타입 매칭
+            const matchedPost = recentMedia.find(post => {
+                const postTime = new Date(post.timestamp).getTime();
+                const diffMinutes = Math.abs((targetTime - postTime) / 60000);
+                return diffMinutes <= 10 && post.media_type === 'CAROUSEL_ALBUM';
+            });
+
+            if (matchedPost) {
+                Logger.success(`✅ Recovered media ID via Admin Sync: ${matchedPost.id}`);
+                return matchedPost.id;
+            }
+            return null;
+        } catch (error: any) {
+            Logger.error('[Instagram] Manual ID recovery failed', error.message);
+            return null;
+        }
+    }
+
+    /**
      * [Main Entry] 인스타그램 캐러셀 포스팅 통합 실행
      * 
      * @param imageUrls - 업로드할 공용 이미지 URL 배열 (최대 10장)

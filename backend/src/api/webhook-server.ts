@@ -77,6 +77,49 @@ const server = http.createServer(async (req, res) => {
                 res.end(JSON.stringify({ error: 'Invalid JSON' }));
             }
         });
+    } else if (req.method === 'POST' && req.url === '/api/sync-instagram') {
+        let body = '';
+        req.on('data', chunk => {
+            body += chunk.toString();
+        });
+
+        req.on('end', async () => {
+            try {
+                const data = JSON.parse(body);
+                const { boardId, apiKey } = data;
+
+                if (apiKey !== API_KEY) {
+                    res.writeHead(401, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Unauthorized' }));
+                    return;
+                }
+
+                if (!boardId) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Missing boardId' }));
+                    return;
+                }
+
+                Logger.info(`🔄 [Webhook] Received sync request for board: ${boardId}`);
+
+                // Import dynamically to avoid circular dependencies if any
+                const { syncInstagramId } = await import('../lib/sync-service');
+                const result = await syncInstagramId(boardId);
+
+                if (result.success) {
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ message: 'Synced successfully', mediaId: result.mediaId }));
+                } else {
+                    res.writeHead(404, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'No matching post found' }));
+                }
+
+            } catch (err) {
+                Logger.error('[Webhook] Sync request failed', err);
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Internal Server Error' }));
+            }
+        });
     } else {
         res.writeHead(404);
         res.end();
