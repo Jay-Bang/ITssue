@@ -128,11 +128,12 @@ npm run debug summary "분석키워드"
 
 ## 7. 배포 및 운영
 
-- **Infrastructure:** **Supabase**를 백엔드 서버리스 플랫폼으로 채택하여 DB 관리 및 이미지 스토리지로 활용합니다.
+- **Infrastructure:** Hybrid architecture (Admin: **Vercel** / Backend: **GCP**) with **Supabase** as the central storage & database.
 - **Batch Processing:** 10분 단위의 데이터 수집과 하루 2회(정오, 밤)의 메인 분석 파이프라인을 자동화했습니다.
-- **GCP Server Setup**: 제공된 스크립트를 통해 원터치로 환경을 구축할 수 있습니다.
-  - `chmod +x backend/scripts/setup_gcp_server.sh`
+- **GCP Server Setup**: 제공된 스크립트를 통해 원터치로 백엔드 환경을 구축할 수 있습니다.
+  - `chmod +x backend/scripts/*.sh`
   - `./backend/scripts/setup_gcp_server.sh`
+  - `./backend/scripts/setup_ai_env.sh` (AI 환경 변수 및 설정 지원)
 - **Automation Daemon (PM2)**:
   - `pm2 start npm --name "itssue-daemon" -- run daemon`
   - `pm2 save && pm2 startup`

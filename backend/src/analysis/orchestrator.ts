@@ -37,7 +37,9 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
         const dateStr = window.end.toISOString().split('T')[0].replace(/-/g, '.');
         const timeSuffix = now.toTimeString().split(' ')[0].replace(/:/g, '');
         const outputTag = type === 'CUSTOM' ? `${dateStr}_CUSTOM_${timeSuffix}` : `${dateStr}_${type}`;
-        const SELECTED_THEME = 'violet-bloom';
+        const visualVersion: 'bubblegum' | 'arcade' = type === 'NOON' ? 'arcade' : 'bubblegum';
+        const p1Title = type === 'NOON' ? 'MIDDAY TRENDS' : 'DAILY TRENDS';
+        const SELECTED_THEME = visualVersion; // Use the actual theme folder name as the theme class
 
         Logger.info(`📅 Analysis Window: ${window.start.toISOString()} ~ ${window.end.toISOString()}`);
 
@@ -128,8 +130,8 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
         const dirA = path.join(outputDir, `Instagram_Feed_${type}_${dateStr}`);
         await fs.ensureDir(dirA);
 
-        const visualVersion: 'bubblegum' | 'arcade' = type === 'NOON' ? 'arcade' : 'bubblegum';
-        const p1Title = type === 'NOON' ? 'MIDDAY TRENDS' : 'DAILY TRENDS';
+        // Update visual version mapping for rendering (already declared above)
+        // visualVersion and p1Title are already defined at the start of the function
 
         await renderFullSet(renderIssues, dateStr, type, SELECTED_THEME, dirA, boardTitles[type], visualVersion, p1Title);
 

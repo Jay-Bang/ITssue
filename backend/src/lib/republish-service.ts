@@ -43,7 +43,7 @@ export async function republishBoard(boardId: string) {
         const type = board.board_type as BoardType;
         const dateStr = board.target_date.replace(/-/g, '.'); // YYYY.MM.DD
         const visualVersion = type === 'NOON' ? 'arcade' : 'bubblegum';
-        const theme = 'violet-bloom'; // Fixed theme for production consistency
+        const theme = visualVersion; // Align theme with visual version
 
         // 3. Format Data for Renderer (Verified with Supabase MCP)
         const formattedIssues: FinalIssueBoard[] = items.map(item => ({

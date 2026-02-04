@@ -27,7 +27,7 @@ async function runManualRender() {
     const isBubblegum = args.includes('--bubblegum') || args.includes('--modern'); // Support both for transition
     const isArcade = args.includes('--arcade');
     let visualVersion: 'bubblegum' | 'arcade' = isArcade ? 'arcade' : 'bubblegum';
-    const SELECTED_THEME = args.find(arg => !arg.startsWith('--') && arg !== jsonPath) || 'violet-bloom';
+    const SELECTED_THEME = args.find(arg => !arg.startsWith('--') && arg !== jsonPath) || visualVersion;
 
     if (!jsonPath) {
         Logger.error('Usage: npm run board:render -- <path_to_json> [theme] [--publish] [--bubblegum|--arcade]');
