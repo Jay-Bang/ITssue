@@ -21,6 +21,7 @@ interface Board {
   target_date: string;
   created_at: string;
   instagram_post_id: string | null;
+  metadata?: { instagram_permalink?: string;[key: string]: any };
 }
 
 export default function BoardsPage() {
@@ -36,7 +37,7 @@ export default function BoardsPage() {
     Logger.info('Fetching boards...');
     const { data, error } = await supabase
       .from('issue_boards')
-      .select('id, board_type, target_date, created_at, instagram_post_id')
+      .select('id, board_type, target_date, created_at, instagram_post_id, metadata')
       .order('target_date', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(50);
@@ -152,7 +153,7 @@ export default function BoardsPage() {
                         <div className="flex items-center space-x-2">
                           <span className="text-green-600 font-medium">✓ Published</span>
                           <a
-                            href={`https://www.instagram.com/p/${board.instagram_post_id}`}
+                            href={board.metadata?.instagram_permalink || `https://www.instagram.com/p/${board.instagram_post_id}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-gray-400 hover:text-gray-600"

@@ -134,7 +134,7 @@ export class InstagramPublisher {
     /**
      * 최근 게시물 목록 조회 (ID 복구용)
      */
-    private async getRecentMedia(): Promise<Array<{ id: string; timestamp: string; media_type: string }>> {
+    private async getRecentMedia(): Promise<Array<{ id: string; timestamp: string; media_type: string; permalink: string }>> {
         const url = `${this.baseUrl}/${this.igUserId}/media`;
         try {
             const response = await axios.get(url, {
@@ -173,7 +173,7 @@ export class InstagramPublisher {
     /**
      * [Admin Feature] 특정 타임스탬프와 일치하는 게시물을 찾아 ID를 복구 (수동 동기화용)
      */
-    async findAndRecoverPost(targetDate: Date): Promise<string | null> {
+    async findAndRecoverPost(targetDate: Date): Promise<{ id: string; permalink: string } | null> {
         await this.ensureInitialized();
 
         try {
@@ -188,8 +188,8 @@ export class InstagramPublisher {
             });
 
             if (matchedPost) {
-                Logger.success(`✅ Recovered media ID via Admin Sync: ${matchedPost.id}`);
-                return matchedPost.id;
+                Logger.success(`✅ Recovered media match: ${matchedPost.id}`);
+                return { id: matchedPost.id, permalink: matchedPost.permalink };
             }
             return null;
         } catch (error: any) {

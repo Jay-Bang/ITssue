@@ -21,16 +21,17 @@ export async function syncInstagramId(boardId: string): Promise<{ success: boole
         // 2. InstagramPublisher를 통해 매칭되는 게시물 검색
         const publisher = new InstagramPublisher();
         const targetDate = new Date(board.created_at);
-        const recoveredId = await publisher.findAndRecoverPost(targetDate);
+        const recoveredPost = await publisher.findAndRecoverPost(targetDate);
 
         // 3. 찾았다면 DB 업데이트
-        if (recoveredId) {
+        if (recoveredPost) {
             const { error: updateError } = await supabase
                 .from('issue_boards')
                 .update({
-                    instagram_post_id: recoveredId,
+                    instagram_post_id: recoveredPost.id,
                     metadata: {
                         ...board.metadata,
+                        instagram_permalink: recoveredPost.permalink,
                         manual_synced_at: new Date().toISOString()
                     }
                 })
@@ -41,8 +42,8 @@ export async function syncInstagramId(boardId: string): Promise<{ success: boole
                 return { success: false };
             }
 
-            Logger.success(`[Sync] Successfully updated board ${boardId} with media ID: ${recoveredId}`);
-            return { success: true, mediaId: recoveredId };
+            Logger.success(`[Sync] Successfully updated board ${boardId} with media ID: ${recoveredPost.id}`);
+            return { success: true, mediaId: recoveredPost.id };
         } else {
             Logger.warn(`[Sync] No matching Instagram post found for board ${boardId}`);
             return { success: false };
