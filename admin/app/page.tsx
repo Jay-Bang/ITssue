@@ -120,19 +120,19 @@ export default function BoardsPage() {
 
   return (
     <div className="space-y-8">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight">Dashboard Overview</h1>
-          <p className="text-gray-500 font-medium">Monitoring ITssue-AI autonomous pipeline status.</p>
+          <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">Dashboard Overview</h1>
+          <p className="text-sm sm:text-base text-gray-500 font-medium">Monitoring ITssue-AI autonomous pipeline status.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={fetchBoards}>Refresh Data</Button>
-          <Button size="sm">Create Manual Board</Button>
+          <Button variant="outline" size="sm" onClick={fetchBoards} className="flex-1 sm:flex-none">Refresh</Button>
+          <Button size="sm" className="flex-1 sm:flex-none">Create Board</Button>
         </div>
       </header>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         <StatsCard
           title="Total Reports"
           value={stats.total}

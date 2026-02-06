@@ -34,6 +34,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const [loading, setLoading] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -86,10 +87,27 @@ export default function RootLayout({
         {isLoginPage ? (
           children
         ) : (
-          <div className="flex min-h-screen">
-            <Sidebar />
-            <main className="flex-1 overflow-x-hidden overflow-y-auto">
-              <div className="max-w-7xl mx-auto py-8 px-6 lg:px-8">
+          <div className="flex min-h-screen flex-col lg:flex-row">
+            {/* Mobile Header */}
+            <header className="lg:hidden flex items-center justify-between px-6 py-4 bg-white border-b border-gray-200 sticky top-0 z-30">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">⚡</span>
+                <span className="font-black text-gray-900 tracking-tight">ITssue</span>
+              </div>
+              <button
+                onClick={() => setIsSidebarOpen(true)}
+                className="p-2 -mr-2 text-gray-600 hover:text-indigo-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+            </header>
+
+            <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+
+            <main className="flex-1 overflow-x-hidden overflow-y-auto w-full">
+              <div className="max-w-7xl mx-auto py-6 px-4 sm:py-8 sm:px-6 lg:px-8">
                 {children}
               </div>
             </main>

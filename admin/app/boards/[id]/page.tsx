@@ -136,15 +136,15 @@ export default function BoardDetailPage() {
 
     return (
         <div className="space-y-6">
-            <header className="flex items-center justify-between">
+            <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <Link href="/" className="text-sm font-bold text-indigo-600 hover:underline mb-2 block">← Back to Dashboard</Link>
-                    <h1 className="text-3xl font-black text-gray-900 tracking-tight">Board Editor</h1>
-                    <p className="text-gray-500 font-medium">{board.board_type} Report • {board.target_date}</p>
+                    <Link href="/" className="text-xs sm:text-sm font-bold text-indigo-600 hover:underline mb-1 sm:mb-2 block">← Back to Dashboard</Link>
+                    <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">Board Editor</h1>
+                    <p className="text-sm sm:text-base text-gray-500 font-medium">{board.board_type} Report • {board.target_date}</p>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={handleRepublish} loading={republishing}>
-                        {republishing ? 'Republishing...' : '🚀 Republish Board'}
+                    <Button variant="outline" onClick={handleRepublish} loading={republishing} className="flex-1 sm:flex-none">
+                        {republishing ? 'Republishing...' : '🚀 Republish'}
                     </Button>
                 </div>
             </header>
@@ -212,7 +212,7 @@ export default function BoardDetailPage() {
                 </div>
 
                 {/* Right: Sticky Mockup Preview */}
-                <div className="lg:col-span-5 sticky top-8">
+                <div className="lg:col-span-5 lg:sticky lg:top-8 order-first lg:order-last">
                     <div className="flex flex-col gap-4">
                         <div className="flex items-center justify-between px-2">
                             <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">Card Preview (Mockup)</h3>
