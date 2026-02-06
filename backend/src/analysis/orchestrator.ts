@@ -167,13 +167,20 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
                     const igPublisher = new InstagramPublisher();
                     igMediaId = await igPublisher.publishCarousel(publicUrls, generatedCaption);
 
+                    // [Logic] Fetch real permalink with shortcode for reliable linking
+                    let igPermalink: string | null = null;
+                    if (igMediaId) {
+                        igPermalink = await igPublisher.getMediaPermalink(igMediaId);
+                    }
+
                     const { error: igUpdateError } = await supabase
                         .from('issue_boards')
                         .update({
                             instagram_post_id: igMediaId,
                             metadata: {
                                 model: 'ITssue AI Engine (Multi-Key)',
-                                published_at: new Date().toISOString()
+                                published_at: new Date().toISOString(),
+                                instagram_permalink: igPermalink
                             }
                         })
                         .eq('id', boardId);

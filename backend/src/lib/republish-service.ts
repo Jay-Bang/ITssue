@@ -93,6 +93,12 @@ export async function republishBoard(boardId: string) {
 
         if (!igMediaId) throw new Error('Instagram publishing returned no Media ID.');
 
+        // [Logic] Fetch real permalink with shortcode for reliable linking
+        let igPermalink: string | null = null;
+        if (igMediaId) {
+            igPermalink = await igPublisher.getMediaPermalink(igMediaId);
+        }
+
         // 9. Update Database with new Post ID and Metadata (CRITICAL)
         // [Logic] We do this BEFORE notification to ensure data integrity even if Telegram fails.
         const { error: updateError } = await supabase
@@ -104,7 +110,8 @@ export async function republishBoard(boardId: string) {
                 metadata: {
                     ...(board.metadata || {}),
                     republished_at: new Date().toISOString(),
-                    note: "Republished via Admin Panel"
+                    note: "Republished via Admin Panel",
+                    instagram_permalink: igPermalink
                 }
             })
             .eq('id', boardId);

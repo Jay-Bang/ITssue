@@ -151,6 +151,26 @@ export class InstagramPublisher {
     }
 
     /**
+     * 특정 미디어 ID에 대한 공개 숏코드가 포함된 permalink 조회
+     */
+    async getMediaPermalink(mediaId: string): Promise<string | null> {
+        await this.ensureInitialized();
+        const url = `${this.baseUrl}/${mediaId}`;
+        try {
+            const response = await axios.get(url, {
+                params: {
+                    fields: 'permalink',
+                    access_token: this.accessToken
+                }
+            });
+            return response.data.permalink || null;
+        } catch (error: any) {
+            Logger.error(`[Instagram] Failed to fetch permalink for ${mediaId}`, error.message);
+            return null;
+        }
+    }
+
+    /**
      * 생성된 컨테이너를 실제로 사용자 피드에 발행
      */
     private async publishMedia(creationId: string): Promise<{ id: string }> {
