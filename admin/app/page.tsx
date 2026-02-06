@@ -178,19 +178,32 @@ export default function BoardsPage() {
                         {board.instagram_post_id ? 'Published' : 'Draft'}
                       </span>
                       {board.instagram_post_id && (
-                        <a
-                          href={board.metadata?.instagram_permalink as string || `https://www.instagram.com/p/${board.instagram_post_id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-muted hover:text-accent-primary transition-colors ml-1"
-                        >
-                          ↗
-                        </a>
+                        <>
+                          <a
+                            href={board.metadata?.instagram_permalink as string || `https://www.instagram.com/p/${board.instagram_post_id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-muted hover:text-accent-primary transition-colors ml-1"
+                            title={board.metadata?.instagram_permalink ? "View on Instagram" : "Legacy Link (Needs Sync)"}
+                          >
+                            ↗
+                          </a>
+                          {!board.metadata?.instagram_permalink && (
+                            <button
+                              onClick={() => handleSync(board.id)}
+                              className="text-accent-orange hover:text-accent-orange/80 transition-colors text-[10px] font-black"
+                              title="Fix Link (Fetch Permalink)"
+                            >
+                              [FIX]
+                            </button>
+                          )}
+                        </>
                       )}
                       {!board.instagram_post_id && (
                         <button
                           onClick={() => handleSync(board.id)}
                           className="text-muted hover:text-accent-secondary transition-colors"
+                          title="Sync with Instagram"
                         >
                           ↻
                         </button>

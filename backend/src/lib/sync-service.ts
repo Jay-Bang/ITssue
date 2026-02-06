@@ -7,7 +7,7 @@ export async function syncInstagramId(boardId: string): Promise<{ success: boole
         // 1. 해당 보드 정보 조회
         const { data: board, error } = await supabase
             .from('issue_boards')
-            .select('created_at, metadata')
+            .select('created_at, metadata, instagram_post_id')
             .eq('id', boardId)
             .single();
 
@@ -16,10 +16,33 @@ export async function syncInstagramId(boardId: string): Promise<{ success: boole
             return { success: false };
         }
 
-        Logger.info(`[Sync] Searching match for board created at: ${board.created_at}`);
-
-        // 2. InstagramPublisher를 통해 매칭되는 게시물 검색
         const publisher = new InstagramPublisher();
+
+        // [Logic] Case A: 이미 ID는 있는데 Permalink가 누락된 경우 (과거 데이터 수기 보정)
+        if (board.instagram_post_id) {
+            Logger.info(`[Sync] Board ${boardId} already has ID ${board.instagram_post_id}. Repairing permalink...`);
+            const permalink = await publisher.getMediaPermalink(board.instagram_post_id);
+
+            if (permalink) {
+                const { error: updateError } = await supabase
+                    .from('issue_boards')
+                    .update({
+                        metadata: {
+                            ...board.metadata,
+                            instagram_permalink: permalink,
+                            manual_repaired_at: new Date().toISOString()
+                        }
+                    })
+                    .eq('id', boardId);
+
+                if (updateError) throw updateError;
+                Logger.success(`[Sync] Successfully repaired permalink for board ${boardId}`);
+                return { success: true, mediaId: board.instagram_post_id };
+            }
+        }
+
+        // [Logic] Case B: ID 자체가 없는 경우 (기존 매칭 로직)
+        Logger.info(`[Sync] Searching match for board created at: ${board.created_at}`);
         const targetDate = new Date(board.created_at);
         const recoveredPost = await publisher.findAndRecoverPost(targetDate);
 
