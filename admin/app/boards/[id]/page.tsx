@@ -10,10 +10,12 @@
  * - [Connectivity] 수동 수정 후 백엔드 웹훅을 호출하여 인스타그램에 즉시 반영하는 flow 지원.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useParams, useRouter } from 'next/navigation';
-import { Logger } from '@/lib/logger';
+import { useParams } from 'next/navigation';
+import Link from 'next/link';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
 
 interface BoardItem {
     id: string;
@@ -32,29 +34,23 @@ interface Board {
 
 export default function BoardDetailPage() {
     const params = useParams();
-    const router = useRouter();
     const boardId = params.id as string;
 
     const [board, setBoard] = useState<Board | null>(null);
     const [items, setItems] = useState<BoardItem[]>([]);
-    const [originalItems, setOriginalItems] = useState<BoardItem[]>([]); // To support "Cancel"
+    const [originalItems, setOriginalItems] = useState<BoardItem[]>([]);
+    const [activeItemIdx, setActiveItemIdx] = useState(0);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [republishing, setRepublishing] = useState(false);
 
-    useEffect(() => {
-        fetchBoardDetails();
-    }, [boardId]);
-
-    async function fetchBoardDetails() {
-        // Fetch board info
+    const fetchBoardDetails = useCallback(async () => {
         const { data: boardData } = await supabase
             .from('issue_boards')
             .select('id, board_type, target_date, instagram_post_id')
             .eq('id', boardId)
             .single();
 
-        // Fetch board items
         const { data: itemsData } = await supabase
             .from('issue_board_items')
             .select('id, rank, keyword, instagram_summary, tags')
@@ -63,9 +59,15 @@ export default function BoardDetailPage() {
 
         setBoard(boardData);
         setItems(itemsData || []);
-        setOriginalItems(JSON.parse(JSON.stringify(itemsData || []))); // Deep copy for baseline
+        setOriginalItems(JSON.parse(JSON.stringify(itemsData || [])));
         setLoading(false);
-    }
+    }, [boardId]);
+
+    useEffect(() => {
+        fetchBoardDetails();
+    }, [fetchBoardDetails]);
+
+    const activeItem = items[activeItemIdx];
 
     const isModified = (item: BoardItem) => {
         const original = originalItems.find(o => o.id === item.id);
@@ -87,17 +89,9 @@ export default function BoardDetailPage() {
         if (error) {
             alert('Failed to save: ' + error.message);
         } else {
-            // Update baseline to current value
-            setOriginalItems(originalItems.map(o => o.id === item.id ? { ...item } : o));
+            setOriginalItems(originalItems.map((o: BoardItem) => o.id === item.id ? { ...item } : o));
         }
         setSaving(false);
-    }
-
-    function handleCancel(itemId: string) {
-        const original = originalItems.find(o => o.id === itemId);
-        if (original) {
-            setItems(items.map(item => item.id === itemId ? JSON.parse(JSON.stringify(original)) : item));
-        }
     }
 
     async function handleRepublish() {
@@ -105,185 +99,162 @@ export default function BoardDetailPage() {
 
         setRepublishing(true);
         try {
-            // Get current session token for server-side auth check
             const { data: { session } } = await supabase.auth.getSession();
             const token = session?.access_token;
 
-            // Use Internal Next.js API Proxy (Handles HTTPS -> HTTP conversion)
             const response = await fetch(`/api/republish`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({
-                    boardId: boardId
-                })
+                body: JSON.stringify({ boardId: boardId })
             });
 
             if (response.ok) {
-                alert('🚀 재발행 요청이 서버로 전달되었습니다! 잠시 후 인스타그램과 텔레그램을 확인해 주세요.');
+                alert('🚀 재발행 요청이 서버로 전달되었습니다!');
             } else {
                 const err = await response.json();
-                alert('❌ 재발행 요청 실패: ' + (err.error || '알 수 없는 에러'));
+                alert('❌ 실패: ' + (err.error || '알 수 없는 에러'));
             }
-        } catch (error: any) {
-            alert('❌ 네트워크 에러: ' + error.message);
+        } catch (error: unknown) {
+            const err = error as Error;
+            alert('❌ 네트워크 에러: ' + err.message);
         } finally {
             setRepublishing(false);
         }
     }
 
     function updateItem(itemId: string, field: 'instagram_summary' | 'tags', value: string | string[]) {
-        setItems(items.map(item =>
+        setItems(items.map((item: BoardItem) =>
             item.id === itemId ? { ...item, [field]: value } : item
         ));
     }
 
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-gray-600">Loading...</div>
-            </div>
-        );
-    }
-
-    if (!board) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-red-600">Board not found</div>
-            </div>
-        );
-    }
+    if (loading) return <div>Loading...</div>;
+    if (!board) return <div>Board not found</div>;
 
     return (
-        <div className="min-h-screen bg-gray-50 py-8 px-4">
-            <div className="max-w-4xl mx-auto">
-                <button
-                    onClick={() => router.push('/')}
-                    className="mb-4 text-indigo-600 hover:text-indigo-800"
-                >
-                    ← Back to list
-                </button>
-
-                <div className="bg-white rounded-lg shadow p-6 mb-6">
-                    <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                        {board.board_type} Board - {board.target_date}
-                    </h1>
-                    <p className="text-sm text-gray-500">
-                        {board.instagram_post_id ? (
-                            <span className="text-green-600">✓ Published (ID: {board.instagram_post_id})</span>
-                        ) : (
-                            <span className="text-gray-400">Draft</span>
-                        )}
-                    </p>
+        <div className="space-y-6">
+            <header className="flex items-center justify-between">
+                <div>
+                    <Link href="/" className="text-sm font-bold text-indigo-600 hover:underline mb-2 block">← Back to Dashboard</Link>
+                    <h1 className="text-3xl font-black text-gray-900 tracking-tight">Board Editor</h1>
+                    <p className="text-gray-500 font-medium">{board.board_type} Report • {board.target_date}</p>
                 </div>
+                <div className="flex gap-2">
+                    <Button variant="outline" onClick={handleRepublish} loading={republishing}>
+                        {republishing ? 'Republishing...' : '🚀 Republish Board'}
+                    </Button>
+                </div>
+            </header>
 
-                <div className="space-y-4">
-                    {items.map((item) => (
-                        <div key={item.id} className="bg-white rounded-lg shadow p-4 sm:p-6">
-                            <div className="flex items-start gap-3 sm:gap-4">
-                                <div className="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm sm:text-base">
-                                    {item.rank}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                {/* Left: Item List and Editor */}
+                <div className="lg:col-span-7 space-y-6">
+                    <Card title="Issue Shards" description="Select an issue to edit its summary and tags.">
+                        <div className="space-y-2">
+                            {items.map((item: BoardItem, idx: number) => (
+                                <button
+                                    key={item.id}
+                                    onClick={() => setActiveItemIdx(idx)}
+                                    className={`w-full text-left p-4 rounded-xl border transition-all ${activeItemIdx === idx
+                                        ? 'border-indigo-600 bg-indigo-50 ring-2 ring-indigo-100 shadow-sm'
+                                        : 'border-gray-100 hover:border-gray-300'
+                                        }`}
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black ${activeItemIdx === idx ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-500'}`}>
+                                            {item.rank}
+                                        </span>
+                                        <span className={`font-bold ${activeItemIdx === idx ? 'text-indigo-900' : 'text-gray-700'}`}>{item.keyword}</span>
+                                        {isModified(item) && <span className="ml-auto w-2 h-2 bg-amber-400 rounded-full"></span>}
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </Card>
+
+                    {activeItem && (
+                        <Card title={`Editing Rank ${activeItem.rank}`} className="border-indigo-100">
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Summary Content</label>
+                                    <textarea
+                                        value={activeItem.instagram_summary}
+                                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => updateItem(activeItem.id, 'instagram_summary', e.target.value)}
+                                        rows={6}
+                                        className="w-full p-4 bg-gray-50 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm font-medium leading-relaxed"
+                                    />
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <h3 className="text-lg font-semibold text-gray-900 mb-3 truncate">
-                                        {item.keyword}
-                                    </h3>
-
-                                    {/* Summary Editor */}
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Summary
-                                        </label>
-                                        <textarea
-                                            value={item.instagram_summary}
-                                            onChange={(e) => updateItem(item.id, 'instagram_summary', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 text-sm sm:text-base bg-white transition-all shadow-inner"
-                                            rows={4}
-                                        />
-                                    </div>
-
-                                    {/* Tags Editor */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Tags (comma-separated)
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={item.tags.join(', ')}
-                                            onChange={(e) => {
-                                                const newTags = e.target.value.split(',').map(t => t.trim()).filter(Boolean);
-                                                updateItem(item.id, 'tags', newTags);
-                                            }}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 text-sm bg-white"
-                                        />
-                                        <div className="mt-2 flex flex-wrap gap-2">
-                                            {item.tags.map((tag, idx) => (
-                                                <span
-                                                    key={idx}
-                                                    className="px-2 py-1 bg-indigo-100 text-indigo-800 text-[10px] sm:text-xs rounded-full"
-                                                >
-                                                    #{tag}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Manual Save/Cancel Buttons */}
-                                    {isModified(item) && (
-                                        <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-end gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                                            <span className="text-xs text-amber-600 font-medium mr-auto flex items-center gap-1">
-                                                <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></span>
-                                                Unsaved changes
-                                            </span>
-                                            <button
-                                                onClick={() => handleCancel(item.id)}
-                                                className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md transition-colors"
-                                            >
-                                                Cancel
-                                            </button>
-                                            <button
-                                                onClick={() => handleSaveItem(item)}
-                                                className="px-4 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow-sm transition-all active:scale-95"
-                                            >
-                                                Save Item
-                                            </button>
-                                        </div>
-                                    )}
+                                <div>
+                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Tags (comma separated)</label>
+                                    <input
+                                        type="text"
+                                        value={activeItem.tags.join(', ')}
+                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateItem(activeItem.id, 'tags', e.target.value.split(',').map((t: string) => t.trim()))}
+                                        className="w-full p-3 bg-gray-50 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm font-bold"
+                                    />
+                                </div>
+                                <div className="pt-4 flex justify-end gap-3">
+                                    <Button
+                                        variant="primary"
+                                        disabled={!isModified(activeItem)}
+                                        onClick={() => handleSaveItem(activeItem)}
+                                        loading={saving}
+                                    >
+                                        Save Changes
+                                    </Button>
                                 </div>
                             </div>
+                        </Card>
+                    )}
+                </div>
+
+                {/* Right: Sticky Mockup Preview */}
+                <div className="lg:col-span-5 sticky top-8">
+                    <div className="flex flex-col gap-4">
+                        <div className="flex items-center justify-between px-2">
+                            <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">Card Preview (Mockup)</h3>
+                            <span className="text-[10px] bg-amber-100 text-amber-700 font-bold px-2 py-0.5 rounded-full">Arcade Theme v3.1</span>
                         </div>
-                    ))}
-                </div>
 
-                {/* Republish Button */}
-                <div className="mt-8 bg-white rounded-lg shadow p-6 text-center border-2 border-dashed border-indigo-200">
-                    <h2 className="text-xl font-bold text-gray-900 mb-2">🚀 인스타그램 재발행</h2>
-                    <p className="text-sm text-gray-500 mb-6 text-balance">
-                        현재 수정된 내용을 바탕으로 카드 뉴스 이미지를 다시 생성하고<br />
-                        인스타그램 게시물을 교체(삭제 후 재발행)합니다.
-                    </p>
-                    <button
-                        onClick={handleRepublish}
-                        disabled={republishing}
-                        className={`px-8 py-3 rounded-full font-bold text-white shadow-lg transition-all ${republishing
-                            ? 'bg-gray-400 cursor-not-allowed'
-                            : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 hover:scale-105 active:scale-95'
-                            }`}
-                    >
-                        {republishing ? '🔄 발행 중...' : '지금 바로 재발행하기'}
-                    </button>
-                    <p className="mt-4 text-[10px] text-gray-400">
-                        * 서버 사양(e2-micro)에 따라 렌더링에 약 1~2분 정도 소요될 수 있습니다.
-                    </p>
-                </div>
+                        {/* The Mockup */}
+                        <div className="aspect-[4/5] bg-white border-[12px] border-white shadow-2xl rounded-sm overflow-hidden flex flex-col font-sans relative">
+                            {/* Header Mock */}
+                            <div className="p-6 border-b-4 border-indigo-600 flex justify-between items-baseline mb-8">
+                                <div className="text-4xl font-black tracking-tighter text-indigo-600">ITssue</div>
+                                <div className="text-right">
+                                    <div className="text-xs font-bold text-gray-400">{board.target_date}</div>
+                                    <div className="text-sm font-black text-indigo-400 uppercase tracking-tighter">{board.board_type} REPORT</div>
+                                </div>
+                            </div>
 
-                {saving && (
-                    <div className="fixed bottom-4 right-4 bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-lg">
-                        Saving...
+                            {/* Main Body Mock */}
+                            <div className="flex-1 px-8 py-2 flex flex-col justify-center">
+                                <div className="text-xl font-black text-gray-300 tracking-widest uppercase mb-4 italic">TOP {activeItem?.rank || '?'}</div>
+                                <h2 className="text-6xl font-black text-gray-900 leading-none tracking-tighter mb-6">{activeItem?.keyword || 'Keyword'}</h2>
+
+                                <div className="flex flex-wrap gap-2 mb-8">
+                                    {activeItem?.tags.slice(0, 3).map((tag: string) => (
+                                        <span key={tag} className="text-xs font-black bg-indigo-600 text-white px-3 py-1 rounded-sm tracking-tighter uppercase italic">#{tag}</span>
+                                    ))}
+                                </div>
+
+                                <div className="space-y-4">
+                                    {activeItem?.instagram_summary.split('\n').map((line: string, i: number) => (
+                                        <p key={i} className="text-2xl font-bold text-gray-700 leading-snug tracking-tight">• {line}</p>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Footer Mock */}
+                            <div className="p-4 border-t-4 border-indigo-600 mt-auto bg-gray-50 flex justify-center items-center">
+                                <div className="text-[10px] font-black tracking-widest text-gray-300 uppercase">ITssue Intelligence Feed</div>
+                            </div>
+                        </div>
                     </div>
-                )}
+                </div>
             </div>
         </div>
     );

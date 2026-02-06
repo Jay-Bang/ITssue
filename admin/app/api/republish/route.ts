@@ -78,10 +78,11 @@ export async function POST(request: Request) {
         const data = await response.json();
         return NextResponse.json(data);
 
-    } catch (error: any) {
-        Logger.error('[Proxy Error]', error);
+    } catch (error: unknown) {
+        const err = error as Error;
+        Logger.error('[Proxy Error]', err);
         return NextResponse.json(
-            { error: `Proxy Failed: ${error.message}` },
+            { error: `Proxy Failed: ${err.message}` },
             { status: 500 }
         );
     }

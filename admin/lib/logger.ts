@@ -9,16 +9,16 @@
  */
 export const Logger = {
     /** 일반 정보 로그 출력 */
-    info: (msg: string, ...args: any[]) => console.log(`[INFO] ${msg}`, ...args),
+    info: (msg: string, ...args: unknown[]) => console.log(`[INFO] ${msg}`, ...args),
 
     /** 성공 메시지 로그 출력 */
-    success: (msg: string, ...args: any[]) => console.log(`[PASS] ${msg}`, ...args),
+    success: (msg: string, ...args: unknown[]) => console.log(`[PASS] ${msg}`, ...args),
 
     /** 경고 메시지 로그 출력 */
-    warn: (msg: string, ...args: any[]) => console.warn(`[WARN] ${msg}`, ...args),
+    warn: (msg: string, ...args: unknown[]) => console.warn(`[WARN] ${msg}`, ...args),
 
     /** 에러 메시지 로그 출력 */
-    error: (msg: string, ...args: any[]) => console.error(`[FAIL] ${msg}`, ...args),
+    error: (msg: string, ...args: unknown[]) => console.error(`[FAIL] ${msg}`, ...args),
 
     /** 시간 측정 시작 */
     time: (label: string) => console.time(label),

@@ -76,3 +76,6 @@ admin/next-env.d.ts
 # --- Private Documentation ---
 backend/docs/SECRET_ARCHITECTURE.md
 backend/docs/BRAND_GUIDE.md
+
+# Sensitive Documentation
+backend/docs/ITssue_Overview.md

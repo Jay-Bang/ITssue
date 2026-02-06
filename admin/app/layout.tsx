@@ -10,12 +10,13 @@
  * - [UX] 전역 글꼴(Geist) 및 스타일 설정을 통해 일관된 브랜드 경험 제공.
  */
 
-import type { Metadata } from "next";
+import type { } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { usePathname, useRouter } from "next/navigation";
+import { Sidebar } from "@/components/layout/Sidebar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -60,12 +61,17 @@ export default function RootLayout({
     return () => subscription.unsubscribe();
   }, [pathname, router]);
 
-  if (loading && pathname !== '/login') {
+  const isLoginPage = pathname === '/login';
+
+  if (loading && !isLoginPage) {
     return (
       <html lang="en">
-        <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-          <div className="min-h-screen flex items-center justify-center bg-gray-50 text-black">
-            Loading Auth...
+        <body className={`${geistSans.variable} ${geistMono.variable} antialiased font-sans`}>
+          <div className="min-h-screen flex items-center justify-center bg-gray-50 text-gray-400">
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+              <p className="text-sm font-bold tracking-widest text-indigo-600">ITSSUE AUTH</p>
+            </div>
           </div>
         </body>
       </html>
@@ -75,9 +81,20 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased text-black`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased text-gray-900 bg-gray-50 font-sans`}
       >
-        {children}
+        {isLoginPage ? (
+          children
+        ) : (
+          <div className="flex min-h-screen">
+            <Sidebar />
+            <main className="flex-1 overflow-x-hidden overflow-y-auto">
+              <div className="max-w-7xl mx-auto py-8 px-6 lg:px-8">
+                {children}
+              </div>
+            </main>
+          </div>
+        )}
       </body>
     </html>
   );
