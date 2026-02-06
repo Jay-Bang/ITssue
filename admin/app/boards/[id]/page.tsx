@@ -111,14 +111,14 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
         }
     };
 
-    if (loading) return <div className="p-8 text-center text-muted font-bold">Loading board data...</div>;
-    if (!board) return <div className="p-8 text-center text-accent-orange font-bold">Board not found.</div>;
-
     const items = useMemo(() => {
-        return [...(board.issue_board_items || [])].sort((a, b) => (a.rank || 0) - (b.rank || 0));
-    }, [board.issue_board_items]);
+        return [...(board?.issue_board_items || [])].sort((a, b) => (a.rank || 0) - (b.rank || 0));
+    }, [board?.issue_board_items]);
 
     const activeItem = editingItem || items[0];
+
+    if (loading) return <div className="p-8 text-center text-muted font-bold">Loading board data...</div>;
+    if (!board) return <div className="p-8 text-center text-accent-orange font-bold">Board not found.</div>;
 
     return (
         <div className="space-y-6">
