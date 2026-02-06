@@ -191,17 +191,31 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
                     <div className="flex flex-col gap-4">
                         <div className="flex items-center justify-between px-2">
                             <h3 className="text-xs font-black text-muted uppercase tracking-widest">Card Preview (Mockup)</h3>
-                            <span className="px-2 py-0.5 bg-accent-orange/10 text-accent-orange text-[10px] font-black rounded uppercase">Live Sync</span>
+                            <div className="flex items-center gap-2">
+                                <span className="px-2 py-0.5 bg-accent-orange/10 text-accent-orange text-[10px] font-black rounded uppercase">Live Sync</span>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-[10px] h-6 px-2 font-black"
+                                    onClick={() => {
+                                        const caption = `[${board.board_type} 이슈 보드]\n\n${items.map((it, idx) => `${idx + 1}. ${it.keyword}`).join('\n')}\n\n#ITssue #뉴스 #이슈 #트렌드`;
+                                        navigator.clipboard.writeText(caption);
+                                        alert('📋 Caption copied to clipboard!');
+                                    }}
+                                >
+                                    📋 COPY CAPTION
+                                </Button>
+                            </div>
                         </div>
 
                         {/* Instagram Style Card Mockup */}
                         <div className="aspect-[4/5] bg-background border border-muted/20 rounded-3xl shadow-2xl overflow-hidden relative group">
                             {/* Theme Overlay (Arcade feel) */}
-                            <div className="absolute inset-0 bg-gradient-to-br from-accent-primary/5 to-accent-secondary/5 pointer-events-none" />
+                            <div className="absolute inset-0 bg-gradient-to-br from-accent-primary/2 to-accent-secondary/2 pointer-events-none" />
 
-                            <div className="p-10 h-full flex flex-col justify-between relative z-10">
+                            <div className="p-10 h-full flex flex-col justify-between relative z-10 transition-all duration-500 scale-[var(--preview-scale,1)]">
                                 <header className="border-b-4 border-foreground pb-4 flex justify-between items-start">
-                                    <span className="text-4xl font-black text-accent-primary tracking-tighter">ITssue</span>
+                                    <span className="text-4xl font-black text-accent-primary tracking-tighter italic">ITssue</span>
                                     <div className="text-right">
                                         <div className="text-xs font-black text-foreground">{board.target_date}</div>
                                         <div className="text-xs font-black text-accent-secondary uppercase">{board.board_type} REPORT</div>
@@ -210,14 +224,14 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
 
                                 <main className="flex-1 flex flex-col justify-center py-8">
                                     <div className="mb-6 flex gap-2">
-                                        <span className="bg-accent-primary text-background text-sm font-black px-3 py-1 rounded">HOT ISSUE</span>
+                                        <span className="bg-accent-primary text-background text-[10px] font-black px-2 py-0.5 rounded tracking-widest">HOT ISSUE</span>
                                     </div>
-                                    <h2 className="text-5xl font-black text-foreground leading-[0.9] tracking-tight mb-8">
+                                    <h2 className="text-5xl font-black text-foreground leading-[0.85] tracking-tight mb-8 transform transition-transform duration-300">
                                         {activeItem?.keyword || "Loading..."}
                                     </h2>
                                     <div className="space-y-4">
                                         {activeItem?.instagram_summary.split('\n').filter((l: string) => l.trim()).map((line: string, i: number) => (
-                                            <p key={i} className="text-xl font-bold text-foreground leading-tight bg-card-bg/50 backdrop-blur-sm p-2 rounded border-l-4 border-accent-primary">
+                                            <p key={i} className="text-xl font-bold text-foreground leading-tight bg-muted/5 backdrop-blur-sm p-3 rounded-lg border-l-4 border-accent-primary">
                                                 {line}
                                             </p>
                                         )) || <div className="h-32 bg-muted/10 rounded animate-pulse" />}
@@ -225,7 +239,10 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
                                 </main>
 
                                 <footer className="border-t-4 border-foreground pt-4 flex justify-between items-center text-[10px] font-black text-muted tracking-widest uppercase">
-                                    <div>AI AUTONOMOUS ENGINE • V2.1</div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 bg-accent-secondary rounded-full animate-pulse" />
+                                        AUTONOMOUS ENGINE v2.3
+                                    </div>
                                     <div className="text-accent-primary">@itssue.news</div>
                                 </footer>
                             </div>

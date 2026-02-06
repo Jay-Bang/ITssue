@@ -41,68 +41,80 @@ export default function LoginPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-            <div className="sm:mx-auto sm:w-full sm:max-w-md">
-                <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-                    ITssue Admin Login
-                </h2>
+        <div className="min-h-screen bg-background flex flex-col justify-center py-12 px-6 lg:px-8 relative overflow-hidden">
+            {/* Background Decorative Elements */}
+            <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-20">
+                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-accent-primary/20 rounded-full blur-[100px]" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent-secondary/20 rounded-full blur-[100px]" />
             </div>
 
-            <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-                <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+            <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10 text-center">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-accent-primary/10 rounded-2xl mb-6 ring-1 ring-accent-primary/20">
+                    <span className="text-3xl">⚡</span>
+                </div>
+                <h2 className="text-4xl font-black text-foreground tracking-tight italic mb-2">
+                    ITssue <span className="text-accent-primary">Admin</span>
+                </h2>
+                <p className="text-sm font-medium text-muted uppercase tracking-widest mb-8">Autonomous AI Pipeline Control</p>
+            </div>
+
+            <div className="mt-4 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
+                <div className="bg-card-bg/50 backdrop-blur-xl py-10 px-8 shadow-2xl rounded-3xl border border-muted/10">
                     <form className="space-y-6" onSubmit={handleLogin}>
                         <div>
-                            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                                Email address
+                            <label htmlFor="email" className="block text-xs font-black text-muted uppercase tracking-widest mb-2 px-1">
+                                Command Center ID
                             </label>
-                            <div className="mt-1">
-                                <input
-                                    id="email"
-                                    name="email"
-                                    type="email"
-                                    autoComplete="email"
-                                    required
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900 bg-white"
-                                />
-                            </div>
+                            <input
+                                id="email"
+                                type="email"
+                                required
+                                placeholder="name@itssue.news"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="w-full px-4 py-3 bg-muted/5 border border-muted/10 rounded-xl focus:ring-2 focus:ring-accent-primary outline-none text-foreground font-bold placeholder:text-muted/30 transition-all"
+                            />
                         </div>
 
                         <div>
-                            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                                Password
+                            <label htmlFor="password" className="block text-xs font-black text-muted uppercase tracking-widest mb-2 px-1">
+                                Security Cipher
                             </label>
-                            <div className="mt-1">
-                                <input
-                                    id="password"
-                                    name="password"
-                                    type="password"
-                                    autoComplete="current-password"
-                                    required
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900 bg-white"
-                                />
-                            </div>
+                            <input
+                                id="password"
+                                type="password"
+                                required
+                                placeholder="••••••••"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full px-4 py-3 bg-muted/5 border border-muted/10 rounded-xl focus:ring-2 focus:ring-accent-primary outline-none text-foreground font-bold placeholder:text-muted/30 transition-all"
+                            />
                         </div>
 
                         {error && (
-                            <div className="text-red-600 text-sm text-center">
+                            <div className="bg-accent-orange/10 border border-accent-orange/20 text-accent-orange text-xs font-bold p-3 rounded-xl text-center">
                                 {error}
                             </div>
                         )}
 
-                        <div>
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-                            >
-                                {loading ? 'Logging in...' : 'Sign in'}
-                            </button>
-                        </div>
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full h-12 flex items-center justify-center bg-foreground text-background rounded-xl text-sm font-black hover:bg-accent-primary transition-all duration-300 transform active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+                        >
+                            {loading ? (
+                                <div className="w-5 h-5 border-2 border-background border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                                'AUTHENTICATE ACCESS'
+                            )}
+                        </button>
                     </form>
+                </div>
+
+                <div className="mt-8 text-center">
+                    <p className="text-[10px] font-black text-muted uppercase tracking-widest opacity-50">
+                        ITSSUE AI AUTONOMOUS ENGINE • SECURITY PROTOCOL V2.3
+                    </p>
                 </div>
             </div>
         </div>
