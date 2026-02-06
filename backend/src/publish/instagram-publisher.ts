@@ -132,14 +132,14 @@ export class InstagramPublisher {
     }
 
     /**
-     * 최근 게시물 목록 조회 (ID 복구용)
+     * 최근 게시물 목록 조회 (ID 및 링크 복구용)
      */
     private async getRecentMedia(): Promise<Array<{ id: string; timestamp: string; media_type: string; permalink: string }>> {
         const url = `${this.baseUrl}/${this.igUserId}/media`;
         try {
             const response = await axios.get(url, {
                 params: {
-                    fields: 'id,timestamp,media_type',
+                    fields: 'id,timestamp,media_type,permalink',
                     access_token: this.accessToken
                 }
             });
@@ -180,17 +180,24 @@ export class InstagramPublisher {
             const recentMedia = await this.getRecentMedia();
             const targetTime = targetDate.getTime();
 
-            // 10분 이내 + CAROUSEL_ALBUM 타입 매칭
-            const matchedPost = recentMedia.find(post => {
+            Logger.info(`[Instagram] Analyzing ${recentMedia.length} recent posts for match...`);
+
+            // 1. CAROUSEL_ALBUM 타입 게시물만 필터링 (Reels 등 제외)
+            const carousels = recentMedia.filter(post => post.media_type === 'CAROUSEL_ALBUM');
+
+            // 2. 시간 오차가 가장 적은(10분 이내) 게시물 매칭
+            const matchedPost = carousels.find(post => {
                 const postTime = new Date(post.timestamp).getTime();
                 const diffMinutes = Math.abs((targetTime - postTime) / 60000);
-                return diffMinutes <= 10 && post.media_type === 'CAROUSEL_ALBUM';
+                return diffMinutes <= 10;
             });
 
             if (matchedPost) {
-                Logger.success(`✅ Recovered media match: ${matchedPost.id}`);
+                Logger.success(`✅ Recovered media match (CAROUSEL_ALBUM): ${matchedPost.id}`);
                 return { id: matchedPost.id, permalink: matchedPost.permalink };
             }
+
+            Logger.warn(`⚠️ No matching CAROUSEL_ALBUM found within 10min of target.`);
             return null;
         } catch (error: any) {
             Logger.error('[Instagram] Manual ID recovery failed', error.message);
