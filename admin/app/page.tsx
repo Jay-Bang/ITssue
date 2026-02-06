@@ -4,10 +4,6 @@
  * [Admin Dashboard: Boards List]
  * 
  * [Description] 발행된 모든 이슈 보드들을 목록 형태로 조회하고 관리할 수 있는 메인 대시보드 페이지입니다.
- * 
- * [Design Intent]
- * - [Logic] Supabase에서 최신 보드 데이터를 역순으로 조회하여 실시간 배포 현황을 한눈에 파악.
- * - [Optimization] 클라이언트 사이드 렌더링('use client')을 통해 즉각적인 필터링 및 네비게이션 지원.
  */
 
 import { useEffect, useState, useMemo } from 'react';
@@ -24,13 +20,13 @@ interface Board {
   target_date: string;
   created_at: string;
   instagram_post_id: string | null;
+  status: string;
   metadata?: { instagram_permalink?: string;[key: string]: unknown };
 }
 
 export default function BoardsPage() {
   const [boards, setBoards] = useState<Board[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchBoards();
@@ -49,7 +45,7 @@ export default function BoardsPage() {
     try {
       const { data, error: fetchError } = await supabase
         .from('issue_boards')
-        .select('id, board_type, target_date, created_at, instagram_post_id, metadata')
+        .select('id, board_type, target_date, created_at, instagram_post_id, metadata, status')
         .order('target_date', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(50);
@@ -59,14 +55,13 @@ export default function BoardsPage() {
     } catch (e: unknown) {
       const err = e as Error;
       Logger.error('Error fetching boards:', err);
-      setError(err.message);
     } finally {
       setLoading(false);
     }
   }
 
   async function handleSync(boardId: string) {
-    if (!confirm('Instagram Graph API에서 최신 게시물을 찾아 ID를 동기화하시겠습니까? (최대 10분 이내 매칭)')) return;
+    if (!confirm('Instagram Graph API에서 최신 게시물을 찾아 ID를 동기화하시겠습니까?')) return;
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
@@ -96,25 +91,10 @@ export default function BoardsPage() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-2">
-          <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-sm font-medium text-gray-500">Loading dashboard...</p>
+          <div className="w-8 h-8 border-4 border-accent-primary border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-sm font-medium text-muted">Loading dashboard...</p>
         </div>
       </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card title="Database Error" className="border-red-200 bg-red-50">
-        <p className="text-red-600 mb-4">{error}</p>
-        <details className="text-xs text-gray-500">
-          <summary className="cursor-pointer font-bold">Troubleshooting</summary>
-          <ul className="mt-2 space-y-1 list-disc list-inside">
-            <li>Check RLS (Row Level Security) on `issue_boards`</li>
-            <li>Verify `NEXT_PUBLIC_SUPABASE_URL`</li>
-          </ul>
-        </details>
-      </Card>
     );
   }
 
@@ -122,8 +102,8 @@ export default function BoardsPage() {
     <div className="space-y-8">
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">Dashboard Overview</h1>
-          <p className="text-sm sm:text-base text-gray-500 font-medium">Monitoring ITssue-AI autonomous pipeline status.</p>
+          <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">Dashboard Overview</h1>
+          <p className="text-sm sm:text-base text-muted font-medium">Monitoring ITssue-AI autonomous pipeline status.</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={fetchBoards} className="flex-1 sm:flex-none">Refresh</Button>
@@ -138,94 +118,86 @@ export default function BoardsPage() {
           value={stats.total}
           icon="📅"
           color="indigo"
-          subValue="Cumulative boards processed"
         />
         <StatsCard
           title="Publish Success"
           value={`${stats.successRate}%`}
           icon="🚀"
-          color="green"
-          trend={{ value: 'Stable', positive: true }}
-          subValue="Instagram auto-publish rate"
+          color="emerald"
+          trend={{ value: 'Active', isUp: true }}
         />
         <StatsCard
           title="Last Lifecycle"
           value={stats.lastRun}
           icon="🕒"
           color="amber"
-          subValue="Latest automated run date"
         />
       </div>
 
       {/* Main Content: Boards Table */}
-      <Card title="Published Boards" description="Latest 50 automated issue boards and their statuses.">
-        <div className="-mx-6 -my-5 overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-100">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Date / Type</th>
-                <th className="px-6 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Status</th>
-                <th className="px-6 py-3 text-right text-xs font-bold text-gray-400 uppercase tracking-widest">Action</th>
+      <Card title="Board Distribution Analysis" description="Latest 50 automated issue boards and their statuses.">
+        <div className="overflow-x-auto -mx-6">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="bg-muted/5 border-y border-muted/10">
+                <th className="px-6 py-4 text-xs font-black text-muted uppercase tracking-widest">Board Name</th>
+                <th className="px-6 py-4 text-xs font-black text-muted uppercase tracking-widest">Type</th>
+                <th className="px-6 py-4 text-xs font-black text-muted uppercase tracking-widest">Status</th>
+                <th className="px-6 py-4 text-xs font-black text-muted uppercase tracking-widest text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-100">
+            <tbody className="divide-y divide-muted/10">
               {boards.map((board) => (
-                <tr key={board.id} className="hover:bg-gray-50/50 transition-colors group">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-2 h-10 rounded-full ${board.board_type === 'NOON' ? 'bg-amber-400' : 'bg-indigo-600'}`}></div>
-                      <div>
-                        <div className="text-sm font-bold text-gray-900">{board.target_date}</div>
-                        <div className={`text-[10px] font-black tracking-tighter uppercase ${board.board_type === 'NOON' ? 'text-amber-600' : 'text-indigo-600'}`}>
-                          {board.board_type} REPORT
-                        </div>
-                      </div>
-                    </div>
+                <tr key={board.id} className="hover:bg-muted/5 transition-colors group">
+                  <td className="px-6 py-4">
+                    <div className="font-bold text-foreground">{board.board_type} Report</div>
+                    <div className="text-xs text-muted font-medium">{board.target_date}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {board.instagram_post_id ? (
-                      <div className="flex items-center gap-2">
-                        <span className="flex h-2 w-2 rounded-full bg-green-500"></span>
-                        <span className="text-sm font-bold text-green-700">Published</span>
+                  <td className="px-6 py-4">
+                    <span className="px-3 py-1 bg-accent-primary/10 text-accent-primary rounded-full text-xs font-black">
+                      AUTO
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${board.status === 'published' ? 'bg-accent-secondary animate-pulse' : 'bg-accent-orange'}`} />
+                      <span className="text-sm font-bold text-foreground capitalize">{board.status}</span>
+                      {board.instagram_post_id && (
                         <a
-                          href={board.metadata?.instagram_permalink || `https://www.instagram.com/p/${board.instagram_post_id}`}
+                          href={board.metadata?.instagram_permalink as string || `https://www.instagram.com/p/${board.instagram_post_id}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-gray-300 hover:text-indigo-600 transition-colors"
+                          className="text-muted hover:text-accent-primary transition-colors ml-1"
                         >
                           ↗
                         </a>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <span className="flex h-2 w-2 rounded-full bg-gray-300"></span>
-                        <span className="text-sm font-bold text-gray-400">Draft / Processing</span>
+                      )}
+                      {!board.instagram_post_id && (
                         <button
                           onClick={() => handleSync(board.id)}
-                          className="text-gray-300 hover:text-green-600 transition-colors"
-                          title="Sync Status"
+                          className="text-muted hover:text-accent-secondary transition-colors"
                         >
                           ↻
                         </button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right">
+                  <td className="px-6 py-4 text-right">
                     <Link href={`/boards/${board.id}`}>
-                      <Button variant="ghost" size="sm" className="font-bold">Manage</Button>
+                      <Button variant="ghost" size="sm" className="font-black">Manage →</Button>
                     </Link>
                   </td>
                 </tr>
               ))}
+              {boards.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="py-20 text-center">
+                    <p className="text-muted font-bold">No boards discovered yet.</p>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
-
-          {boards.length === 0 && (
-            <div className="py-20 text-center">
-              <p className="text-gray-400 font-bold mb-1">No data available.</p>
-              <p className="text-xs text-gray-300">Check your Supabase connection or run the backend engine.</p>
-            </div>
-          )}
         </div>
       </Card>
     </div>

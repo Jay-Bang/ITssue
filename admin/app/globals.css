@@ -1,26 +1,60 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Default Arcade Theme (Light Solarized) */
+  --background: #fdf6e3;
+  --foreground: #073642;
+  --card-bg: #eee8d5;
+  --accent-primary: #d33682;
+  --accent-secondary: #2aa198;
+  --accent-orange: #cb4b16;
+  --muted: #839496;
+}
+
+[data-theme='bubblegum'] {
+  /* Bubblegum Theme (Neon Dark) */
+  --background: #12242e;
+  --foreground: #f3e3ea;
+  --card-bg: #1c2e38;
+  --accent-primary: #fbe2a7;
+  --accent-secondary: #e4a2b1;
+  --accent-orange: #50afb6;
+  --muted: #e4a2b1;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-accent-primary: var(--accent-primary);
+  --color-accent-secondary: var(--accent-secondary);
+  --color-accent-orange: var(--accent-orange);
+  --color-muted: var(--muted);
+  --color-card-bg: var(--card-bg);
+  --font-sans: var(--font-geist-sans), 'Pretendard', sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Custom Scrollbar for Theme matching */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--muted);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary);
 }
