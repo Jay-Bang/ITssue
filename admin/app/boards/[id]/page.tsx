@@ -41,6 +41,7 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
                 .from('issue_boards')
                 .select('*, issue_board_items(*)')
                 .eq('id', params.id)
+                .order('rank', { foreignTable: 'issue_board_items', ascending: true })
                 .single();
 
             if (error) throw error;
@@ -136,7 +137,7 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
                 <div className="lg:col-span-7 space-y-6">
                     <Card title="Issue Items" description="Click an item to edit its AI-generated content.">
                         <div className="space-y-3">
-                            {items.map((item, idx) => (
+                            {items.sort((a, b) => (a.rank || 0) - (b.rank || 0)).map((item, idx) => (
                                 <button
                                     key={item.id}
                                     onClick={() => setEditingItem(item)}
@@ -147,7 +148,7 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
                                 >
                                     <div className="flex items-center gap-3">
                                         <span className="text-xs font-black bg-foreground text-background w-6 h-6 flex items-center justify-center rounded-md">
-                                            {item.rank || idx + 1}
+                                            {item.rank}
                                         </span>
                                         <span className="font-bold text-foreground line-clamp-1">{item.keyword}</span>
                                     </div>
@@ -209,38 +210,38 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
                         </div>
 
                         {/* Instagram Style Card Mockup */}
-                        <div className="aspect-[4/5] bg-background border border-muted/20 rounded-3xl shadow-2xl overflow-hidden relative group">
+                        <div className="relative w-full aspect-[4/5] bg-background border border-muted/20 rounded-3xl shadow-2xl overflow-hidden group origin-top sm:origin-center scale-[0.85] sm:scale-100 -my-10 sm:my-0">
                             {/* Theme Overlay (Arcade feel) */}
                             <div className="absolute inset-0 bg-gradient-to-br from-accent-primary/2 to-accent-secondary/2 pointer-events-none" />
 
-                            <div className="p-10 h-full flex flex-col justify-between relative z-10 transition-all duration-500 scale-[var(--preview-scale,1)]">
-                                <header className="border-b-4 border-foreground pb-4 flex justify-between items-start">
-                                    <span className="text-4xl font-black text-accent-primary tracking-tighter italic">ITssue</span>
+                            <div className="p-6 sm:p-10 h-full flex flex-col justify-between relative z-10">
+                                <header className="border-b-2 sm:border-b-4 border-foreground pb-2 sm:pb-4 flex justify-between items-start">
+                                    <span className="text-2xl sm:text-4xl font-black text-accent-primary tracking-tighter italic">ITssue</span>
                                     <div className="text-right">
-                                        <div className="text-xs font-black text-foreground">{board.target_date}</div>
-                                        <div className="text-xs font-black text-accent-secondary uppercase">{board.board_type} REPORT</div>
+                                        <div className="text-[10px] sm:text-xs font-black text-foreground">{board.target_date}</div>
+                                        <div className="text-[10px] sm:text-xs font-black text-accent-secondary uppercase">{board.board_type} REPORT</div>
                                     </div>
                                 </header>
 
-                                <main className="flex-1 flex flex-col justify-center py-8">
-                                    <div className="mb-6 flex gap-2">
-                                        <span className="bg-accent-primary text-background text-[10px] font-black px-2 py-0.5 rounded tracking-widest">HOT ISSUE</span>
+                                <main className="flex-1 flex flex-col justify-center py-4 sm:py-8">
+                                    <div className="mb-3 sm:mb-6 flex gap-2">
+                                        <span className="bg-accent-primary text-background text-[8px] sm:text-[10px] font-black px-1.5 sm:px-2 py-0.5 rounded tracking-widest">HOT ISSUE</span>
                                     </div>
-                                    <h2 className="text-5xl font-black text-foreground leading-[0.85] tracking-tight mb-8 transform transition-transform duration-300">
+                                    <h2 className="text-3xl sm:text-5xl font-black text-foreground leading-[0.85] tracking-tight mb-4 sm:mb-8 transition-all duration-300">
                                         {activeItem?.keyword || "Loading..."}
                                     </h2>
-                                    <div className="space-y-4">
+                                    <div className="space-y-3 sm:space-y-4">
                                         {activeItem?.instagram_summary.split('\n').filter((l: string) => l.trim()).map((line: string, i: number) => (
-                                            <p key={i} className="text-xl font-bold text-foreground leading-tight bg-muted/5 backdrop-blur-sm p-3 rounded-lg border-l-4 border-accent-primary">
+                                            <p key={i} className="text-base sm:text-xl font-bold text-foreground leading-tight bg-muted/5 backdrop-blur-sm p-2 sm:p-3 rounded-lg border-l-3 sm:border-l-4 border-accent-primary">
                                                 {line}
                                             </p>
                                         )) || <div className="h-32 bg-muted/10 rounded animate-pulse" />}
                                     </div>
                                 </main>
 
-                                <footer className="border-t-4 border-foreground pt-4 flex justify-between items-center text-[10px] font-black text-muted tracking-widest uppercase">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 bg-accent-secondary rounded-full animate-pulse" />
+                                <footer className="border-t-2 sm:border-t-4 border-foreground pt-2 sm:pt-4 flex justify-between items-center text-[8px] sm:text-[10px] font-black text-muted tracking-widest uppercase">
+                                    <div className="flex items-center gap-1.5 sm:gap-2">
+                                        <div className="w-1 sm:h-1.5 w-1 sm:h-1.5 bg-accent-secondary rounded-full animate-pulse" />
                                         AUTONOMOUS ENGINE v2.3
                                     </div>
                                     <div className="text-accent-primary">@itssue.news</div>
