@@ -15,18 +15,17 @@ import { Card } from '@/components/ui/Card';
 
 interface Item {
     id: string;
-    title: string;
-    summary: string;
+    keyword: string; // Map to title in UI
+    instagram_summary: string; // Map to summary in UI
     tags: string[];
-    index?: number;
+    rank: number;
 }
 
 interface Board {
     id: string;
     board_type: string;
     target_date: string;
-    items: Item[];
-    status: string;
+    issue_board_items: Item[]; // Supabase join result
 }
 
 export default function BoardDetailPage(props: { params: Promise<{ id: string }> }) {
@@ -40,7 +39,7 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
         try {
             const { data, error } = await supabase
                 .from('issue_boards')
-                .select('*')
+                .select('*, issue_board_items(*)')
                 .eq('id', params.id)
                 .single();
 
@@ -61,18 +60,23 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
     const handleSaveItem = async () => {
         if (!board || !editingItem) return;
 
-        const updatedItems = board.items.map(item =>
+        const updatedItems = board.issue_board_items.map(item =>
             item.id === editingItem.id ? editingItem : item
         );
 
         try {
+            // Update individual item in issue_board_items table
             const { error } = await supabase
-                .from('issue_boards')
-                .update({ items: updatedItems })
-                .eq('id', board.id);
+                .from('issue_board_items')
+                .update({
+                    keyword: editingItem.keyword,
+                    instagram_summary: editingItem.instagram_summary,
+                    tags: editingItem.tags
+                })
+                .eq('id', editingItem.id);
 
             if (error) throw error;
-            setBoard({ ...board, items: updatedItems });
+            setBoard({ ...board, issue_board_items: updatedItems });
             setEditingItem(null);
             alert('✅ Item saved successfully');
         } catch (error: unknown) {
@@ -109,7 +113,8 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
     if (loading) return <div className="p-8 text-center text-muted font-bold">Loading board data...</div>;
     if (!board) return <div className="p-8 text-center text-accent-orange font-bold">Board not found.</div>;
 
-    const activeItem = editingItem || board.items[0];
+    const items = board.issue_board_items || [];
+    const activeItem = editingItem || items[0];
 
     return (
         <div className="space-y-6">
@@ -131,7 +136,7 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
                 <div className="lg:col-span-7 space-y-6">
                     <Card title="Issue Items" description="Click an item to edit its AI-generated content.">
                         <div className="space-y-3">
-                            {board.items.map((item, idx) => (
+                            {items.map((item, idx) => (
                                 <button
                                     key={item.id}
                                     onClick={() => setEditingItem(item)}
@@ -142,9 +147,9 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
                                 >
                                     <div className="flex items-center gap-3">
                                         <span className="text-xs font-black bg-foreground text-background w-6 h-6 flex items-center justify-center rounded-md">
-                                            {idx + 1}
+                                            {item.rank || idx + 1}
                                         </span>
-                                        <span className="font-bold text-foreground line-clamp-1">{item.title}</span>
+                                        <span className="font-bold text-foreground line-clamp-1">{item.keyword}</span>
                                     </div>
                                 </button>
                             ))}
@@ -152,14 +157,14 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
                     </Card>
 
                     {editingItem && (
-                        <Card title="Edit Content" description={`Editing #${board.items.findIndex(i => i.id === editingItem.id) + 1} - ${editingItem.title}`}>
+                        <Card title="Edit Content" description={`Editing #${items.findIndex(i => i.id === editingItem.id) + 1} - ${editingItem.keyword}`}>
                             <div className="space-y-4">
                                 <div>
                                     <label className="block text-xs font-black text-muted uppercase mb-2">Issue Title</label>
                                     <input
                                         type="text"
-                                        value={editingItem.title}
-                                        onChange={e => setEditingItem({ ...editingItem, title: e.target.value })}
+                                        value={editingItem.keyword}
+                                        onChange={e => setEditingItem({ ...editingItem, keyword: e.target.value })}
                                         className="w-full p-3 bg-muted/5 border border-muted/20 rounded-xl focus:ring-2 focus:ring-accent-primary outline-none text-foreground font-bold"
                                     />
                                 </div>
@@ -167,8 +172,8 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
                                     <label className="block text-xs font-black text-muted uppercase mb-2">Summary (Card Text)</label>
                                     <textarea
                                         rows={4}
-                                        value={editingItem.summary}
-                                        onChange={e => setEditingItem({ ...editingItem, summary: e.target.value })}
+                                        value={editingItem.instagram_summary}
+                                        onChange={e => setEditingItem({ ...editingItem, instagram_summary: e.target.value })}
                                         className="w-full p-3 bg-muted/5 border border-muted/20 rounded-xl focus:ring-2 focus:ring-accent-primary outline-none text-foreground font-medium"
                                     />
                                 </div>
@@ -208,10 +213,10 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
                                         <span className="bg-accent-primary text-background text-sm font-black px-3 py-1 rounded">HOT ISSUE</span>
                                     </div>
                                     <h2 className="text-5xl font-black text-foreground leading-[0.9] tracking-tight mb-8">
-                                        {activeItem?.title || "Loading..."}
+                                        {activeItem?.keyword || "Loading..."}
                                     </h2>
                                     <div className="space-y-4">
-                                        {activeItem?.summary.split('\n').filter(l => l.trim()).map((line, i) => (
+                                        {activeItem?.instagram_summary.split('\n').filter((l: string) => l.trim()).map((line: string, i: number) => (
                                             <p key={i} className="text-xl font-bold text-foreground leading-tight bg-card-bg/50 backdrop-blur-sm p-2 rounded border-l-4 border-accent-primary">
                                                 {line}
                                             </p>

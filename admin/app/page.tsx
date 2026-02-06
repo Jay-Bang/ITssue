@@ -20,13 +20,13 @@ interface Board {
   target_date: string;
   created_at: string;
   instagram_post_id: string | null;
-  status: string;
   metadata?: { instagram_permalink?: string;[key: string]: unknown };
 }
 
 export default function BoardsPage() {
   const [boards, setBoards] = useState<Board[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchBoards();
@@ -45,16 +45,18 @@ export default function BoardsPage() {
     try {
       const { data, error: fetchError } = await supabase
         .from('issue_boards')
-        .select('id, board_type, target_date, created_at, instagram_post_id, metadata, status')
+        .select('id, board_type, target_date, created_at, instagram_post_id, metadata')
         .order('target_date', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(50);
 
       if (fetchError) throw fetchError;
       setBoards(data || []);
+      setError(null);
     } catch (e: unknown) {
       const err = e as Error;
       Logger.error('Error fetching boards:', err);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -94,6 +96,17 @@ export default function BoardsPage() {
           <div className="w-8 h-8 border-4 border-accent-primary border-t-transparent rounded-full animate-spin"></div>
           <p className="text-sm font-medium text-muted">Loading dashboard...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8">
+        <Card title="Data Fetch Error" className="border-accent-orange/50 bg-accent-orange/5">
+          <p className="text-accent-orange font-bold mb-4">{error}</p>
+          <Button onClick={fetchBoards}>Try Again</Button>
+        </Card>
       </div>
     );
   }
@@ -160,8 +173,10 @@ export default function BoardsPage() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full ${board.status === 'published' ? 'bg-accent-secondary animate-pulse' : 'bg-accent-orange'}`} />
-                      <span className="text-sm font-bold text-foreground capitalize">{board.status}</span>
+                      <div className={`w-2 h-2 rounded-full ${board.instagram_post_id ? 'bg-accent-secondary animate-pulse' : 'bg-accent-orange'}`} />
+                      <span className="text-sm font-bold text-foreground capitalize">
+                        {board.instagram_post_id ? 'Published' : 'Draft'}
+                      </span>
                       {board.instagram_post_id && (
                         <a
                           href={board.metadata?.instagram_permalink as string || `https://www.instagram.com/p/${board.instagram_post_id}`}
