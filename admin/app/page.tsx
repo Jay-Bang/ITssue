@@ -62,32 +62,7 @@ export default function BoardsPage() {
     }
   }
 
-  async function handleSync(boardId: string) {
-    if (!confirm('Instagram Graph API에서 최신 게시물을 찾아 ID를 동기화하시겠습니까?')) return;
 
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
-      const res = await fetch(`${apiUrl}/api/sync-instagram`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          boardId,
-          apiKey: process.env.NEXT_PUBLIC_ADMIN_API_KEY || 'itssue-admin-secure-key-2026'
-        })
-      });
-
-      const data = await res.json();
-      if (res.ok) {
-        alert(`✅ 성공: ${data.mediaId}`);
-        fetchBoards();
-      } else {
-        alert(`❌ 실패: ${data.error}`);
-      }
-    } catch (e: unknown) {
-      const err = e as Error;
-      alert(`시스템 에러: ${err.message}`);
-    }
-  }
 
   if (loading) {
     return (
@@ -188,12 +163,7 @@ export default function BoardsPage() {
                         </a>
                       )}
                       {!board.instagram_post_id && (
-                        <button
-                          onClick={() => handleSync(board.id)}
-                          className="text-muted hover:text-accent-secondary transition-colors"
-                        >
-                          ↻
-                        </button>
+                        <div className="text-muted text-xs italic font-medium">Pending</div>
                       )}
                     </div>
                   </td>
