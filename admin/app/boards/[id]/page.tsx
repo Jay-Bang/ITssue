@@ -235,11 +235,16 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
                                             {activeItem?.keyword || "Loading..."}
                                         </h2>
                                         <div className="space-y-3 sm:space-y-4">
-                                            {activeItem?.instagram_summary.split('\n').filter((l: string) => l.trim()).map((line: string, i: number) => (
+                                            {activeItem?.instagram_summary?.split('\n').filter((l: string) => l.trim()).map((line: string, i: number) => (
                                                 <p key={i} className="text-lg sm:text-xl font-bold text-foreground leading-tight bg-muted/5 backdrop-blur-sm p-3 rounded-lg border-l-4 border-accent-primary">
                                                     {line}
                                                 </p>
-                                            )) || <div className="h-32 bg-muted/10 rounded animate-pulse" />}
+                                            )) || (
+                                                    <div className="space-y-3">
+                                                        <div className="h-12 bg-muted/10 rounded animate-pulse" />
+                                                        <div className="h-12 bg-muted/10 rounded animate-pulse w-4/5" />
+                                                    </div>
+                                                )}
                                         </div>
                                     </main>
 
