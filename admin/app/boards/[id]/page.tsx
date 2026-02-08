@@ -91,9 +91,23 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
 
         setRepublishing(true);
         try {
+            // [Bugfix] Add Authentication Header (Supabase JWT)
+            // API Route (route.ts) requires 'Authorization' header to verify admin status.
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
+            if (!token) {
+                alert('❌ 인증 세션이 만료되었습니다. 다시 로그인해주세요.');
+                setRepublishing(false);
+                return;
+            }
+
             const res = await fetch('/api/republish', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({ boardId: board?.id })
             });
 
