@@ -34,6 +34,7 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
     const [loading, setLoading] = useState(true);
     const [editingItem, setEditingItem] = useState<Item | null>(null);
     const [republishing, setRepublishing] = useState(false);
+    const [regenerating, setRegenerating] = useState(false);
 
     const fetchBoard = useCallback(async () => {
         try {
@@ -83,6 +84,47 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
         } catch (error: unknown) {
             const err = error as Error;
             alert(`❌ Error saving: ${err.message}`);
+        }
+    };
+
+    const handleRegenerate = async () => {
+        if (!editingItem) return;
+        if (!confirm(`'${editingItem.keyword}'에 대한 AI 요약을 다시 생성하시겠습니까?\n기존 요약 내용은 덮어씌워집니다.`)) return;
+
+        setRegenerating(true);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
+            if (!token) {
+                alert('❌ 인증 세션이 만료되었습니다. 다시 로그인해주세요.');
+                setRegenerating(false);
+                return;
+            }
+
+            const res = await fetch('/api/regenerate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ itemId: editingItem.id })
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                // Update local state with new summary
+                const newSummary = data.summary.join('\n');
+                setEditingItem({ ...editingItem, instagram_summary: newSummary });
+                alert('✨ AI 요약이 성공적으로 재생성되었습니다! 확인 후 저장해주세요.');
+            } else {
+                alert(`❌ 실패: ${data.error}`);
+            }
+        } catch (error: unknown) {
+            const err = error as Error;
+            alert(`❌ 네트워크 에러: ${err.message}`);
+        } finally {
+            setRegenerating(false);
         }
     };
 
@@ -195,9 +237,20 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
                                         className="w-full p-4 bg-muted/5 border border-muted/10 rounded-2xl focus:ring-2 focus:ring-accent-primary outline-none text-foreground font-medium text-sm leading-relaxed transition-all"
                                     />
                                 </div>
-                                <div className="flex gap-2 justify-end pt-2">
-                                    <Button variant="ghost" onClick={() => setEditingItem(null)}>Cancel</Button>
-                                    <Button onClick={handleSaveItem}>Save Changes</Button>
+                                <div className="flex gap-2 justify-between pt-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleRegenerate}
+                                        loading={regenerating}
+                                        className="text-accent-secondary border-accent-secondary/30 hover:bg-accent-secondary/10"
+                                    >
+                                        ✨ Regenerate AI Summary
+                                    </Button>
+                                    <div className="flex gap-2">
+                                        <Button variant="ghost" onClick={() => setEditingItem(null)}>Cancel</Button>
+                                        <Button onClick={handleSaveItem}>Save Changes</Button>
+                                    </div>
                                 </div>
                             </div>
                         </Card>

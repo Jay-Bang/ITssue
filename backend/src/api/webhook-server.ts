@@ -11,6 +11,7 @@ import * as http from 'http';
 import * as dotenv from 'dotenv';
 import { Logger } from '../lib/logger';
 import { republishBoard } from '../lib/republish-service';
+import { regenerateItemSummary } from '../lib/item-generator';
 
 dotenv.config();
 
@@ -70,6 +71,50 @@ const server = http.createServer(async (req, res) => {
 
                 res.writeHead(202, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ message: 'Republishing started in background' }));
+
+            } catch (err) {
+                Logger.error('[Webhook] Request parsing error', err);
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Invalid JSON' }));
+            }
+        });
+    } else if (req.method === 'POST' && req.url === '/api/regenerate-item') {
+        let body = '';
+        req.on('data', chunk => {
+            body += chunk.toString();
+        });
+
+        req.on('end', async () => {
+            try {
+                const data = JSON.parse(body);
+                const { itemId, apiKey } = data;
+
+                // 1. Security Check
+                if (apiKey !== API_KEY) {
+                    Logger.warn(`⚠️  Unauthorized access attempt from ${req.socket.remoteAddress}`);
+                    res.writeHead(401, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Unauthorized' }));
+                    return;
+                }
+
+                if (!itemId) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Missing itemId' }));
+                    return;
+                }
+
+                // 2. Trigger Regeneration (Sync for immediate feedback)
+                Logger.info(`🚀 [Webhook] Received regenerate request for item: ${itemId}`);
+
+                try {
+                    const newSummary = await regenerateItemSummary(itemId);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ message: 'Success', summary: newSummary }));
+                } catch (genError: any) {
+                    Logger.error(`[Webhook] Regeneration failed`, genError);
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: genError.message }));
+                }
 
             } catch (err) {
                 Logger.error('[Webhook] Request parsing error', err);
