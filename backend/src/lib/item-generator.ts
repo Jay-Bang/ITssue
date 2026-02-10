@@ -82,11 +82,7 @@ ${summaryRule}
             .from('issue_board_items')
             .update({
                 instagram_summary: sanitizedSummary.join('\n'), // Store as string for DB compatibility with existing schema/renderer
-                tags: sanitizedTags,
-                metadata: {
-                    ...(item.metadata || {}),
-                    regenerated_at: new Date().toISOString()
-                }
+                tags: sanitizedTags
             })
             .eq('id', itemId);
 
