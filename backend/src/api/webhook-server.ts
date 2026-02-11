@@ -10,7 +10,7 @@
 import * as http from 'http';
 import * as dotenv from 'dotenv';
 import { Logger } from '../lib/logger';
-import { republishBoard } from '../lib/republish-service';
+import { republishBoard, retryPublishBoard } from '../lib/republish-service';
 import { regenerateItemSummary } from '../lib/item-generator';
 
 dotenv.config();
@@ -115,6 +115,51 @@ const server = http.createServer(async (req, res) => {
                     res.writeHead(500, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ error: genError.message }));
                 }
+
+            } catch (err) {
+                Logger.error('[Webhook] Request parsing error', err);
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Invalid JSON' }));
+            }
+        });
+    } else if (req.method === 'POST' && req.url === '/api/retry-publish') {
+        let body = '';
+        req.on('data', chunk => {
+            body += chunk.toString();
+        });
+
+        req.on('end', async () => {
+            try {
+                const data = JSON.parse(body);
+                const { boardId, apiKey } = data;
+
+                if (apiKey !== API_KEY) {
+                    Logger.warn(`⚠️  Unauthorized access attempt from ${req.socket.remoteAddress}`);
+                    res.writeHead(401, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Unauthorized' }));
+                    return;
+                }
+
+                if (!boardId) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Missing boardId' }));
+                    return;
+                }
+
+                Logger.info(`🚀 [Webhook] Received Retry Publish request for board: ${boardId}`);
+
+                // Async execution for timeout safety (though it's faster than full render)
+                retryPublishBoard(boardId)
+                    .then(result => {
+                        Logger.success(`[Webhook] Background Retry success: ${boardId}`);
+                    })
+                    .catch(err => {
+                        Logger.error(`[Webhook] Background Retry failed for ${boardId}`, err);
+                    });
+
+                // Immediate response
+                res.writeHead(202, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ message: 'Retry Publish started in background' }));
 
             } catch (err) {
                 Logger.error('[Webhook] Request parsing error', err);

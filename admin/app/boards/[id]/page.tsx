@@ -35,6 +35,7 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
     const [editingItem, setEditingItem] = useState<Item | null>(null);
     const [republishing, setRepublishing] = useState(false);
     const [regenerating, setRegenerating] = useState(false);
+    const [retrying, setRetrying] = useState(false);
 
     const fetchBoard = useCallback(async () => {
         try {
@@ -128,6 +129,43 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
         }
     };
 
+    const handleRetryPublish = async () => {
+        if (!confirm('이미지 렌더링을 건너뛰고 인스타그램 업로드만 다시 시도하시겠습니까?\n(이미지가 깨져있다면 전체 Republish를 사용하세요)')) return;
+
+        setRetrying(true);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
+            if (!token) {
+                alert('❌ 인증 세션이 만료되었습니다. 다시 로그인해주세요.');
+                setRetrying(false);
+                return;
+            }
+
+            const res = await fetch('/api/retry-publish', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ boardId: board?.id })
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                alert('📤 업로드 재시도 요청 성공! 잠시 후 인스타그램을 확인하세요.');
+            } else {
+                alert(`❌ 실패: ${data.error}`);
+            }
+        } catch (error: unknown) {
+            const err = error as Error;
+            alert(`❌ 네트워크 에러: ${err.message}`);
+        } finally {
+            setRetrying(false);
+        }
+    };
+
     const handleRepublish = async () => {
         if (!confirm('변경된 내용으로 이미지를 다시 렌더링하고 인스타그램에 재발행하시겠습니까?')) return;
 
@@ -185,6 +223,9 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
                     <p className="text-sm sm:text-base text-muted font-medium uppercase">{board.board_type} Report • {board.target_date}</p>
                 </div>
                 <div className="flex gap-2">
+                    <Button variant="ghost" onClick={handleRetryPublish} loading={retrying} className="text-muted hover:text-foreground">
+                        📤 Retry Upload
+                    </Button>
                     <Button variant="outline" onClick={handleRepublish} loading={republishing} className="flex-1 sm:flex-none">
                         {republishing ? 'Republishing...' : '🚀 Republish'}
                     </Button>

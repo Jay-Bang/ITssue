@@ -152,6 +152,102 @@ export async function republishBoard(boardId: string) {
     }
 }
 
+export async function retryPublishBoard(boardId: string) {
+    Logger.info(`🔄 [RetryService] Starting retry publish for Board ID: ${boardId}`);
+
+    try {
+        // 1. Fetch Board Data
+        const { data: board, error: boardError } = await supabase
+            .from('issue_boards')
+            .select('*')
+            .eq('id', boardId)
+            .single();
+
+        if (boardError || !board) throw new Error(`Board not found: ${boardError?.message}`);
+
+        // 2. Check for minimal requirements (Images must exist)
+        const imageUrls = board.storage_urls;
+        if (!imageUrls || !Array.isArray(imageUrls) || imageUrls.length === 0) {
+            throw new Error(`❌ No storage URLs found. Cannot retry publish without existing images. Please use full 'Republish' instead.`);
+        }
+
+        Logger.info(`✅ Found ${imageUrls.length} existing images. Skipping rendering.`);
+
+        // 3. Prepare Data for Caption (re-fetch items to ensure caption is up-to-date)
+        const { data: items, error: itemsError } = await supabase
+            .from('issue_board_items')
+            .select('*')
+            .eq('board_id', boardId)
+            .order('rank', { ascending: true });
+
+        if (itemsError || !items) throw new Error(`Items not found: ${itemsError?.message}`);
+
+        const formattedIssues: FinalIssueBoard[] = items.map(item => ({
+            rank: item.rank,
+            representative_keyword: item.keyword,
+            instagram_summary: typeof item.instagram_summary === 'string'
+                ? item.instagram_summary.split('\n').filter((line: string) => line.trim() !== '')
+                : (item.instagram_summary || []),
+            tags: item.tags || [],
+            score: item.score || 0,
+            news_titles: item.news_titles || []
+        }));
+
+        const type = board.board_type as BoardType;
+        const dateStr = board.target_date.replace(/-/g, '.');
+
+        // 4. Generate Caption
+        const caption = await generateInstagramCaption(type, dateStr, formattedIssues);
+
+        // 5. Publish to Instagram
+        Logger.info("📸 Retry: Publishing to Instagram...");
+        const igPublisher = new InstagramPublisher();
+
+        // Delete old post if exists (optional cleanup)
+        if (board.instagram_post_id) {
+            try {
+                await igPublisher.deleteMedia(board.instagram_post_id);
+            } catch (err) {
+                Logger.warn(`Failed to clean up old post: ${err}`);
+            }
+        }
+
+        const igMediaId = await igPublisher.publishCarousel(imageUrls, caption);
+
+        if (!igMediaId) throw new Error('Instagram publishing returned no Media ID.');
+
+        // 6. Fetch Permalink
+        let igPermalink: string | null = null;
+        if (igMediaId) {
+            igPermalink = await igPublisher.getMediaPermalink(igMediaId);
+        }
+
+        // 7. Update Database
+        const { error: updateError } = await supabase
+            .from('issue_boards')
+            .update({
+                instagram_post_id: igMediaId,
+                caption: caption, // Update caption just in case it changed
+                metadata: {
+                    ...(board.metadata || {}),
+                    republished_at: new Date().toISOString(),
+                    note: "Retried Publish via Admin Panel",
+                    instagram_permalink: igPermalink
+                }
+            })
+            .eq('id', boardId);
+
+        if (updateError) throw updateError;
+
+        Logger.success(`🎉 Retry Publish Successful! ID: ${igMediaId}`);
+        return { success: true, igMediaId };
+
+    } catch (error: any) {
+        Logger.error(`❌ Retry Failed for Board: ${boardId}`, error);
+        throw error;
+    }
+}
+
 const HASHTAG_SETS = [
     "#ITssue #뉴스 #이슈 #트렌드",
     "#ITssue #오늘의이슈 #뉴스요약 #트렌드",
@@ -161,7 +257,7 @@ const HASHTAG_SETS = [
     "#ITssue #뉴스정리 #이슈 #트렌드"
 ];
 
-async function generateInstagramCaption(type: BoardType, date: string, summaries: FinalIssueBoard[]): Promise<string> {
+export async function generateInstagramCaption(type: BoardType, date: string, summaries: FinalIssueBoard[]): Promise<string> {
     const templatePath = path.join(__dirname, '../publish/templates/issue_board_caption.txt');
     const templateSource = await fs.readFile(templatePath, 'utf-8');
     const template = Handlebars.compile(templateSource);
