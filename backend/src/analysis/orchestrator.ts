@@ -280,15 +280,17 @@ function calculateTimeWindow(type: BoardType, now: Date, customStart?: Date, cus
 
     switch (type) {
         case 'NOON':
-            // [Logic] 정오 이슈: 당일 12:00 KST (03:00 UTC)까지의 데이터
-            end = new Date(Date.UTC(kYear, kMonth, kDate, 3, 0, 0, 0));
+            // [Logic] 정오 이슈: 당일 11:45 KST (02:45 UTC)까지의 데이터
+            // 수집 범위: 전일 20:45 KST ~ 당일 11:45 KST
+            end = new Date(Date.UTC(kYear, kMonth, kDate, 2, 45, 0, 0));
             start = new Date(end.getTime());
-            start.setUTCDate(start.getUTCDate() - 1); // 24시간 전 시점부터
-            start.setUTCHours(13, 0, 0, 0); // KST 기준 전일 22:00부터 수집 (야간 데이터 포함)
+            start.setUTCDate(start.getUTCDate() - 1);
+            start.setUTCHours(11, 45, 0, 0); // 전일 20:45 KST (11:45 UTC)
             break;
         case 'NIGHT':
-            // [Logic] 일일 이슈: 당일 22:00 KST (13:00 UTC)까지의 24시간 데이터
-            end = new Date(Date.UTC(kYear, kMonth, kDate, 13, 0, 0, 0));
+            // [Logic] 일일 이슈: 당일 20:45 KST (11:45 UTC)까지의 데이터
+            // 수집 범위: 전일 20:45 KST ~ 당일 20:45 KST (24시간)
+            end = new Date(Date.UTC(kYear, kMonth, kDate, 11, 45, 0, 0));
             start = new Date(end.getTime());
             start.setUTCDate(start.getUTCDate() - 1); // 정확히 24시간 전
             break;
