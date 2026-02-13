@@ -20,7 +20,12 @@ interface Board {
   target_date: string;
   created_at: string;
   instagram_post_id: string | null;
-  metadata?: { instagram_permalink?: string;[key: string]: unknown };
+  metadata?: {
+    instagram_permalink?: string;
+    threads_post_id?: string;
+    facebook_post_id?: string;
+    [key: string]: unknown
+  };
 }
 
 export default function BoardsPage() {
@@ -181,10 +186,32 @@ export default function BoardsPage() {
                               className="text-muted hover:text-accent-primary transition-colors ml-1"
                               title="View on Instagram"
                             >
-                              ↗
+                              📸
                             </a>
                           )}
-                          {!board.instagram_post_id && (
+                          {board.metadata?.threads_post_id && (
+                            <a
+                              href={`https://www.threads.net/@issue.itssue/post/${board.metadata.threads_post_id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-muted hover:text-accent-primary transition-colors ml-1"
+                              title="View on Threads"
+                            >
+                              🧵
+                            </a>
+                          )}
+                          {board.metadata?.facebook_post_id && (
+                            <a
+                              href={`https://www.facebook.com/${board.metadata.facebook_post_id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-muted hover:text-accent-primary transition-colors ml-1"
+                              title="View on Facebook"
+                            >
+                              📘
+                            </a>
+                          )}
+                          {!board.instagram_post_id && !board.metadata?.threads_post_id && !board.metadata?.facebook_post_id && (
                             <div className="text-muted text-[10px] italic font-medium">Pending</div>
                           )}
                         </div>

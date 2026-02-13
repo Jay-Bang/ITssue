@@ -16,6 +16,8 @@ import { renderCard, closeBrowser, renderFullSet } from '../visual/card-renderer
 import { supabase } from '../db/supabase-client';
 import { uploadInstagramImages } from '../publish/storage-manager';
 import { InstagramPublisher } from '../publish/instagram-publisher';
+import { ThreadsPublisher } from '../publish/threads-publisher';
+import { FacebookPublisher } from '../publish/facebook-publisher';
 import * as Handlebars from 'handlebars';
 import * as path from 'path';
 import * as fs from 'fs-extra';
@@ -173,12 +175,13 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
                         igPermalink = await igPublisher.getMediaPermalink(igMediaId);
                     }
 
+                    const { data: boardBeforeIg } = await supabase.from('issue_boards').select('metadata').eq('id', boardId).single();
                     const { error: igUpdateError } = await supabase
                         .from('issue_boards')
                         .update({
                             instagram_post_id: igMediaId,
                             metadata: {
-                                model: 'ITssue AI Engine (Multi-Key)',
+                                ...(boardBeforeIg?.metadata || {}),
                                 published_at: new Date().toISOString(),
                                 instagram_permalink: igPermalink
                             }
@@ -187,6 +190,55 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
 
                     if (igUpdateError) throw igUpdateError;
                     Logger.success(`✨ Instagram Publishing Complete! ID: ${igMediaId}`);
+
+                    // [Logic] 8.5 Threads 최종 게시 (옵션 - Instagram 성공 여부에 독립적으로 실행)
+                    Logger.info("🧵 Publishing to Threads...");
+                    try {
+                        const threadsPublisher = new ThreadsPublisher();
+                        const threadsMediaId = await threadsPublisher.publishCarousel(publicUrls, generatedCaption);
+
+                        if (threadsMediaId) {
+                            const { data: boardBeforeTh } = await supabase.from('issue_boards').select('metadata').eq('id', boardId).single();
+                            const { error: threadsUpdateError } = await supabase
+                                .from('issue_boards')
+                                .update({
+                                    metadata: {
+                                        ...(boardBeforeTh?.metadata || {}),
+                                        threads_post_id: threadsMediaId
+                                    }
+                                })
+                                .eq('id', boardId);
+
+                            if (threadsUpdateError) Logger.warn(`⚠️ Failed to update Threads ID in DB: ${threadsUpdateError.message}`);
+                            Logger.success(`✨ Threads Publishing Complete! ID: ${threadsMediaId}`);
+                        }
+                    } catch (threadsError: any) {
+                        Logger.error("❌ Threads Publishing Failed", threadsError.message);
+                    }
+
+                    // [Logic] 8.6 Facebook 최종 게시 (옵션 - Instagram/Threads 성공과 독립적)
+                    Logger.info("📘 Publishing to Facebook...");
+                    try {
+                        const fbPublisher = new FacebookPublisher();
+                        const fbPostId = await fbPublisher.publishMultiPhoto(publicUrls, generatedCaption);
+
+                        if (fbPostId) {
+                            // Update metadata with FB Post ID
+                            const { data: currentBoard } = await supabase.from('issue_boards').select('metadata').eq('id', boardId).single();
+                            await supabase
+                                .from('issue_boards')
+                                .update({
+                                    metadata: {
+                                        ...(currentBoard?.metadata || {}),
+                                        facebook_post_id: fbPostId
+                                    }
+                                })
+                                .eq('id', boardId);
+                            Logger.success(`✨ Facebook Publishing Complete! ID: ${fbPostId}`);
+                        }
+                    } catch (fbError: any) {
+                        Logger.error("❌ Facebook Publishing Failed", fbError.message);
+                    }
                 }
 
                 // [Logic] 8.4 발행 정보 파일 저장 (publish_info.json)

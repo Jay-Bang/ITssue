@@ -13,6 +13,8 @@ import { supabase } from '../db/supabase-client';
 import { closeBrowser, renderFullSet } from '../visual/card-renderer';
 import { Logger } from '../lib/logger';
 import { InstagramPublisher } from '../publish/instagram-publisher';
+import { ThreadsPublisher } from '../publish/threads-publisher';
+import { FacebookPublisher } from '../publish/facebook-publisher';
 import { uploadInstagramImages } from '../publish/storage-manager';
 import { NotificationService } from '../lib/notifier';
 import * as Handlebars from 'handlebars';
@@ -111,7 +113,8 @@ export async function republishBoard(boardId: string) {
                     ...(board.metadata || {}),
                     republished_at: new Date().toISOString(),
                     note: "Republished via Admin Panel",
-                    instagram_permalink: igPermalink
+                    instagram_permalink: igPermalink,
+                    threads_post_id: null // Reset or keep? Let's try to republish to Threads too
                 }
             })
             .eq('id', boardId);
@@ -119,6 +122,51 @@ export async function republishBoard(boardId: string) {
         if (updateError) {
             Logger.error(`❌ DB Update Failed for Board: ${boardId}`, updateError);
             throw updateError;
+        }
+
+        // [Logic] 9.1 Threads에도 동일하게 게시
+        Logger.info("🧵 [Republish] Also publishing to Threads...");
+        try {
+            const threadsPublisher = new ThreadsPublisher();
+            const threadsMediaId = await threadsPublisher.publishCarousel(imageUrls.map(img => img.publicUrl), caption);
+            if (threadsMediaId) {
+                await supabase
+                    .from('issue_boards')
+                    .update({
+                        metadata: {
+                            ...(board.metadata || {}),
+                            republished_at: new Date().toISOString(),
+                            instagram_permalink: igPermalink,
+                            threads_post_id: threadsMediaId
+                        }
+                    })
+                    .eq('id', boardId);
+                Logger.success(`✨ Threads Repost Complete! ID: ${threadsMediaId}`);
+            }
+        } catch (thErr: any) {
+            Logger.warn(`⚠️ Threads Repost Failed: ${thErr.message}`);
+        }
+
+        // [Logic] 9.2 Facebook에도 동일하게 게시
+        Logger.info("📘 [Republish] Also publishing to Facebook...");
+        try {
+            const fbPublisher = new FacebookPublisher();
+            const fbPostId = await fbPublisher.publishMultiPhoto(imageUrls.map(img => img.publicUrl), caption);
+            if (fbPostId) {
+                const { data: currentBoard } = await supabase.from('issue_boards').select('metadata').eq('id', boardId).single();
+                await supabase
+                    .from('issue_boards')
+                    .update({
+                        metadata: {
+                            ...(currentBoard?.metadata || {}),
+                            facebook_post_id: fbPostId
+                        }
+                    })
+                    .eq('id', boardId);
+                Logger.success(`✨ Facebook Repost Complete! ID: ${fbPostId}`);
+            }
+        } catch (fbErr: any) {
+            Logger.warn(`⚠️ Facebook Repost Failed: ${fbErr.message}`);
         }
 
         Logger.success(`✅ Database updated with new IG_MEDIA_ID: ${igMediaId}`);
@@ -232,12 +280,60 @@ export async function retryPublishBoard(boardId: string) {
                     ...(board.metadata || {}),
                     republished_at: new Date().toISOString(),
                     note: "Retried Publish via Admin Panel",
-                    instagram_permalink: igPermalink
+                    instagram_permalink: igPermalink,
+                    threads_post_id: board.metadata?.threads_post_id // Keep existing or retry?
                 }
             })
             .eq('id', boardId);
 
         if (updateError) throw updateError;
+
+        // [Logic] 7.1 Threads Retry
+        if (!board.metadata?.threads_post_id) {
+            Logger.info("🧵 [Retry] Publishing missing post to Threads...");
+            try {
+                const threadsPublisher = new ThreadsPublisher();
+                const threadsMediaId = await threadsPublisher.publishCarousel(imageUrls, caption);
+                if (threadsMediaId) {
+                    await supabase
+                        .from('issue_boards')
+                        .update({
+                            metadata: {
+                                ...(board.metadata || {}),
+                                republished_at: new Date().toISOString(),
+                                instagram_permalink: igPermalink,
+                                threads_post_id: threadsMediaId
+                            }
+                        })
+                        .eq('id', boardId);
+                }
+            } catch (thErr: any) {
+                Logger.warn(`⚠️ Threads Retry Failed: ${thErr.message}`);
+            }
+        }
+
+        // [Logic] 7.2 Facebook Retry
+        if (!board.metadata?.facebook_post_id) {
+            Logger.info("📘 [Retry] Publishing missing post to Facebook...");
+            try {
+                const fbPublisher = new FacebookPublisher();
+                const fbPostId = await fbPublisher.publishMultiPhoto(imageUrls, caption);
+                if (fbPostId) {
+                    const { data: currentBoard } = await supabase.from('issue_boards').select('metadata').eq('id', boardId).single();
+                    await supabase
+                        .from('issue_boards')
+                        .update({
+                            metadata: {
+                                ...(currentBoard?.metadata || {}),
+                                facebook_post_id: fbPostId
+                            }
+                        })
+                        .eq('id', boardId);
+                }
+            } catch (fbErr: any) {
+                Logger.warn(`⚠️ Facebook Retry Failed: ${fbErr.message}`);
+            }
+        }
 
         Logger.success(`🎉 Retry Publish Successful! ID: ${igMediaId}`);
         return { success: true, igMediaId };

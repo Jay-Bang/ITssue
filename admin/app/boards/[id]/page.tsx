@@ -26,6 +26,11 @@ interface Board {
     board_type: string;
     target_date: string;
     issue_board_items: Item[]; // Supabase join result
+    metadata?: {
+        instagram_permalink?: string;
+        threads_post_id?: string;
+        facebook_post_id?: string;
+    };
 }
 
 export default function BoardDetailPage(props: { params: Promise<{ id: string }> }) {
@@ -219,7 +224,20 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
             <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <Link href="/" className="text-xs sm:text-sm font-bold text-accent-primary hover:underline mb-1 sm:mb-2 block">← Back to Dashboard</Link>
-                    <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">Board Editor</h1>
+                    <div className="flex items-center gap-3">
+                        <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">Board Editor</h1>
+                        <div className="flex gap-2">
+                            {board.metadata?.instagram_permalink && (
+                                <a href={board.metadata.instagram_permalink} target="_blank" className="text-xs bg-accent-primary/10 text-accent-primary px-2 py-1 rounded-md font-bold hover:bg-accent-primary/20 transition-all">📸 Instagram</a>
+                            )}
+                            {board.metadata?.threads_post_id && (
+                                <a href={`https://www.threads.net/@issue.itssue/post/${board.metadata.threads_post_id}`} target="_blank" className="text-xs bg-foreground/10 text-foreground px-2 py-1 rounded-md font-bold hover:bg-foreground/20 transition-all">🧵 Threads</a>
+                            )}
+                            {board.metadata?.facebook_post_id && (
+                                <a href={`https://www.facebook.com/${board.metadata.facebook_post_id}`} target="_blank" className="text-xs bg-[#1877F2]/10 text-[#1877F2] px-2 py-1 rounded-md font-bold hover:bg-[#1877F2]/20 transition-all">📘 Facebook</a>
+                            )}
+                        </div>
+                    </div>
                     <p className="text-sm sm:text-base text-muted font-medium uppercase">{board.board_type} Report • {board.target_date}</p>
                 </div>
                 <div className="flex gap-2">
