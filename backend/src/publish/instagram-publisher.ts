@@ -375,7 +375,8 @@ export class InstagramPublisher {
             });
             return response.data.status_code || 'UNKNOWN';
         } catch (error: any) {
-            Logger.warn(`[Instagram] Failed to check status for ${containerId}`, error.message);
+            const errorDetail = error.response?.data?.error?.message || error.message;
+            Logger.warn(`[Instagram] Failed to check status for ${containerId}: ${errorDetail}`);
             return 'ERROR';
         }
     }
@@ -390,9 +391,14 @@ export class InstagramPublisher {
         Logger.info(`🕵️ Checking status for ${itemIds.length} items...`);
 
         for (let i = 0; i < MAX_TRY; i++) {
-            const statuses = await Promise.all(
-                itemIds.map(id => this.checkContainerStatus(id))
-            );
+            const statuses: string[] = [];
+
+            // [Fix] 병렬 요청 대신 순차 요청으로 전환하여 Rate Limit 방지
+            for (const id of itemIds) {
+                const status = await this.checkContainerStatus(id);
+                statuses.push(status);
+                await this.sleep(1000); // 1초 간격으로 체크
+            }
 
             // 모든 항목이 완료되었는지 확인
             const allFinished = statuses.every(s => s === 'FINISHED');

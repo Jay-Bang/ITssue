@@ -51,6 +51,16 @@ export class ThreadsPublisher {
      */
     private async loadAccessToken(): Promise<void> {
         try {
+            // [Design Change] Currently, instagram_tokens table only holds IG/FB tokens.
+            // Threads requires a separate token obtained via Threads OAuth.
+            // For now, we prioritize the THREADS_ACCESS_TOKEN from .env if it starts with 'TH'.
+            if (process.env.THREADS_ACCESS_TOKEN?.startsWith('TH')) {
+                this.accessToken = process.env.THREADS_ACCESS_TOKEN;
+                Logger.info('[Threads] Using Threads-specific token from .env');
+                return;
+            }
+
+            // Fallback to Supabase (only if we decide to store it there later)
             const { data, error } = await this.supabase
                 .from('instagram_tokens')
                 .select('access_token')
@@ -61,10 +71,10 @@ export class ThreadsPublisher {
                 this.accessToken = data.access_token;
                 Logger.info('[Threads] Successfully loaded access token from Supabase.');
             } else {
-                Logger.warn('[Threads] Failed to find token in Supabase, using fallback from .env');
+                Logger.warn('[Threads] No specific token found, using .env fallback');
             }
         } catch (e: any) {
-            Logger.error('[Threads] Error loading token from Supabase', e.message);
+            Logger.error('[Threads] Error loading token', e.message);
         }
     }
 
@@ -120,6 +130,63 @@ export class ThreadsPublisher {
     }
 
     /**
+     * 생성된 컨테이너의 상태를 확인
+     */
+    private async checkContainerStatus(containerId: string): Promise<string> {
+        const url = `${this.baseUrl}/${containerId}`;
+        try {
+            const response = await axios.get(url, {
+                params: {
+                    fields: 'status_code,status',
+                    access_token: this.accessToken
+                }
+            });
+            // Threads API may return different field names or structure, 
+            // but status_code is standard for Meta containers.
+            return response.data.status_code || 'UNKNOWN';
+        } catch (error: any) {
+            const errorDetail = error.response?.data?.error?.message || error.message;
+            Logger.warn(`[Threads] Failed to check status for ${containerId}: ${errorDetail}`);
+            return 'ERROR';
+        }
+    }
+
+    /**
+     * 모든 아이템 컨테이너가 FINISHED 상태가 될 때까지 대기
+     */
+    private async waitUntilAllItemsFinished(itemIds: string[]) {
+        const MAX_TRY = 12;
+        let interval = 5000;
+
+        Logger.info(`🕵️ Checking status for ${itemIds.length} Threads items...`);
+
+        for (let i = 0; i < MAX_TRY; i++) {
+            const statuses: string[] = [];
+            for (const id of itemIds) {
+                const status = await this.checkContainerStatus(id);
+                statuses.push(status);
+                await this.sleep(1000);
+            }
+
+            const allFinished = statuses.every(s => s === 'FINISHED');
+            if (allFinished) {
+                Logger.success("✅ All Threads items processing finished.");
+                return;
+            }
+
+            const hasFailure = statuses.some(s => s === 'ERROR' || s === 'EXPIRED');
+            if (hasFailure) {
+                throw new Error('Some Threads item containers failed or expired.');
+            }
+
+            Logger.info(`⏳ Threads processing... (Attempt ${i + 1}/${MAX_TRY}, waiting ${interval / 1000}s)`);
+            await this.sleep(interval);
+            interval = Math.min(interval * 1.5, 10000);
+        }
+        throw new Error('Timeout waiting for Threads items.');
+    }
+
+    /**
      * 생성된 컨테이너를 실제로 사용자 피드에 발행
      */
     private async publishMedia(creationId: string): Promise<{ id: string }> {
@@ -167,9 +234,10 @@ export class ThreadsPublisher {
                 await this.sleep(2000);
             }
 
-            // [Safety] 이미지 처리 대기 (Threads API는 컨테이너 생성 후 처리에 시간이 걸릴 수 있음)
-            Logger.info('⏳ Waiting 30s for processing...');
-            await this.sleep(30000);
+            // [Safety] 이미지 처리 대기 (Smart Polling)
+            Logger.info('⏳ Waiting for Threads processing...');
+            await this.sleep(10000); // Initial delay
+            await this.waitUntilAllItemsFinished(itemIds);
 
             // [Step 2] 캐러셀 컨테이너 생성
             Logger.info('📦 Assembling carousel container...');
