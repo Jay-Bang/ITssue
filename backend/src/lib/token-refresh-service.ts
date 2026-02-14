@@ -54,30 +54,55 @@ export class TokenRefreshService {
     }
 
     /**
-     * Threads 토큰을 새로운 Long-lived Token으로 교환
-     * [Ref] https://developers.facebook.com/docs/threads/threads-api-reference/refresh-access-token
+     * Threads 토큰을 새로운 Long-lived Token으로 교환 또는 갱신
+     * [Logic] 
+     * 1. Short-lived -> Long-lived 교환 (th_exchange_token)
+     * 2. Long-lived -> Long-lived 연장 (th_refresh_token)
      */
     async refreshThreadsToken(): Promise<string> {
         try {
-            Logger.info('🔄 Starting Threads token refresh...');
-            const currentToken = await this.getCurrentToken(2); // id=2 for Threads
+            Logger.info('🔄 Starting Threads token refresh/exchange...');
 
-            const url = 'https://graph.threads.net/refresh_access_token';
-            const response = await axios.get(url, {
-                params: {
+            // DB에 id=2가 있는지 확인
+            const { data: dbData } = await this.supabase
+                .from('instagram_tokens')
+                .select('id')
+                .eq('id', 2)
+                .single();
+
+            const currentToken = await this.getCurrentToken(2);
+            let url = '';
+            let params: any = {};
+
+            if (!dbData) {
+                // [Case A] 최초 등록: Short-lived -> Long-lived 교환
+                Logger.info('🆕 Initial Threads token detected. Exchanging for Long-lived token...');
+                url = 'https://graph.threads.net/access_token';
+                params = {
+                    grant_type: 'th_exchange_token',
+                    client_secret: this.appSecret,
+                    access_token: currentToken
+                };
+            } else {
+                // [Case B] 정기 갱신: Long-lived -> Long-lived 연장
+                Logger.info('🔄 Existing Threads token detected. Refreshing...');
+                url = 'https://graph.threads.net/refresh_access_token';
+                params = {
                     grant_type: 'th_refresh_token',
                     access_token: currentToken
-                }
-            });
+                };
+            }
 
+            const response = await axios.get(url, { params });
             const newToken = response.data.access_token;
             const expiresIn = response.data.expires_in; // 60일 (5184000초)
-            
+
             await this.saveToken(2, newToken, expiresIn);
-            Logger.success('💾 Threads token saved to Supabase (id=2)');
+            Logger.success(`💾 Threads token (${dbData ? 'Refreshed' : 'Exchanged'}) saved to Supabase (id=2)`);
             return newToken;
         } catch (error: any) {
-            Logger.error('❌ Threads token refresh failed', error.message);
+            const errorMsg = error.response?.data?.error?.message || error.message;
+            Logger.error('❌ Threads token process failed', errorMsg);
             throw error;
         }
     }
@@ -130,7 +155,7 @@ if (require.main === module) {
     (async () => {
         const service = new TokenRefreshService();
         const args = process.argv.slice(2);
-        
+
         if (args.includes('--threads')) {
             await service.refreshThreadsToken();
         } else {
