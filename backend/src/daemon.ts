@@ -93,10 +93,18 @@ cron.schedule('45 20 * * *', () => {
     timezone: "Asia/Seoul"
 });
 
-// 🔄 [Job] Instagram 토큰 갱신: 매월 1일 00:00 KST
-cron.schedule('0 0 1 * *', () => {
+// 🔄 [Job] Meta (Instagram & Threads) 토큰 갱신: 매월 1일 00:00 KST
+cron.schedule('0 0 1 * *', async () => {
     Logger.info('🔄 [Daemon] Monthly Token Refresh Job Triggered');
-    runCommand('npm run refresh-token', 'Token Refresh');
+
+    // 1. Instagram 토큰 갱신 (id=1)
+    runCommand('npm run refresh-token', 'Instagram Token Refresh');
+
+    // 2. [Added] Threads 토큰 갱신 (id=2)
+    // 약간의 간격을 두고 실행 (안전성 확보)
+    setTimeout(() => {
+        runCommand('npm run refresh-token -- --threads', 'Threads Token Refresh');
+    }, 30000); // 30초 후 실행
 }, {
     timezone: TIMEZONE
 });

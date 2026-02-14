@@ -26,16 +26,12 @@ export class TokenRefreshService {
     }
 
     /**
-     * 현재 토큰을 새로운 Long-lived Token으로 교환
+     * Instagram 토큰을 새로운 Long-lived Token으로 교환
      */
-    async refreshToken(): Promise<string> {
+    async refreshInstagramToken(): Promise<string> {
         try {
             Logger.info('🔄 Starting Instagram token refresh...');
-
-            // 1. 현재 토큰 가져오기 (Supabase 우선, 없으면 .env)
-            const currentToken = await this.getCurrentToken();
-
-            // 2. Facebook Graph API로 토큰 갱신
+            const currentToken = await this.getCurrentToken(1); // id=1 for Instagram
             const url = 'https://graph.facebook.com/v24.0/oauth/access_token';
             const response = await axios.get(url, {
                 params: {
@@ -47,18 +43,41 @@ export class TokenRefreshService {
             });
 
             const newToken = response.data.access_token;
-            const expiresIn = response.data.expires_in; // 초 단위 (보통 5184000 = 60일)
-
-            Logger.success(`✅ New token received (expires in ${expiresIn / 86400} days)`);
-
-            // 3. Supabase에 저장
-            await this.saveToken(newToken, expiresIn);
-
-            Logger.success('💾 Token saved to Supabase');
+            const expiresIn = response.data.expires_in;
+            await this.saveToken(1, newToken, expiresIn);
+            Logger.success('💾 Instagram token saved to Supabase (id=1)');
             return newToken;
-
         } catch (error: any) {
-            Logger.error('❌ Token refresh failed', error.message);
+            Logger.error('❌ Instagram token refresh failed', error.message);
+            throw error;
+        }
+    }
+
+    /**
+     * Threads 토큰을 새로운 Long-lived Token으로 교환
+     * [Ref] https://developers.facebook.com/docs/threads/threads-api-reference/refresh-access-token
+     */
+    async refreshThreadsToken(): Promise<string> {
+        try {
+            Logger.info('🔄 Starting Threads token refresh...');
+            const currentToken = await this.getCurrentToken(2); // id=2 for Threads
+
+            const url = 'https://graph.threads.net/refresh_access_token';
+            const response = await axios.get(url, {
+                params: {
+                    grant_type: 'th_refresh_token',
+                    access_token: currentToken
+                }
+            });
+
+            const newToken = response.data.access_token;
+            const expiresIn = response.data.expires_in; // 60일 (5184000초)
+            
+            await this.saveToken(2, newToken, expiresIn);
+            Logger.success('💾 Threads token saved to Supabase (id=2)');
+            return newToken;
+        } catch (error: any) {
+            Logger.error('❌ Threads token refresh failed', error.message);
             throw error;
         }
     }
@@ -66,39 +85,37 @@ export class TokenRefreshService {
     /**
      * 현재 토큰 가져오기 (Supabase → .env fallback)
      */
-    private async getCurrentToken(): Promise<string> {
-        // Supabase에서 조회
+    private async getCurrentToken(id: number): Promise<string> {
         const { data, error } = await this.supabase
             .from('instagram_tokens')
             .select('access_token')
-            .eq('id', 1)
+            .eq('id', id)
             .single();
 
         if (!error && data?.access_token) {
-            Logger.info('📦 Using token from Supabase');
+            Logger.info(`📦 Using token from Supabase (id=${id})`);
             return data.access_token;
         }
 
-        // Fallback: .env
-        const envToken = process.env.IG_ACCESS_TOKEN;
+        const envToken = id === 1 ? process.env.IG_ACCESS_TOKEN : process.env.THREADS_ACCESS_TOKEN;
         if (!envToken) {
-            throw new Error('No token found in Supabase or .env');
+            throw new Error(`No token found for id=${id} in Supabase or .env`);
         }
 
-        Logger.warn('⚠️ Using fallback token from .env');
+        Logger.warn(`⚠️ Using fallback token from .env for id=${id}`);
         return envToken;
     }
 
     /**
      * 새 토큰을 Supabase에 저장
      */
-    private async saveToken(token: string, expiresIn: number): Promise<void> {
+    private async saveToken(id: number, token: string, expiresIn: number): Promise<void> {
         const expiresAt = new Date(Date.now() + expiresIn * 1000);
 
         const { error } = await this.supabase
             .from('instagram_tokens')
             .upsert({
-                id: 1,
+                id: id,
                 access_token: token,
                 expires_at: expiresAt.toISOString(),
                 updated_at: new Date().toISOString()
@@ -112,7 +129,13 @@ export class TokenRefreshService {
 if (require.main === module) {
     (async () => {
         const service = new TokenRefreshService();
-        await service.refreshToken();
+        const args = process.argv.slice(2);
+        
+        if (args.includes('--threads')) {
+            await service.refreshThreadsToken();
+        } else {
+            await service.refreshInstagramToken();
+        }
         process.exit(0);
     })();
 }

@@ -51,27 +51,25 @@ export class ThreadsPublisher {
      */
     private async loadAccessToken(): Promise<void> {
         try {
-            // [Design Change] Currently, instagram_tokens table only holds IG/FB tokens.
-            // Threads requires a separate token obtained via Threads OAuth.
-            // For now, we prioritize the THREADS_ACCESS_TOKEN from .env if it starts with 'TH'.
-            if (process.env.THREADS_ACCESS_TOKEN?.startsWith('TH')) {
-                this.accessToken = process.env.THREADS_ACCESS_TOKEN;
-                Logger.info('[Threads] Using Threads-specific token from .env');
-                return;
-            }
-
-            // Fallback to Supabase (only if we decide to store it there later)
+            // [Design Change] Threads requires a separate token (id=2 in our schema).
             const { data, error } = await this.supabase
                 .from('instagram_tokens')
                 .select('access_token')
-                .eq('id', 1)
+                .eq('id', 2)
                 .single();
 
             if (!error && data?.access_token) {
                 this.accessToken = data.access_token;
-                Logger.info('[Threads] Successfully loaded access token from Supabase.');
+                Logger.info('[Threads] Successfully loaded access token from Supabase (id=2).');
+                return;
+            }
+
+            // Fallback to .env (only for first-time setup or emergency)
+            if (process.env.THREADS_ACCESS_TOKEN?.startsWith('TH')) {
+                this.accessToken = process.env.THREADS_ACCESS_TOKEN;
+                Logger.info('[Threads] Using Threads-specific token from .env (Fallback)');
             } else {
-                Logger.warn('[Threads] No specific token found, using .env fallback');
+                Logger.warn('[Threads] No specific token found in DB or .env');
             }
         } catch (e: any) {
             Logger.error('[Threads] Error loading token', e.message);
