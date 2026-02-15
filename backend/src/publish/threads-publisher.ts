@@ -135,13 +135,12 @@ export class ThreadsPublisher {
         try {
             const response = await axios.get(url, {
                 params: {
-                    fields: 'status_code,status',
+                    fields: 'status',
                     access_token: this.accessToken
                 }
             });
-            // Threads API may return different field names or structure, 
-            // but status_code is standard for Meta containers.
-            return response.data.status_code || 'UNKNOWN';
+            // Threads API returns 'status' field, unlike Instagram's 'status_code'
+            return response.data.status || 'UNKNOWN';
         } catch (error: any) {
             const errorDetail = error.response?.data?.error?.message || error.message;
             Logger.warn(`[Threads] Failed to check status for ${containerId}: ${errorDetail}`);
