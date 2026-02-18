@@ -247,27 +247,21 @@ export async function retryPublishBoard(boardId: string) {
         // 4. Generate Caption
         const caption = await generateInstagramCaption(type, dateStr, formattedIssues);
 
-        // 5. Publish to Instagram
-        Logger.info("📸 Retry: Publishing to Instagram...");
-        const igPublisher = new InstagramPublisher();
+        // 5. Publish to Instagram (Conditional)
+        let igMediaId = board.instagram_post_id;
+        let igPermalink = board.metadata?.instagram_permalink;
 
-        // Delete old post if exists (optional cleanup)
-        if (board.instagram_post_id) {
-            try {
-                await igPublisher.deleteMedia(board.instagram_post_id);
-            } catch (err) {
-                Logger.warn(`Failed to clean up old post: ${err}`);
-            }
-        }
+        if (!igMediaId) {
+            Logger.info("📸 Retry: Publishing to Instagram...");
+            const igPublisher = new InstagramPublisher();
+            igMediaId = await igPublisher.publishCarousel(imageUrls, caption);
 
-        const igMediaId = await igPublisher.publishCarousel(imageUrls, caption);
+            if (!igMediaId) throw new Error('Instagram publishing returned no Media ID.');
 
-        if (!igMediaId) throw new Error('Instagram publishing returned no Media ID.');
-
-        // 6. Fetch Permalink
-        let igPermalink: string | null = null;
-        if (igMediaId) {
+            // 6. Fetch Permalink
             igPermalink = await igPublisher.getMediaPermalink(igMediaId);
+        } else {
+            Logger.info(`✅ Instagram already published (ID: ${igMediaId}). Skipping.`);
         }
 
         // 7. Update Database
