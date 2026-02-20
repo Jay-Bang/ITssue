@@ -153,7 +153,7 @@ export async function renderCard(page: Page, data: CardData, options: RenderOpti
     const stylePath = path.join(__dirname, visualVersion, 'style.css');
 
     // [Step 1] 리소스 로드 (HTML/CSS)
-    Logger.time('Template & Data Prep');
+
     const templateHtml = await fs.readFile(templatePath, 'utf-8');
     const styleCss = await fs.readFile(stylePath, 'utf-8');
 
@@ -166,13 +166,13 @@ export async function renderCard(page: Page, data: CardData, options: RenderOpti
 
     // [Layout] CSS를 수동으로 주입하여 템플릿 정합성 유지
     const html = renderedHtml.replace('/* STYLING_PLACEHOLDER */', styleCss);
-    Logger.timeEnd('Template & Data Prep');
+
 
     // [Step 3] 브라우저 렌더링 루프 (Retry 지원) - Page is now injected
     let lastError: any = null;
     for (let attempt = 0; attempt <= retry; attempt++) {
         try {
-            Logger.time('Page Content Set');
+
             // [Step] HTML/CSS 주입 및 로딩 대기
             // [Optimization] 'networkidle0'은 외부 폰트/에셋의 네트워크 상황에 따라 타임아웃을 유발할 수 있습니다.
             // HTML 본문과 구조 로딩('domcontentloaded')까지만 대기한 후, 폰트 로딩은 JS에서 별도로 관리합니다.
@@ -180,7 +180,7 @@ export async function renderCard(page: Page, data: CardData, options: RenderOpti
                 waitUntil: ['load', 'domcontentloaded'],
                 timeout
             });
-            Logger.timeEnd('Page Content Set');
+
 
             // [Safety] 웹 폰트 로딩 완벽 대기 (Flash of Unstyled Text 방지)
             // 폰트가 렌더링되기 전에 스크린샷이 찍히면 깨진 레이아웃이 출력될 수 있으므로 명시적으로 대기합니다.
@@ -189,13 +189,13 @@ export async function renderCard(page: Page, data: CardData, options: RenderOpti
             })()`);
 
             // [Step 4] 스크린샷 캡처 및 이미지 반환
-            Logger.time('Screenshot Capture');
+
             // path 파라미터를 제거하여 Uint8Array(Buffer)로 반환받음
             const imageBuffer = await page.screenshot({
                 type: 'png',
                 omitBackground: false
             });
-            Logger.timeEnd('Screenshot Capture');
+
 
             // 타입 안전한 로그 출력
             let logInfo = '';

@@ -146,9 +146,9 @@ function getCoreEntities(keyword: string): string[] {
 
 export async function runMergeGate(options: TimeWindow): Promise<IssueEntity[]> {
     Logger.info(`🛠️ Phase 2.5: 이슈 병합 게이트 시작 (Pure Rule-based)`);
-    Logger.time('Ranking Engine');
+
     const atomIssues = await runRankingEngine(options);
-    Logger.timeEnd('Ranking Engine');
+
     if (!atomIssues || atomIssues.length === 0) return [];
 
     // [Step 1] 데이터 확장 및 전처리
@@ -164,7 +164,7 @@ export async function runMergeGate(options: TimeWindow): Promise<IssueEntity[]> 
     const candidates: MergeCandidate[] = [];
     Logger.info(`   (Sample: ID ${atomIssues[0].raw_snapshot_ids[0]}, Time: ${atomIssues[0].first_seen_at})`);
 
-    Logger.time('Pure Rule Judging (V2)');
+
     // 1. 후보군 탐색 및 버킷팅 (O(N^2) Pruning 기초)
     // 시간순으로 정렬되어 있다고 가정 (rankingEngine에서 보장)
     for (let i = 0; i < extendedIssues.length; i++) {
@@ -222,10 +222,10 @@ export async function runMergeGate(options: TimeWindow): Promise<IssueEntity[]> 
             }
         }
     }
-    Logger.timeEnd('Pure Rule Judging (V2)');
+
 
     // 3. 최종 그룹핑 및 집계 (Aggregation)
-    Logger.time('Group Aggregation');
+
     const groupedMap = new Map<number, MergableIssue[]>();
 
     extendedIssues.forEach((issue, idx) => {
@@ -281,7 +281,7 @@ export async function runMergeGate(options: TimeWindow): Promise<IssueEntity[]> 
         mergeCountMap.set(leader.representative_keyword, members.length);
         mergedKeywordsMap.set(leader.representative_keyword, members.map(m => m.representative_keyword));
     }
-    Logger.timeEnd('Group Aggregation');
+
 
     // 4. 최종 정렬 (점수순) - 전체 반환
     finalIssues.sort((a, b) => b.score - a.score);

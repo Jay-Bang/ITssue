@@ -34,7 +34,7 @@ export async function runRankingEngine(options: TimeWindow): Promise<IssueEntity
     const PAGE_SIZE = 1000;
 
     Logger.info(`[Ranking] 📡 Fetching data from Database...`);
-    Logger.time('Supabase Fetch');
+
 
     while (true) {
         const { data, error } = await supabase
@@ -57,7 +57,7 @@ export async function runRankingEngine(options: TimeWindow): Promise<IssueEntity
         if (data.length < PAGE_SIZE) break;
         page++;
     }
-    Logger.timeEnd('Supabase Fetch');
+
 
     if (allRows.length === 0) {
         Logger.warn(`No snapshots found for the given range.`);
@@ -67,7 +67,7 @@ export async function runRankingEngine(options: TimeWindow): Promise<IssueEntity
     Logger.success(`Supabase Fetch Success: ${allRows.length} rows loaded.`);
 
     // [Step 2] 키워드별 그룹화 (Keyword Pooling)
-    Logger.time('Keyword Grouping');
+
     const issueMap = new Map<string, any[]>();
 
     allRows.forEach(s => {
@@ -78,10 +78,10 @@ export async function runRankingEngine(options: TimeWindow): Promise<IssueEntity
     });
 
     Logger.info(`🧩 Grouped into ${issueMap.size} distinct keyword pools.`);
-    Logger.timeEnd('Keyword Grouping');
+
 
     // 3. Scoring Engine (Simple Summation)
-    Logger.time('Scoring Engine');
+
     const issueEntities: IssueEntity[] = [];
 
     issueMap.forEach((rows, keyword) => {
@@ -117,7 +117,7 @@ export async function runRankingEngine(options: TimeWindow): Promise<IssueEntity
             raw_snapshot_ids: rows.map(r => r.id)
         });
     });
-    Logger.timeEnd('Scoring Engine');
+
 
     const sortedIssues = issueEntities.sort((a, b) => b.score - a.score);
 
