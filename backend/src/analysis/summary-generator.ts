@@ -13,7 +13,7 @@ import { ai } from '../lib/ai-engine';
  * - [Safety] API Quota 관리를 위한 Throttling 및 재시도(Retry) 전략을 적용했습니다.
  */
 
-const GENERATION_DELAY_MS = 10000; // API 쿼터 보호를 위한 10초 대기
+const GENERATION_DELAY_MS = 10000; // [Safety] API 쿼터 보호를 위한 10초 대기
 
 export async function generateAISummaries(issues: IssueEntity[]): Promise<FinalIssueBoard[]> {
     const results: FinalIssueBoard[] = [];
@@ -26,8 +26,7 @@ export async function generateAISummaries(issues: IssueEntity[]): Promise<FinalI
         const keyword = issue.representative_keyword;
 
         // [Optimization] API 쿼터 보호를 위한 Throttle (지연 실행)
-        // [Logic] AI 서비스의 분당 요청 제한(RPM)을 초과하지 않도록 
-        // 각 이슈 분석 사이에 의도적인 지연 시간(10초)을 삽입합니다.
+        // [Logic] AI 서비스의 분당 요청 제한(RPM)을 초과하지 않도록 각 이슈 분석 사이에 의도적인 지연 시간을 삽입합니다.
         if (i > 0) {
             Logger.info(`⏱️ Waiting ${GENERATION_DELAY_MS / 1000}s for API quota... (${i + 1}/${issues.length})`);
             await new Promise(resolve => setTimeout(resolve, GENERATION_DELAY_MS));
@@ -66,14 +65,13 @@ ${summaryRule}
             try {
                 if (attempt > 1) {
                     Logger.info(`🔄 [AI] Retrying... (Attempt ${attempt}/${MAX_RETRIES})`);
-                    await new Promise(resolve => setTimeout(resolve, 3000)); // 재시도 전 짧은 대기
+                    await new Promise(resolve => setTimeout(resolve, 3000)); // [Safety] 재시도 전 짧은 대기
                 }
 
                 const text = await ai.generateWithSearch(prompt);
 
                 // [Logic] Robust JSON Parsing (강력한 추출 로직)
-                // AI 응답 텍스트 내에 JSON 외의 설명 문구가 포함되더라도, 
-                // 가장 바깥쪽의 중괄호(`{`, `}`) 범위를 찾아 순수 JSON 데이터만 추출합니다.
+                // [Self-Healing] AI 응답 텍스트 내에 JSON 외의 설명 문구가 포함되더라도 정규식을 통해 순수 JSON 데이터만 추출합니다.
                 let jsonStr = text.replace(/```json|```/g, '').trim();
                 const firstOpen = jsonStr.indexOf('{');
                 const lastClose = jsonStr.lastIndexOf('}');
@@ -84,14 +82,13 @@ ${summaryRule}
 
                 const parsed = JSON.parse(jsonStr);
 
-                // [Sanitization] AI 응답에서 마크다운 기호 제거 (**, *)
-                // 인스타그램 카드 뉴스나 캡션에 마크다운 기호가 노출되지 않도록 함
+                // [Logic] AI 응답 정제: 마크다운 기호 제거 (**, *)
                 const rawSummary: string[] = parsed.summary || [];
                 const sanitizedSummary = rawSummary.map((line: string) =>
                     line.replace(/\*\*/g, '').replace(/\*/g, '').trim()
                 );
 
-                // [Tag Sanitization] AI가 생성한 태그에 #이 포함되어 있으면 제거
+                // [Logic] 태그 정제: 불필요한 # 기호 제거
                 const rawTags: string[] = parsed.tags || [];
                 const sanitizedTags = rawTags.map(tag => tag.replace(/^#/, '').trim());
 
@@ -103,7 +100,7 @@ ${summaryRule}
                     instagram_summary: sanitizedSummary,
                     tags: sanitizedTags,
                     merged_keywords: issue.merged_keywords || [],
-                    // [Pass-through] 랭킹 단계에서 계산된 중요도 메트릭 유지
+                    // [Logic] 랭킹 단계에서 계산된 중요도 메트릭 유지
                     score: issue.score,
                     snapshot_count: issue.snapshot_count,
                     first_seen_at: issue.first_seen_at,
@@ -117,7 +114,7 @@ ${summaryRule}
             } catch (error: any) {
                 Logger.warn(`⚠️ [AI] Attempt ${attempt} failed for [${keyword}]: ${error.message}`);
                 if (attempt === MAX_RETRIES) {
-                    // 최종 실패 시 Fallback
+                    // [Safety] 최종 실패 시 Fallback 기본 데이터 생성
                     results.push({
                         representative_keyword: issue.representative_keyword,
                         news_titles: issue.news_titles,

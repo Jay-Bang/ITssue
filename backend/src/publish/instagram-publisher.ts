@@ -23,7 +23,7 @@ export class InstagramPublisher {
 
     constructor() {
         this.igUserId = process.env.IG_USER_ID || '';
-        this.accessToken = process.env.IG_ACCESS_TOKEN || ''; // Fallback
+        this.accessToken = process.env.IG_ACCESS_TOKEN || ''; // [Logic] 기본 토큰 설정 (Fallback용)
         this.supabase = createClient(
             process.env.SUPABASE_URL || '',
             process.env.SUPABASE_SERVICE_KEY || ''
@@ -33,7 +33,7 @@ export class InstagramPublisher {
             Logger.warn('[Instagram] IG_USER_ID or IG_ACCESS_TOKEN is missing in .env');
         }
 
-        // 비동기 토큰 로딩 (필요 시 명시적으로 await 호출 권장)
+        // [Logic] 비동기 토큰 로딩 (필요 시 명시적으로 await 호출 권장)
         this.initialized = this.loadAccessToken();
     }
 
@@ -51,6 +51,7 @@ export class InstagramPublisher {
      */
     private async loadAccessToken(): Promise<void> {
         try {
+            // [Step] Supabase 전역 설정 테이블에서 최신 Access Token 인출
             const { data, error } = await this.supabase
                 .from('instagram_tokens')
                 .select('access_token')
@@ -66,7 +67,7 @@ export class InstagramPublisher {
             Logger.warn('⚠️ Failed to load token from Supabase, using .env fallback');
         }
 
-        // Fallback은 이미 constructor에서 설정됨
+        // [Logic] Fallback은 이미 constructor에서 설정됨
     }
 
     private async sleep(ms: number) {
@@ -249,6 +250,8 @@ export class InstagramPublisher {
                 Logger.info(`   - Creating container for: ${url.split('/').pop()}`);
                 const id = await this.createItemContainer(url);
                 itemIds.push(id);
+                // [Optimization] 연이은 요청으로 인한 차단 방지를 위한 5초 대기
+                await this.sleep(5000);
             }
 
             // [Safety] 인스타그램 이미지 처리 지연 대기 (Smart Polling)
@@ -256,7 +259,7 @@ export class InstagramPublisher {
             Logger.info('⏳ Waiting 60s initial buffer for processing...');
             await new Promise(resolve => setTimeout(resolve, 60000));
 
-            // 2. 상태 기반 폴링 (Exponential Backoff)
+            // 2. [Step] 상태 기반 폴링 (Exponential Backoff)
             await this.waitUntilAllItemsFinished(itemIds);
 
             // [Step 2] 캐러셀 컨테이너(Carousel Container) 생성
@@ -305,7 +308,7 @@ export class InstagramPublisher {
 
             Logger.error('[Instagram] Complete publish flow failed.', error.message);
 
-            // [Fallback] API 실패 시 피드에서 ID 복구 시도
+            // [Fallback] API 실패 혹은 타임아웃 발생 시 피드 스냅샷을 통한 ID 복구 시도
             Logger.warn('⚠️ Attempting to recover media ID from feed...');
             try {
                 const recentMedia = await this.getRecentMedia();

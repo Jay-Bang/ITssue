@@ -1,10 +1,18 @@
+/**
+ * [Admin API: Retry SNS Publish]
+ * 
+ * [Description] 발행에 실패했거나 누락된 SNS 게시물을 재시도하기 위한 API 프록시입니다.
+ * 
+ * [Design Intent]
+ * - [Logic] 특정 보드 ID를 백엔드로 전달하여 재발행 오케스트레이션을 트리거합니다.
+ */
 import { NextResponse } from 'next/server';
 import { Logger } from '@/lib/logger';
 import { supabase } from '@/lib/supabase';
 
 export async function POST(request: Request) {
     try {
-        // 1. Check Authentication (Verify Supabase JWT)
+        // [Safety] 관리자 세션 유효성 검증 (Supabase JWT 확인)
         const authHeader = request.headers.get('Authorization');
         if (!authHeader) {
             Logger.warn('[Proxy] Unauthorized access attempt: Missing Authorization header');
@@ -22,7 +30,7 @@ export async function POST(request: Request) {
         const body = await request.json();
         const { boardId } = body;
 
-        // Server-side Environment Variables
+        // [Config] 서버 사이드 전용 환경 변수 로드 (GCP 백엔드 연동)
         const BACKEND_URL = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
         const API_KEY = process.env.ADMIN_API_KEY || process.env.NEXT_PUBLIC_ADMIN_API_KEY;
 
@@ -35,6 +43,7 @@ export async function POST(request: Request) {
 
         Logger.info(`[Proxy] Forwarding retry publish request for board ${boardId} to ${BACKEND_URL}...`);
 
+        // [Step] GCP 백엔드 서버로 게시 재시도(Retry) 요청 위임 (Server-to-Server)
         const response = await fetch(`${BACKEND_URL}/api/retry-publish`, {
             method: 'POST',
             headers: {

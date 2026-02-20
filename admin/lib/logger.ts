@@ -8,21 +8,15 @@
  * - 브라우저 콘솔에서 시각적으로 구분 가능한 로그 출력.
  */
 export const Logger = {
-    /** 일반 정보 로그 출력 */
+    /** [Level: INFO] 일반 정보 로그 출력 */
     info: (msg: string, ...args: unknown[]) => console.log(`[INFO] ${msg}`, ...args),
 
-    /** 성공 메시지 로그 출력 */
+    /** [Level: PASS] 성공 메시지 로그 출력 */
     success: (msg: string, ...args: unknown[]) => console.log(`[PASS] ${msg}`, ...args),
 
-    /** 경고 메시지 로그 출력 */
+    /** [Level: WARN] 경고 메시지 로그 출력 */
     warn: (msg: string, ...args: unknown[]) => console.warn(`[WARN] ${msg}`, ...args),
 
-    /** 에러 메시지 로그 출력 */
+    /** [Level: FAIL] 에러 메시지 로그 출력 */
     error: (msg: string, ...args: unknown[]) => console.error(`[FAIL] ${msg}`, ...args),
-
-    /** 시간 측정 시작 */
-    time: (label: string) => console.time(label),
-
-    /** 시간 측정 종료 및 결과 출력 */
-    timeEnd: (label: string) => console.timeEnd(label)
 };

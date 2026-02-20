@@ -18,7 +18,7 @@ export async function runRankingEngine(options: TimeWindow): Promise<IssueEntity
 
     /**
      * [Timezone Policy]
-     * 정규화된 DB(timestamptz)를 사용하므로, 더 이상 수동으로 9시간을 더할 필요가 없습니다.
+     * 정규화된 DB(timestamptz)를 사용하므로 더 이상 수동으로 9시간을 더할 필요가 없습니다.
      * 표준 toISOString()은 절대 시각인 UTC 문자열을 반환하며, Supabase가 이를 완벽히 이해합니다.
      */
     const startStr = start.toISOString();
@@ -28,7 +28,7 @@ export async function runRankingEngine(options: TimeWindow): Promise<IssueEntity
 
     // [Step 1] 특정 시간 범위 내의 모든 스냅샷 조회
     // [Logic] 대량의 데이터를 수집할 경우를 대비하여 1,000개 단위의 페이지네이션 루프를 구현합니다.
-    // order('id')를 추가하여 페이지네이션 검색 시 데이터 순서의 결정성(Determinism)을 확보합니다.
+    // [Safety] order('id')를 추가하여 페이지네이션 검색 시 데이터 순서의 결정성(Determinism)을 확보합니다.
     let allRows: any[] = [];
     let page = 0;
     const PAGE_SIZE = 1000;
@@ -67,7 +67,6 @@ export async function runRankingEngine(options: TimeWindow): Promise<IssueEntity
     Logger.success(`Supabase Fetch Success: ${allRows.length} rows loaded.`);
 
     // [Step 2] 키워드별 그룹화 (Keyword Pooling)
-
     const issueMap = new Map<string, any[]>();
 
     allRows.forEach(s => {
@@ -80,18 +79,17 @@ export async function runRankingEngine(options: TimeWindow): Promise<IssueEntity
     Logger.info(`🧩 Grouped into ${issueMap.size} distinct keyword pools.`);
 
 
-    // 3. Scoring Engine (Simple Summation)
-
+    // [Step 3] Scoring Engine (점수 합산 및 엔티티 변환)
     const issueEntities: IssueEntity[] = [];
 
     issueMap.forEach((rows, keyword) => {
-        // [Safety Sort] 로컬 시간순 보장
+        // [Safety] 로컬 시간순 정렬 보장
         const sortedRows = [...rows].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
         const newsTitles = Array.from(new Set(sortedRows.map(r => r.news_title).filter(Boolean)));
 
-        // [Step 3] Scoring Engine (순수 가중치 합산)
-        // [Logic] "Honest Aggregation": 인위적인 보정 없이 수집된 모든 시점의 순위 데이터를 점수화합니다.
+        // [Logic] Scoring Formula: Max(0, 21 - Rank)
+        // [Design Intent] 1위(20점)부터 20위(1점)까지 차등 부여하여 상위권 트렌드에 가중치를 둡니다.
         let score = 0;
         sortedRows.forEach(r => {
             if (typeof r.rank !== 'number' || r.rank === null) {
@@ -100,9 +98,6 @@ export async function runRankingEngine(options: TimeWindow): Promise<IssueEntity
                 return;
             }
 
-            // [Algorithm] 이슈 가중치 산출 (Scoring Formula)
-            // - 수식: Max(0, 21 - Rank)
-            // - 의도: 1위(20점)부터 20위(1점)까지 차등 부여하여 상위권 트렌드에 가중치를 둡니다.
             const rankScore = Math.max(0, 21 - r.rank);
             score += rankScore;
         });
@@ -118,7 +113,7 @@ export async function runRankingEngine(options: TimeWindow): Promise<IssueEntity
         });
     });
 
-
+    // [Step 4] 최종 점수순 정렬 및 결과 반환
     const sortedIssues = issueEntities.sort((a, b) => b.score - a.score);
 
     Logger.info(`🏆 --- RANKING ENGINE COMPLETE (Total ${sortedIssues.length} issues) ---`);
@@ -130,7 +125,7 @@ export async function runRankingEngine(options: TimeWindow): Promise<IssueEntity
     return sortedIssues;
 }
 
-// 로컬 테스트를 위한 직접 실행 로직
+// [Logic] 로컬 테스트를 위한 직접 실행 루틴
 if (require.main === module) {
     const end = new Date();
     const start = new Date(end);

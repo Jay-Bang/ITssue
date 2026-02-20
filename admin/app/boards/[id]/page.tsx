@@ -3,7 +3,11 @@
 /**
  * [Admin Dashboard: Board Detail & Editor]
  * 
- * [Description] 특정 이슈 보드의 세부 내용을 확인하고 AI가 생성한 요약/태그를 수정할 수 있는 편집 페이지입니다.
+ * [Description] 특정 이슈 보드의 세부 내용을 확인하고 AI가 생성한 요약/태그를 수동으로 수정하거나 재생성할 수 있는 제어 페이지입니다.
+ * 
+ * [Logic]
+ * - [Strategy] 수동 저장, AI 재생성, 인스타그램 재발행(Republish) 기능을 통합하여 수동 교정 워크플로우를 제공합니다.
+ * - [Safety] 모든 파이프라인 트리거 시 백엔드 Webhook 서버와 동적 인증(JWT)을 통해 보안을 유지합니다.
  */
 
 import { useEffect, useState, use, useCallback, useMemo } from 'react';
@@ -73,7 +77,7 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
         );
 
         try {
-            // Update individual item in issue_board_items table
+            // [Step 1] 특정 이슈 항목(Item)의 텍스트 필드 업데이트 수행
             const { error } = await supabase
                 .from('issue_board_items')
                 .update({
@@ -99,6 +103,7 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
 
         setRegenerating(true);
         try {
+            // [Step 2] 현재 관리자 세션의 JWT 획득 (백엔드 요청용)
             const { data: { session } } = await supabase.auth.getSession();
             const token = session?.access_token;
 
@@ -119,7 +124,7 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
 
             const data = await res.json();
             if (res.ok) {
-                // Update local state with new summary
+                // [Logic] AI 응답 결과로 로컬 상태 동기화 및 즉시 반영
                 const newSummary = data.summary.join('\n');
                 setEditingItem({ ...editingItem, instagram_summary: newSummary });
                 alert('✨ AI 요약이 성공적으로 재생성되었습니다! 확인 후 저장해주세요.');
@@ -135,6 +140,7 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
     };
 
     const handleRetryPublish = async () => {
+        // [Safety] 업로드만 실패한 경우를 위한 경량화된 재시도 가이드 제공
         if (!confirm('이미지 렌더링을 건너뛰고 인스타그램 업로드만 다시 시도하시겠습니까?\n(이미지가 깨져있다면 전체 Republish를 사용하세요)')) return;
 
         setRetrying(true);
@@ -176,8 +182,8 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
 
         setRepublishing(true);
         try {
-            // [Bugfix] Add Authentication Header (Supabase JWT)
-            // API Route (route.ts) requires 'Authorization' header to verify admin status.
+            // [Fix] Authentication Header 보강 (백엔드 Webhook 보안 검증용)
+            // route.ts의 관리자 권한 체크를 통과하기 위해 Supabase 세션의 access_token을 전달합니다.
             const { data: { session } } = await supabase.auth.getSession();
             const token = session?.access_token;
 
@@ -254,6 +260,7 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
                 {/* Left: Content Editor */}
                 <div className="lg:col-span-7 space-y-6">
                     <Card title="Issue Items" description="Click an item to edit its AI-generated content. Items are sorted by rank.">
+                        {/* [Logic] 랭킹별 이슈 항목 리스트: 활성화된 항목은 강조 표시됩니다. */}
                         <div className="space-y-3">
                             {items.map((item: Item) => (
                                 <button
@@ -340,6 +347,7 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
 
                         {/* Instagram Style Card Mockup Container */}
                         <div className="w-full relative py-8 sm:py-0 overflow-hidden sm:overflow-visible">
+                            {/* [Design Intent] 인스타그램 포스팅 비율(4:5)을 모사하여 렌더링 결과를 미리 확인합니다. */}
                             <div className="aspect-[4/5] w-full bg-background border border-muted/20 rounded-3xl shadow-2xl overflow-hidden group origin-top scale-[0.9] sm:scale-100 transition-transform duration-500">
                                 {/* Theme Overlay (Arcade feel) */}
                                 <div className="absolute inset-0 bg-gradient-to-br from-accent-primary/2 to-accent-secondary/2 pointer-events-none" />

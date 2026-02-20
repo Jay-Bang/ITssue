@@ -1,3 +1,8 @@
+/**
+ * [Admin Infrastructure: Telegram Notifier]
+ * 
+ * [Description] 분석 결과 및 시스템 상태를 텔레그램 메신저로 전송하는 통신 계층입니다.
+ */
 import axios from 'axios';
 import * as fs from 'fs-extra';
 import * as dotenv from 'dotenv';
@@ -10,8 +15,8 @@ import * as https from 'https';
 dotenv.config();
 
 // [Optimization] 텔레그램 API 통신 전용 에이전트
-// - [Logic] GCP 환경에서 IPv6 우선 시도로 인한 지연(Timeout)을 방지하기 위해 IPv4 전용(`family: 4`)으로 강제합니다.
-// - [Logic] KeepAlive를 켜서 빈번한 전송 시 핸드셰이크 시간을 단축합니다.
+// - [Logic] GCP 환경에서 IPv6 우선 시도로 인한 지연(Timeout)을 방지하기 위해 IPv4 전용(`family: 4`)으로 강제 설정합니다.
+// - [Optimization] KeepAlive 활성화로 빈번한 전송 시 연결 핸드셰이크 시간을 단축합니다.
 const telegramAgent = new https.Agent({
     family: 4,
     keepAlive: true,
@@ -32,7 +37,7 @@ export class NotificationService {
     private readonly telegramChatId = process.env.TELEGRAM_CHAT_ID;
 
     /**
-     * HTML 특수 문자 이스케이프 (텔레그램 HTML 모드 안전용)
+     * [Logic] HTML 특수 문자 이스케이프 (텔레그램 HTML Mode 전송 안전성 확보)
      */
     private escapeHtml(text: string): string {
         return text
@@ -42,7 +47,7 @@ export class NotificationService {
     }
 
     /**
-     * 텔레그램으로 이미지 묶음과 인스타그램 캡션을 전송합니다.
+     * [Main Logic] 텔레그램으로 이미지 묶음과 인스타그램 캡션을 전송합니다.
      */
     async sendTelegram(type: string, date: string, issues: FinalIssueBoard[], imagePaths: string[], caption?: string) {
         if (!this.telegramToken || !this.telegramChatId) {
@@ -57,19 +62,19 @@ export class NotificationService {
             try {
                 if (attempt > 1) {
                     const delay = attempt * 10000;
-                    Logger.info(`🔄 Retrying Telegram notification (Attempt ${attempt}/${MAX_RETRIES}) in ${delay / 1000}s...`);
+                    Logger.info(`🔄 [Notifier] Retrying Telegram notification (Attempt ${attempt}/${MAX_RETRIES}) in ${delay / 1000}s...`);
                     await new Promise(resolve => setTimeout(resolve, delay));
                 }
 
                 // [Step 1] 이미지 묶음 전송 (Media Group) - 텔레그램 미디어 그룹은 최대 10개까지 지원
                 if (imagePaths.length > 0) {
                     const FormData = require('form-data');
-                    // [Fix] 전송 데이터 크기 제한 해제 (기본 2MB 초과 시 에러 방지)
+                    // [Safety] 전송 데이터 크기 제한 해제 (기본 2MB 초과 시 에러 방지)
                     const formData = new FormData({ maxDataSize: Infinity });
                     formData.append('chat_id', this.telegramChatId);
 
                     const mediaLimit = 10;
-                    // [Fix] 이미지 파일명(P1, P2...) 순으로 정렬하여 랭킹 페이지가 항상 첫 번째로 오게 함
+                    // [Optimization] 이미지 파일명(P1, P2...) 순으로 정렬하여 랭킹 페이지가 항상 첫 번째로 오게 설계했습니다.
                     const targetImages = [...imagePaths]
                         .sort((a, b) => path.basename(a).localeCompare(path.basename(b)))
                         .slice(0, mediaLimit);
@@ -87,10 +92,10 @@ export class NotificationService {
 
                     await axios.post(`https://api.telegram.org/bot${this.telegramToken}/sendMediaGroup`, formData, {
                         headers: formData.getHeaders(),
-                        httpsAgent: telegramAgent, // [Fix] IPv4 강제 적용
+                        httpsAgent: telegramAgent, // [Safety] IPv4 강제 적용
                         maxContentLength: Infinity,
                         maxBodyLength: Infinity,
-                        timeout: 10000 // 10초로 넉넉하게 설정
+                        timeout: 10000 // 10초 명시적 타임아웃
                     });
                 }
 
@@ -109,10 +114,10 @@ export class NotificationService {
 
                         await axios.post(`https://api.telegram.org/bot${this.telegramToken}/sendVideo`, videoForm, {
                             headers: videoForm.getHeaders(),
-                            httpsAgent: telegramAgent, // [Fix] IPv4 강제 적용
+                            httpsAgent: telegramAgent, // [Safety] IPv4 강제 적용
                             maxContentLength: Infinity,
                             maxBodyLength: Infinity,
-                            timeout: 20000 // 비디오는 20초
+                            timeout: 20000 // [Safety] 비디오는 상대적으로 긴 타임아웃(20초) 부여
                         });
 
                         Logger.success('🎥 Telegram video preview sent.');
@@ -129,8 +134,8 @@ export class NotificationService {
                         text: safeCaption,
                         parse_mode: 'HTML'
                     }, {
-                        httpsAgent: telegramAgent, // [Fix] IPv4 강제 적용
-                        timeout: 5000 // 캡션은 5초
+                        httpsAgent: telegramAgent, // [Safety] IPv4 강제 적용
+                        timeout: 5000 // [Safety] 캡션 전송 타임아웃(5초)
                     });
                 }
 
@@ -150,7 +155,7 @@ export class NotificationService {
     }
 
     /**
-     * 별도의 시스템 에러/결과 리포트를 텔레그램으로 전송합니다.
+     * [Logic] 별도의 시스템 에러/결과 리포트를 텔레그램으로 전송합니다.
      */
     async sendErrorReport(reportText: string) {
         if (!this.telegramToken || !this.telegramChatId) return;

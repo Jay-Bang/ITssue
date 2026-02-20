@@ -4,8 +4,8 @@ import * as dns from 'dns';
 import { runOrchestrator } from './analysis/orchestrator';
 import { BoardType } from './types';
 
-// [Critical/Networking] Fix for GCP VM IPv6/IPv4 Connection Issues
-// Force Node.js to prefer IPv4 over IPv6 to avoid connection timeouts when reaching external services like Supabase.
+// [Critical/Networking] GCP VM 전용 네트워킹 환경 보정
+// [Logic] IPv6 우선 시도로 인한 Supabase 연결 타임아웃(Timeout)을 방지하기 위해 IPv4 우선(`ipv4first`)으로 강제 설정합니다.
 dns.setDefaultResultOrder('ipv4first');
 
 dotenv.config();
@@ -80,9 +80,8 @@ async function main() {
     await runOrchestrator(type, shouldPublish, startKST, endKST);
 }
 
-// [Logic] 최상위 예외 처리 및 프로세스 종료
+// [Logic] 최상위 예외 처리 및 프로세스 종료 핸들링
 main().catch(err => {
-    Logger.error('Fatal error in index.ts', err);
-    Logger.error(err);
+    Logger.error('[Index] Critical failure at entry point', err);
     process.exit(1);
 });

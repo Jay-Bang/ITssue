@@ -1,8 +1,11 @@
 /**
- * [manual-renderer.ts]
+ * [Manual Rendering & Publishing Utility]
  * 
- * [Description] 분석 결과(JSON)를 기반으로 우회 이미지 재생성 및 재발행 유틸리티
- * [Architecture] 분석 엔진을 다시 거치지 않고 CSS/HTML 수정본을 즉각적으로 반영하기 위해 사용합니다.
+ * [Description] 이미 생성된 보드 데이터(JSON)를 기반으로 이미지를 재생성하거나 SNS에 수동으로 게시하는 운영 지원 도구입니다.
+ * 
+ * [Design Intent]
+ * - [Strategy] 분석 엔진을 다시 거치지 않고 CSS/HTML 템플릿의 변경사항을 실시간으로 이미지에 반영할 수 있도록 설계했습니다.
+ * - [Logic] 버전 제어(EDITION)를 통해 원본 데이터를 보존하면서 수동 수정본을 추적 가능한 구조로 발행합니다.
  */
 import * as path from 'path';
 import * as fs from 'fs-extra';
@@ -17,16 +20,19 @@ import { uploadInstagramImages } from '../publish/storage-manager';
 import { NotificationService } from '../lib/notifier';
 
 /**
- * [Main Logic] 수동 렌더링 및 발행 프로세스 실행부
- * [Description] 지정된 경로의 JSON 리포트를 로드하여 렌더링 파이프라인을 수동으로 트리거합니다.
+ * [Manual Rendering & Publishing Utility]
+ * 
+ * [Main Logic] 지정된 로컬 JSON 리포트 파일을 로드하여 카드 뉴스 렌더링 파이프라인을 수동으로 트리거하고, 선택적으로 SNS 재발행을 수행합니다.
  */
 async function runManualRender() {
     const args = process.argv.slice(2);
     const jsonPath = args.find(arg => !arg.startsWith('--'));
     const shouldPublish = args.includes('--publish');
-    const isBubblegum = args.includes('--bubblegum') || args.includes('--modern'); // Support both for transition
+    const isBubblegum = args.includes('--bubblegum') || args.includes('--modern');
     const isArcade = args.includes('--arcade');
     let visualVersion: 'bubblegum' | 'arcade' = isArcade ? 'arcade' : 'bubblegum';
+
+    // [Step 1] 인자 분석 및 시각 테마 설정
     const SELECTED_THEME = args.find(arg => !arg.startsWith('--') && arg !== jsonPath) || visualVersion;
 
     if (!jsonPath) {
@@ -134,7 +140,7 @@ async function runManualRender() {
         if (shouldPublish) {
             Logger.info("🌐 Syncing with Supabase Storage...");
 
-            // [Naming] publish_info.json 이름이 `publish_${type}_${dateStr}.json`으로 변경됨에 따라 동적 탐색
+            // [Logic] Publish Info 파일 동적 탐색 (Naming Convention 대응)
             const files = await fs.readdir(outputDir);
             const publishInfoFile = files.find(f => f.startsWith('publish_') && f.endsWith('.json'));
 
@@ -171,14 +177,15 @@ async function runManualRender() {
             const storageTag = `${outputFolderName}_rev${Date.now()}`;
             const imageUrls = await uploadInstagramImages(imageBuffers, storageTag);
 
-            // 2. 캡션 파일 읽기
+            // [Step 2] 캡션 파일 읽기 및 데이터 정합성 확인
             const captionPath = path.join(outputDir, `caption_${type}_${dateStr}.txt`);
             let captionContent = '';
             if (await fs.pathExists(captionPath)) {
                 captionContent = await fs.readFile(captionPath, 'utf-8');
             }
 
-            // 3. 새로운 보드 레코드 생성 (Insert, not Update)
+            // [Step 3] 새로운 보드 레코드 생성 (Edition Versioning)
+            // [Logic] 원본 보드를 물리적으로 덮어쓰지 않고 새로운 버전(EDITION)으로 등록하여 히스토리를 관리합니다.
             const { data: newBoard, error: insertError } = await supabase
                 .from('issue_boards')
                 .insert([{
@@ -201,11 +208,11 @@ async function runManualRender() {
             const newBoardId = newBoard.id;
             Logger.success(`New Edition Board created: ${newBoardId}`);
 
-            // 4. 인스타그램 자동 게시 (NEW)
+            // [Step 4] 인스타그램 자동 교체 게시 (Self-healing)
             Logger.info("📸 Publishing manual edition to Instagram...");
             const igPublisher = new InstagramPublisher();
 
-            // 기존 게시물이 이미 있었다면 자동으로 삭제 (자기 교정 로직)
+            // [Strategy] 기존 게시물이 이미 있었다면 자동으로 삭제하여 피드 정합성을 유지합니다.
             if (originalBoard?.instagram_post_id) {
                 await igPublisher.deleteMedia(originalBoard.instagram_post_id);
             }

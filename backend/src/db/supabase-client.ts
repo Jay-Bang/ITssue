@@ -7,11 +7,11 @@ dotenv.config();
 /**
  * [Supabase Infrastructure]
  * 
- * [Description] 프로젝트 전역에서 사용할 Supabase 클라이언트 인스턴스를 초기화하고 관리합니다.
+ * [Description] 프로젝트 전역에서 사용할 Supabase 클라이언트 인스턴스를 초기화하고 관리하는 인프라 계층입니다.
  * 
  * [Design Intent]
- * - 서버 사이드 배치 작업 및 데이터 분석을 위해 Service Role Key를 사용한 관리자 권한 확보.
- * - 프로젝트 전반의 데이터 영속성(Persistence)을 담당.
+ * - [Logic] 서버 사이드 배치 작업 및 데이터 분석을 위해 Service Role Key를 사용한 전체 관리자 권한을 확보합니다.
+ * - [Strategy] 프로젝트 전반의 데이터 영속성(Persistence) 및 Storage 에셋 관리를 담당하는 싱글톤 엔트리 역할을 수행합니다.
  * 
  * [Environment Variables]
  * - SUPABASE_URL: Supabase 프로젝트 API URL

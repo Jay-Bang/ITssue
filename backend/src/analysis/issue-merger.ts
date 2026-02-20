@@ -3,7 +3,7 @@ import { IssueEntity, TimeWindow } from '../types';
 import { runRankingEngine } from './ranking-engine';
 
 
-// 병합 정책 설정 (V2 Config)
+// [Logic] 병합 정책 설정 (V2 Config)
 const MERGE_CONFIG = {
     JACCARD_STRONG: 0.7,   // 자동 병합 수준
     JACCARD_WEAK: 0.35,    // 기사 내용 유사도 기준
@@ -13,11 +13,11 @@ const MERGE_CONFIG = {
     MIN_TOKEN_LENGTH: 2    // 유효 토큰 최소 길이
 };
 
-// 내부 처리용 확장 인터페이스 (V2.6)
+// [Logic] 내부 처리용 확장 인터페이스 (V2.6)
 interface MergableIssue extends IssueEntity {
     tokens: Set<string>;
     originalIndex: number;
-    merge_reasons: string[]; // 병합 사유 추적 (Observability)
+    merge_reasons: string[]; // [Logic] 병합 사유 추적 (Observability)
 }
 
 /**
@@ -36,13 +36,13 @@ interface MergableIssue extends IssueEntity {
  * 4. 그룹 내 최고 점수 키워드를 `Representative Keyword`로 선정 및 모든 데이터 집계.
  */
 
-// [Logic/Data Structure] Union-Find (Disjoint Set) 알고리즘
-// 별개의 원소들을 상호 배타적 집합으로 관리하며, 병합과 그룹 식별 작업을 최적화된 시간 내에 수행합니다.
+// [Algorithm] Union-Find (Disjoint Set) 알고리즘
+// [Description] 별개의 원소들을 상호 배타적 집합으로 관리하며, 병합과 그룹 식별 작업을 최적화된 시간 내에 수행합니다.
 class UnionFind {
     private parent: number[];
 
     constructor(size: number) {
-        // 모든 원소는 자기 자신을 부모로 하여 초기화 (독립 집합)
+        // [Logic] 모든 원소는 자기 자신을 부모로 하여 초기화 (독립 집합)
         this.parent = Array.from({ length: size }, (_, i) => i);
     }
 
@@ -77,7 +77,7 @@ interface MergeCandidate {
 }
 
 // [Logic] 한국어 텍스트 정규화: 한자(Hanja) 기반 약어 치환
-// 뉴스 헤드라인에서 자국/타국명 및 정부 부처 등을 나타낼 때 쓰는 한자를 한글로 변환하여 병합 확률을 높입니다.
+// [Algorithm] 뉴스 헤드라인에서 자국/타국명 및 정부 부처 등을 나타낼 때 쓰는 한자를 한글로 변환하여 병합 확률을 높집니다.
 function normalizeHanja(text: string): string {
     const hanjaMap: Record<string, string> = {
         '李': '이', '朴': '박', '崔': '최', '鄭': '정', '姜': '강',
@@ -152,10 +152,10 @@ export async function runMergeGate(options: TimeWindow): Promise<IssueEntity[]> 
     if (!atomIssues || atomIssues.length === 0) return [];
 
     // [Step 1] 데이터 확장 및 전처리
-    // 모든 이슈에 대해 뉴스 제목을 토큰화하여 메모리에 캐싱 (유사도 계산 최적화용)
+    // [Logic] 뉴스 제목을 토큰화하여 유사도 계산을 위한 어휘 집합을 구축합니다.
     const extendedIssues: MergableIssue[] = atomIssues.map((issue, idx) => ({
         ...issue,
-        tokens: tokenize(issue.news_titles.join(' ')),
+        tokens: tokenize((issue.news_titles || []).join(' ')),
         originalIndex: idx,
         merge_reasons: []
     }));
@@ -165,8 +165,8 @@ export async function runMergeGate(options: TimeWindow): Promise<IssueEntity[]> 
     Logger.info(`   (Sample: ID ${atomIssues[0].raw_snapshot_ids[0]}, Time: ${atomIssues[0].first_seen_at})`);
 
 
-    // 1. 후보군 탐색 및 버킷팅 (O(N^2) Pruning 기초)
-    // 시간순으로 정렬되어 있다고 가정 (rankingEngine에서 보장)
+    // [Step 2] 유사도 측정 및 후보군 추출 (O(N^2) Pruning 기초)
+    // [Algorithm] 이슈 간의 시간차 및 텍스트 유사도를 바탕으로 병합 가능성을 전수 조사합니다.
     for (let i = 0; i < extendedIssues.length; i++) {
         for (let j = i + 1; j < extendedIssues.length; j++) {
             const issueA = extendedIssues[i];
@@ -224,7 +224,8 @@ export async function runMergeGate(options: TimeWindow): Promise<IssueEntity[]> 
     }
 
 
-    // 3. 최종 그룹핑 및 집계 (Aggregation)
+    // [Step 3] 최종 그룹핑 및 집계 (Aggregation)
+    // [Logic] Union-Find 결과를 기반으로 한 그룹으로 묶인 이슈들의 점수와 키워드를 통합합니다.
 
     const groupedMap = new Map<number, MergableIssue[]>();
 
@@ -283,7 +284,7 @@ export async function runMergeGate(options: TimeWindow): Promise<IssueEntity[]> 
     }
 
 
-    // 4. 최종 정렬 (점수순) - 전체 반환
+    // [Step 4] 최종 정렬 및 결과 반환
     finalIssues.sort((a, b) => b.score - a.score);
 
     Logger.info(`🏆 --- FINAL MERGED RANKING (Top 10 Preview) ---`);

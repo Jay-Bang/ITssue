@@ -112,6 +112,7 @@
         }
 
         function scaleGrid() {
+            // [Step 1] 그리드 요소 식별 및 초기 폰트 크기 설정
             const grid = document.getElementById('r-grid');
             if (!grid) return;
             const tiles = grid.querySelectorAll('.arcade-tile');
@@ -120,6 +121,7 @@
             let currentFontSize = 32;
             const maxWidth = 340; // Safe width within tile after accounting for badge (65px) and padding
 
+            // [Logic] 모든 키워드가 동일한 크기로 정렬되도록 가장 긴 텍스트에 맞춰 최소 폰트 크기를 산출합니다.
             // 1. Find the smallest font size needed to fit the longest keyword
             tiles.forEach(tile => {
                 const key = tile.querySelector('.tile-key');
@@ -180,6 +182,7 @@
         }
 
         function scaleDetailSummary() {
+            // [Step 1] 요약 패널 및 본문 영역 식별
             const panel = document.querySelector('.summary-panel-v3');
             if (!panel) return;
             const content = panel.querySelector('.summary-content');
@@ -187,6 +190,7 @@
             let fontSize = parseFloat(window.getComputedStyle(content).fontSize);
             const maxH = panel.clientHeight - 40;
 
+            // [Logic] 오버플로우 발생 시 폰트 크기를 축소하고, 여백이 많을 경우 시각적 밀도를 위해 확대합니다.
             // 1. Shrink if overflow
             while (content.scrollHeight > maxH && fontSize > 24) {
                 fontSize -= 1;

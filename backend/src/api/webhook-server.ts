@@ -25,11 +25,12 @@ if (!API_KEY) {
 }
 
 const server = http.createServer(async (req, res) => {
-    // CORS Headers
+    // [Logic] CORS Headers 설정 (Admin Panel 크로스 도메인 요청 허용)
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
+    // [Logic] Preflight 요청 처리
     if (req.method === 'OPTIONS') {
         res.writeHead(204);
         res.end();
@@ -47,7 +48,7 @@ const server = http.createServer(async (req, res) => {
                 const data = JSON.parse(body);
                 const { boardId, apiKey } = data;
 
-                // 1. Security Check
+                // [Safety] API Key 인증 기반의 보안 검증
                 if (apiKey !== API_KEY) {
                     Logger.warn(`⚠️  Unauthorized access attempt from ${req.socket.remoteAddress}`);
                     res.writeHead(401, { 'Content-Type': 'application/json' });
@@ -61,10 +62,10 @@ const server = http.createServer(async (req, res) => {
                     return;
                 }
 
-                // 2. Trigger Republish (Async)
+                // [Step] 보드 재발행(Republish) 트리거 (비동기 처리)
                 Logger.info(`🚀 [Webhook] Received republish request for board: ${boardId}`);
 
-                // We return immediately to avoid timeout, but run the task in background
+                // [Optimization] 클라이언트 타임아웃 방지를 위해 즉시 응답 반환 후 백그라운드 작업 수행
                 republishBoard(boardId).catch(err => {
                     Logger.error(`[Webhook] Background republish failed for ${boardId}`, err);
                 });
@@ -89,7 +90,7 @@ const server = http.createServer(async (req, res) => {
                 const data = JSON.parse(body);
                 const { itemId, apiKey } = data;
 
-                // 1. Security Check
+                // [Safety] API Key 인증 기반의 보안 검증
                 if (apiKey !== API_KEY) {
                     Logger.warn(`⚠️  Unauthorized access attempt from ${req.socket.remoteAddress}`);
                     res.writeHead(401, { 'Content-Type': 'application/json' });
@@ -103,7 +104,7 @@ const server = http.createServer(async (req, res) => {
                     return;
                 }
 
-                // 2. Trigger Regeneration (Sync for immediate feedback)
+                // [Step] 개별 아이템 요약 재생성 트리거 (동기 처리로 결과 즉시 반환)
                 Logger.info(`🚀 [Webhook] Received regenerate request for item: ${itemId}`);
 
                 try {
@@ -146,9 +147,10 @@ const server = http.createServer(async (req, res) => {
                     return;
                 }
 
+                // [Step] 미발행 채널 퍼블리싱 재시도(Retry) 트리거 (비동기 처리)
                 Logger.info(`🚀 [Webhook] Received Retry Publish request for board: ${boardId}`);
 
-                // Async execution for timeout safety (though it's faster than full render)
+                // [Optimization] 타임아웃 방지를 위한 비동기 실행
                 retryPublishBoard(boardId)
                     .then(result => {
                         Logger.success(`[Webhook] Background Retry success: ${boardId}`);
@@ -173,6 +175,7 @@ const server = http.createServer(async (req, res) => {
     }
 });
 
+// [Logic] 서버 리스닝 시작
 server.listen(PORT, () => {
     Logger.info(`📡 ITssue Webhook Server running on port ${PORT}`);
     Logger.info(`🔒 Security: ADMIN_API_KEY is Active`);

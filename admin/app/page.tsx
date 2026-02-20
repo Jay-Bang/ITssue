@@ -1,9 +1,12 @@
 'use client';
 
 /**
- * [Admin Dashboard: Boards List]
+ * [Admin Dashboard: Main Overview]
  * 
- * [Description] 발행된 모든 이슈 보드들을 목록 형태로 조회하고 관리할 수 있는 메인 대시보드 페이지입니다.
+ * [Description] 전체 이슈 보드 목록과 주요 도구를 시각화하는 관리자의 메인 대시보드 화면입니다.
+ * 
+ * [Design Intent]
+ * - [UX] 실시간 데이터 그리드와 요약 상술(Stats)을 한눈에 파악할 수 있도록 중앙 집중식 레이아웃을 채택했습니다.
  */
 
 import { useEffect, useState, useMemo } from 'react';

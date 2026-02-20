@@ -21,7 +21,7 @@ export class AIEngine {
     private model: any;
 
     constructor() {
-        // API 키 로드 (여러 방식 지원)
+        // [Logic] 가용 가능한 모든 API 키 로드 (Multi-Key Rotation 지원)
         this.apiKeys = this.loadApiKeys();
 
         if (this.apiKeys.length === 0) {
@@ -31,7 +31,7 @@ export class AIEngine {
 
         Logger.info(`[AI] 🔑 Loaded ${this.apiKeys.length} API key(s)`);
 
-        // 첫 번째 키로 초기화
+        // [Step 1] 첫 번째 가용 키로 초기 AI 인스턴스 할당
         this.genAI = new GoogleGenerativeAI(this.apiKeys[0]);
         const modelName = process.env.CLOUD_AI_MODEL;
         if (!modelName) {
@@ -49,7 +49,7 @@ export class AIEngine {
     private loadApiKeys(): string[] {
         const keys: string[] = [];
 
-        // 방법 1: 쉼표로 구분된 단일 환경 변수 처리
+        // [Logic] 방법 1: 쉼표로 구분된 단일 환경 변수 처리 (Legacy/Simple Support)
         const mainKey = process.env.CLOUD_AI_KEY;
         if (mainKey) {
             if (mainKey.includes(',')) {
@@ -59,7 +59,7 @@ export class AIEngine {
             }
         }
 
-        // 방법 2: 개별 환경 변수 (CLOUD_AI_KEY_1, CLOUD_AI_KEY_2, ...)
+        // [Logic] 방법 2: 개별 환경 변수 번호링 처리 (Scalability Support)
         let i = 1;
         while (true) {
             const key = process.env[`CLOUD_AI_KEY_${i}`];
@@ -72,11 +72,11 @@ export class AIEngine {
     }
 
     /**
-     * 다음 API 키로 전환
+     * [Logic] 다음 API 키로 전환 (Key Rotation)
      */
     private switchToNextKey(): boolean {
         if (this.apiKeys.length <= 1) {
-            return false; // 키가 1개뿐이면 전환 불가
+            return false; // [Safety] 키가 1개뿐이면 전환 루틴을 스킵합니다.
         }
 
         this.currentKeyIndex = (this.currentKeyIndex + 1) % this.apiKeys.length;
@@ -84,7 +84,7 @@ export class AIEngine {
 
         Logger.info(`[AI] 🔄 Switching to API key #${this.currentKeyIndex + 1}`);
 
-        // 새 키로 클라이언트 재생성
+        // [Step] 새 키로 클라이언트 및 모델 객체 재생성
         this.genAI = new GoogleGenerativeAI(newKey);
         const modelName = process.env.CLOUD_AI_MODEL!;
         this.model = this.genAI.getGenerativeModel({ model: modelName });
@@ -97,7 +97,7 @@ export class AIEngine {
     }
 
     /**
-     * 지수 백오프 + API 키 로테이션 재시도 로직
+     * [Advanced Logic] 지수 백오프 + API 키 로테이션 통합 재시도 메커니즘
      */
     private async withRetry<T>(fn: () => Promise<T>, maxRetries: number = 3): Promise<T> {
         let lastError: any;
@@ -139,7 +139,7 @@ export class AIEngine {
                         Logger.warn(`[AI] 🚦 All keys exhausted. Waiting ${Math.round(delay)}ms... (Attempt ${attempt + 1}/${maxRetries})`);
                         await this.wait(delay);
 
-                        // [Safety] 대기 후 첫 번째 키로 다시 리셋하여 순환 루프 재시작
+                        // [Safety] 대기 후 신규 사이클 시작을 위해 첫 번째 키로 모델 초기화
                         this.currentKeyIndex = 0;
                         this.genAI = new GoogleGenerativeAI(this.apiKeys[0]);
                         const modelName = process.env.CLOUD_AI_MODEL!;
@@ -155,7 +155,7 @@ export class AIEngine {
         throw lastError;
     }
 
-    /** 텍스트 생성 (재시도 로직 포함) */
+    /** [Logic] 텍스트 생성 (재시도 및 로테이션 투명성 제공) */
     async generateText(prompt: string): Promise<string> {
         return this.withRetry(async () => {
             const result = await this.model.generateContent(prompt);
@@ -164,7 +164,7 @@ export class AIEngine {
         });
     }
 
-    /** JSON 생성 (재시도 로직 및 파싱 처리 포함) */
+    /** [Logic] JSON 생성 (자동 Prompt 보정 및 파싱 처리 포함) */
     async generateJson<T>(prompt: string): Promise<T | null> {
         try {
             const text = await this.withRetry(async () => {
@@ -173,6 +173,7 @@ export class AIEngine {
                 return response.text();
             });
 
+            // [Logic] 마크다운 코드 블록 제거 후 JSON 파싱 시도
             const jsonStr = text.replace(/```json|```/g, '').trim();
             return JSON.parse(jsonStr) as T;
         } catch (error: any) {
@@ -214,6 +215,6 @@ export class AIEngine {
     }
 }
 
-// 싱글톤 인스턴스 노출
+// [Logic] 시스템 전체에서 사용할 싱글톤 인스턴스 노출
 export const ai = new AIEngine();
 export const coreAI = ai;

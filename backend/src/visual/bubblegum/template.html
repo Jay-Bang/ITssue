@@ -113,6 +113,7 @@
     }
 
     function scaleGrid() {
+      // [Step 1] 그리드 요소 식별 및 초기 폰트 크기 설정
       const grid = document.getElementById('r-grid');
       if (!grid) return;
       const tiles = grid.querySelectorAll('.arcade-tile');
@@ -120,6 +121,7 @@
       let currentFontSize = 32;
       const maxWidth = 340;
 
+      // [Logic] 모든 타일의 키워드가 통일된 크기를 갖도록 최소 적정 폰트 크기를 산출합니다.
       tiles.forEach(tile => {
         const key = tile.querySelector('.tile-key');
         if (!key) return;
@@ -175,6 +177,7 @@
     }
 
     function scaleDetailSummary() {
+      // [Step 1] 요약 패널 및 본문 영역 식별
       const panel = document.querySelector('.summary-panel-v3');
       if (!panel) return;
       const content = panel.querySelector('.summary-content');
@@ -182,6 +185,7 @@
       let fontSize = parseFloat(window.getComputedStyle(content).fontSize);
       const maxH = panel.clientHeight - 40;
 
+      // [Logic] 본문 길이에 따라 폰트 크기를 동적으로 조절하여 패널 내 가독성을 극대화합니다.
       while (content.scrollHeight > maxH && fontSize > 24) {
         fontSize -= 1;
         content.style.fontSize = fontSize + 'px';

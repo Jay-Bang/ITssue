@@ -1,5 +1,8 @@
-'use client';
-
+/**
+ * [UI Component: Stats Overview Card]
+ * 
+ * [Description] 주요 지표(Metrics)를 시각적인 아이콘 및 트렌드 정보와 함께 요약하여 보여주는 전문 컴포넌트입니다.
+ */
 import React from 'react';
 
 interface StatsCardProps {
@@ -14,7 +17,7 @@ interface StatsCardProps {
 }
 
 export const StatsCard: React.FC<StatsCardProps> = ({ title, value, icon, trend, color = 'indigo' }) => {
-    // Mapping base colors to theme-aware variants
+    // [Design Intent] 기획의도에 따른 컬러 팔레트 매핑 (Theme-aware variants)
     const colorStyles = {
         indigo: "text-accent-primary bg-accent-primary/10",
         purple: "text-accent-secondary bg-accent-secondary/10",

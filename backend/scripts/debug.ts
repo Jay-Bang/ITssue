@@ -8,9 +8,13 @@ import { TimeWindow } from '../src/types';
 dotenv.config();
 
 /**
- * [Debug Tool]
- * ITssue 프로젝트의 핵심 모듈을 개별적으로 테스트하기 위한 CLI 도구입니다.
- * Dependency: moment 제거, Native Date 사용
+ * [Debug Tool: Pipeline Module Tester]
+ * 
+ * [Description] ITssue 프로젝트의 핵심 모듈(Ranking, Merger, Summary)을 개별적으로 테스트하기 위한 CLI 도구입니다.
+ * 
+ * [Design Intent]
+ * - 오케스트레이터 전체를 실행하지 않고도 특정 단계의 로직 변화를 즉각적으로 검증할 수 있도록 설계했습니다.
+ * - [Fix] Dependency: moment 제거 및 Native Date 사용으로 런타임 환경 일원화.
  */
 async function main() {
     const args = process.argv.slice(2);
@@ -54,7 +58,7 @@ Usage:
  * [Enhanced] ISO 문자열 2개가 들어오면 Custom Range로 처리
  */
 function getWindow(arg1?: string, arg2?: string): { window: TimeWindow, label: string } {
-    // 1. Custom Time Range Check (ISO 8601 format check: "YYYY-MM-DDTHH:mm:ss")
+    // [Step] Custom Time Range Check (ISO 8601 format check: "YYYY-MM-DDTHH:mm:ss")
     const isISODate = (str?: string) => str && str.includes('T') && !isNaN(Date.parse(str));
 
     if (arg1 && arg2 && isISODate(arg1) && isISODate(arg2)) {
@@ -66,7 +70,7 @@ function getWindow(arg1?: string, arg2?: string): { window: TimeWindow, label: s
         };
     }
 
-    // 2. Preset Mode (Date + Type)
+    // [Step] Preset Mode (Date + Type) 기반 윈도우 생성
     const dateStr = arg1;
     const typeStr = arg2 || 'NOON';
     const type = (typeStr.toUpperCase() === 'NIGHT' ? 'NIGHT' : 'NOON') as 'NOON' | 'NIGHT';
@@ -83,8 +87,8 @@ function getWindow(arg1?: string, arg2?: string): { window: TimeWindow, label: s
         now = new Date(Date.UTC(y, m - 1, d, utcHour, 0, 0, 0));
     }
 
-    // Logic from orchestrator.ts
-    // 9시간 오프셋 적용 (KST 기준 계산을 위해 가상의 Date 객체 생성)
+    // [Logic] orchestrator.ts의 calculateTimeWindow 로직 동기화
+    // - 9시간 오프셋 적용 (KST 기준 계산을 위해 가상의 Date 객체 생성)
     const kstShift = 9 * 60 * 60 * 1000;
     const kstNow = new Date(now.getTime() + kstShift);
     const kYear = kstNow.getUTCFullYear();
@@ -134,11 +138,7 @@ async function debugMerger(arg1?: string, arg2?: string) {
     Logger.info(`🧪 [DEBUG: Merger] Target: ${label}`);
     Logger.info(`   Window (UTC): ${window.start.toISOString()} ~ ${window.end.toISOString()}`);
 
-    // [Corrected] Using functional import. runMergeGate internally runs ranking if needed, or we pass window.
-    // However, runMergeGate actually takes 'window' and calls ranking internally.
-    // Let's check runMergeGate signature usage in orchestrator.ts:
-    // const allMergedIssues = await runMergeGate(window);
-
+    // [Logic] runMergeGate 내부적으로 ranking을 수행하거나 윈도우를 직접 전달받아 처리함
     const mergedIssues = await runMergeGate(window);
 
     Logger.info(`✅ Merged Issues (Top 10):`);

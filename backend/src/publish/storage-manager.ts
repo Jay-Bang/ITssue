@@ -11,6 +11,7 @@ import { Logger } from '../lib/logger';
  * - [Safety] 파일명 정규화(Sanitization)를 통해 공백이나 특수문자로 인한 Storage 키 오류를 방지합니다.
  */
 export async function uploadInstagramImages(images: { fileName: string, buffer: Buffer }[], outputTag: string): Promise<{ fileName: string, publicUrl: string }[]> {
+    // [Step 1] 인스타그램 발행 규격(P1~P6)에 맞는 이미지 필터링 및 정렬
     const imagesToUpload = images
         .filter(f => f.fileName.endsWith('.png') && /P[1-6]/.test(f.fileName))
         .sort((a, b) => a.fileName.localeCompare(b.fileName));
@@ -19,12 +20,12 @@ export async function uploadInstagramImages(images: { fileName: string, buffer: 
     const urls: { fileName: string, publicUrl: string }[] = [];
 
     for (const image of imagesToUpload) {
-        // [Sanitization] Supabase Storage keys should be ASCII-safe.
-        // Extract prefix (1, P2, P3...) to create a safe filename.
+        // [Logic] 파일명 정규화 (Sanitization): Storage Key 정책 준수 및 ASCII 안전성 확보
         const prefix = image.fileName.split('_')[0];
         const safeFileName = prefix.startsWith('P') ? `${prefix}.png` : `P${prefix}.png`;
         const storagePath = `${outputTag}/${safeFileName}`;
 
+        // [Step 2] Supabase Storage 버킷에 바이너리 데이터 직접 업로드
         const { data, error } = await supabase.storage
             .from('instagram-feeds')
             .upload(storagePath, image.buffer, {
@@ -37,6 +38,7 @@ export async function uploadInstagramImages(images: { fileName: string, buffer: 
             continue;
         }
 
+        // [Step 3] 업로드된 파일의 공용 URL (Public URL) 획득
         const { data: { publicUrl } } = supabase.storage
             .from('instagram-feeds')
             .getPublicUrl(storagePath);

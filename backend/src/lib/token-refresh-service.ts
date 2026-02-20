@@ -6,10 +6,13 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 /**
- * [Instagram Token Refresh Service]
+ * [Social Token Management Service]
  * 
- * Instagram Access Token을 자동으로 갱신하고 Supabase에 저장합니다.
- * Long-lived Token (60일 유효)을 매월 자동 갱신하여 만료를 방지합니다.
+ * [Description] Instagram 및 Threads Access Token을 자동으로 갱신하고 Supabase 전역 설정 테이블에 저장합니다.
+ * 
+ * [Design Intent]
+ * - [Logic] Long-lived Token (60일 유효)을 만료 전 정기적으로 자동 갱신하여 인스타그램 게시 무중단을 보장합니다.
+ * - [Strategy] Threads API의 특수성(Refresh vs Exchange)을 고려한 조건부 갱신 로직을 구현했습니다.
  */
 export class TokenRefreshService {
     private supabase;
@@ -26,7 +29,7 @@ export class TokenRefreshService {
     }
 
     /**
-     * Instagram 토큰을 새로운 Long-lived Token으로 교환
+     * [Logic] Instagram 토큰을 새로운 Long-lived Token으로 교환
      */
     async refreshInstagramToken(): Promise<string> {
         try {
@@ -54,10 +57,10 @@ export class TokenRefreshService {
     }
 
     /**
-     * Threads 토큰을 새로운 Long-lived Token으로 교환 또는 갱신
-     * [Logic] 
-     * 1. Short-lived -> Long-lived 교환 (th_exchange_token)
-     * 2. Long-lived -> Long-lived 연장 (th_refresh_token)
+     * [Logic] Threads 토큰을 새로운 Long-lived Token으로 교환 또는 갱신
+     * [Strategy]
+     * 1. Short-lived -> Long-lived 최초 교환 (th_exchange_token 활용)
+     * 2. Long-lived -> Long-lived 정기 연장 (th_refresh_token 활용)
      */
     async refreshThreadsToken(): Promise<string> {
         try {
@@ -108,7 +111,7 @@ export class TokenRefreshService {
     }
 
     /**
-     * 현재 토큰 가져오기 (Supabase → .env fallback)
+     * [Logic] 현재 활성화된 토큰 조회 (Supabase DB 우선, .env Fallback 차선)
      */
     private async getCurrentToken(id: number): Promise<string> {
         const { data, error } = await this.supabase
@@ -132,7 +135,7 @@ export class TokenRefreshService {
     }
 
     /**
-     * 새 토큰을 Supabase에 저장
+     * [Step] 갱신된 새 토큰을 Supabase 전역 설정 테이블에 Persist
      */
     private async saveToken(id: number, token: string, expiresIn: number): Promise<void> {
         const expiresAt = new Date(Date.now() + expiresIn * 1000);
@@ -150,7 +153,7 @@ export class TokenRefreshService {
     }
 }
 
-// CLI 실행용
+// [Logic] CLI 환경에서의 직접 실행 및 모드(Instagram/Threads) 전환 지원
 if (require.main === module) {
     (async () => {
         const service = new TokenRefreshService();

@@ -1,5 +1,11 @@
-'use client';
-
+/**
+ * [Admin Layout: Sidebar Navigation]
+ * 
+ * [Description] 관리자 대시보드의 주요 메뉴 탐색 및 사용자 로그아웃 기능을 담당하는 측면 바입니다.
+ * 
+ * [Design Intent]
+ * - [Nav] 현재 경로를 인식하여 활성 메뉴를 강조하고 서비스 간 이동을 직관적으로 보조합니다.
+ */
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -23,11 +29,12 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     ];
 
     const handleLogout = async () => {
+        // [Logic] 세션 종료 후 로그인 페이지로 강제 이동 및 상태 초기화 수행
         await supabase.auth.signOut();
         window.location.href = '/login';
     };
 
-    // Close sidebar on navigation (for mobile)
+    // [Logic] 모바일 환경에서 내비게이션 시 사이드바 자동 닫기
     useEffect(() => {
         onClose();
     }, [pathname, onClose]);

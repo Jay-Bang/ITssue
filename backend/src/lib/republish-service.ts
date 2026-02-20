@@ -33,7 +33,7 @@ export async function republishBoard(boardId: string) {
 
         if (boardError || !board) throw new Error(`Board not found: ${boardError?.message}`);
 
-        // 2. Fetch Board Items (Content) from Supabase
+        // [Step 2] 보드 아이템(콘텐츠) 데이터 조회
         const { data: items, error: itemsError } = await supabase
             .from('issue_board_items')
             .select('*')
@@ -47,7 +47,8 @@ export async function republishBoard(boardId: string) {
         const visualVersion = type === 'NOON' ? 'arcade' : 'bubblegum';
         const theme = visualVersion; // Align theme with visual version
 
-        // 3. Format Data for Renderer (Verified with Supabase MCP)
+        // [Step 3] 렌더러 전용 데이터 포매팅
+        // [Logic] DB의 원시 필드명을 렌더링 엔진(Handlebars)이 예상하는 구조로 변환합니다.
         const formattedIssues: FinalIssueBoard[] = items.map(item => ({
             rank: item.rank,
             representative_keyword: item.keyword, // DB 'keyword' -> Type 'representative_keyword'
@@ -59,30 +60,31 @@ export async function republishBoard(boardId: string) {
             news_titles: Array.isArray(item.news_titles) ? item.news_titles : []
         }));
 
-        // 4. Setup Directories
+        // [Step 4] 분석 결과물 임시 저장 디렉토리 설정
         const tempDir = path.join(process.cwd(), 'output', 'temp_republish', `${boardId}_${Date.now()}`);
         await fs.ensureDir(tempDir);
 
-        // 5. Render Images
+        // [Step 5] 카드 뉴스 이미지 렌더링
+        // [Logic] 메모리 버퍼 방식으로 렌더링하여 디스크 쓰기 오버헤드를 최소화합니다.
         Logger.info(`🎨 Rendering images to memory`);
         const boardTitle = type === 'NOON' ? '정오 이슈 보드' : '일일 이슈 보드';
         const p1Title = type === 'NOON' ? 'MIDDAY TRENDS' : 'DAILY TRENDS';
 
         const imageBuffers = await renderFullSet(formattedIssues, dateStr, type, theme, boardTitle, visualVersion, p1Title);
 
-        // 6. Generate Caption
+        // [Step 6] 인스타그램 업로드용 캡션 생성
         const caption = await generateInstagramCaption(type, dateStr, formattedIssues);
 
-        // 7. Upload to Storage
+        // [Step 7] Supabase Storage 클라우드 동기화 (이미지 업로드)
         Logger.info("🌐 Syncing with Supabase Storage...");
         const storageTag = `republish_${boardId}_${Date.now()}`;
         const imageUrls = await uploadInstagramImages(imageBuffers, storageTag);
 
-        // 8. Publish to Instagram
+        // [Step 8] 인스타그램 최종 발행 및 기존 게시물 정리
         Logger.info("📸 Publishing to Instagram...");
         const igPublisher = new InstagramPublisher();
 
-        // Delete old post if exists (optional but recommended for republication)
+        // [Safety] 중복 방지를 위해 기존 게시물이 있는 경우 삭제를 시도합니다.
         if (board.instagram_post_id) {
             try {
                 await igPublisher.deleteMedia(board.instagram_post_id);
@@ -101,8 +103,8 @@ export async function republishBoard(boardId: string) {
             igPermalink = await igPublisher.getMediaPermalink(igMediaId);
         }
 
-        // 9. Update Database with new Post ID and Metadata (CRITICAL)
-        // [Logic] We do this BEFORE notification to ensure data integrity even if Telegram fails.
+        // [Step 9] 데이터베이스 동기화 (Post ID 및 메타데이터 업데이트)
+        // [Logic] 알림 전송 실패와 무관하게 데이터 정합성을 유지하기 위해 선행 업데이트를 수행합니다.
         const { error: updateError } = await supabase
             .from('issue_boards')
             .update({
@@ -171,8 +173,8 @@ export async function republishBoard(boardId: string) {
 
         Logger.success(`✅ Database updated with new IG_MEDIA_ID: ${igMediaId}`);
 
-        // 10. Notify Telegram (NON-CRITICAL)
-        // [Safety] Wrap in try-catch so notification timeouts don't crash the whole process.
+        // [Step 10] 텔레그램 최종 알림 전송 (비디오 포함)
+        // [Safety] 알림 전송은 부차적인 기능이므로 실패해도 전체 프로세스 중단을 방해하지 않도록 처리합니다.
         try {
             Logger.info("📨 Sending Telegram notification...");
             const notifier = new NotificationService();
@@ -208,7 +210,7 @@ export async function retryPublishBoard(boardId: string) {
     Logger.info(`🔄 [RetryService] Starting retry publish for Board ID: ${boardId}`);
 
     try {
-        // 1. Fetch Board Data
+        // [Step 1] 보드 기본 정보 조회
         const { data: board, error: boardError } = await supabase
             .from('issue_boards')
             .select('*')
@@ -217,7 +219,8 @@ export async function retryPublishBoard(boardId: string) {
 
         if (boardError || !board) throw new Error(`Board not found: ${boardError?.message}`);
 
-        // 2. Check for minimal requirements (Images must exist)
+        // [Step 2] 최소 요구사항 검증 (Storage URL 존재 여부)
+        // [Safety] 이미지가 Storage에 업로드되어 있지 않은 경우 렌더링을 포함한 전체 재발행(Republish)이 권장됩니다.
         const imageUrls = board.storage_urls;
         if (!imageUrls || !Array.isArray(imageUrls) || imageUrls.length === 0) {
             throw new Error(`❌ No storage URLs found. Cannot retry publish without existing images. Please use full 'Republish' instead.`);
@@ -225,7 +228,7 @@ export async function retryPublishBoard(boardId: string) {
 
         Logger.info(`✅ Found ${imageUrls.length} existing images. Skipping rendering.`);
 
-        // 3. Prepare Data for Caption (re-fetch items to ensure caption is up-to-date)
+        // [Step 3] 캡션용 아이템 데이터 재조회
         const { data: items, error: itemsError } = await supabase
             .from('issue_board_items')
             .select('*')
@@ -248,10 +251,10 @@ export async function retryPublishBoard(boardId: string) {
         const type = board.board_type as BoardType;
         const dateStr = board.target_date.replace(/-/g, '.');
 
-        // 4. Generate Caption
+        // [Step 4] 인스타그램 업로드용 캡션 생성
         const caption = await generateInstagramCaption(type, dateStr, formattedIssues);
 
-        // 5. Publish to Instagram (Conditional)
+        // [Step 5] 인스타그램 조건부 발행 (게시 ID가 없는 경우에만 수행)
         let igMediaId = board.instagram_post_id;
         let igPermalink = board.metadata?.instagram_permalink;
 
@@ -262,13 +265,13 @@ export async function retryPublishBoard(boardId: string) {
 
             if (!igMediaId) throw new Error('Instagram publishing returned no Media ID.');
 
-            // 6. Fetch Permalink
+            // [Step 6] 게시물 퍼머링크 조회
             igPermalink = await igPublisher.getMediaPermalink(igMediaId);
         } else {
             Logger.info(`✅ Instagram already published (ID: ${igMediaId}). Skipping.`);
         }
 
-        // 7. Update Database
+        // [Step 7] 데이터베이스 동기화 및 메타데이터 갱신
         const { error: updateError } = await supabase
             .from('issue_boards')
             .update({

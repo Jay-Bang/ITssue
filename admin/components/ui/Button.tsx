@@ -1,5 +1,11 @@
-'use client';
-
+/**
+ * [Admin UI Component: Button]
+ * 
+ * [Description] 관리자 도구에서 다양한 액션을 수행하기 위한 표준 버튼 컴포넌트입니다.
+ * 
+ * [Design Intent]
+ * - [UX] 로딩 상태(Loading Spinner) 및 비활성화 처리를 캡슐화하여 일관된 인터랙션을 제공합니다.
+ */
 import React from 'react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -38,6 +44,7 @@ export const Button: React.FC<ButtonProps> = ({
             disabled={loading || props.disabled}
             {...props}
         >
+            {/* [Logic] 로딩 중인 경우 스피너와 함께 처리 중 메시지를 표시합니다. */}
             {loading ? (
                 <div className="flex items-center gap-2">
                     <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">

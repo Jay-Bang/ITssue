@@ -13,6 +13,7 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import React from 'react'; // Added React import for potential new components
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
@@ -26,6 +27,7 @@ export default function LoginPage() {
         setLoading(true);
         setError(null);
 
+        // [Safety] 입력된 크리덴셜로 Supabase 인증 엔진 호출
         const { error } = await supabase.auth.signInWithPassword({
             email,
             password,
@@ -35,6 +37,7 @@ export default function LoginPage() {
             setError(error.message);
             setLoading(false);
         } else {
+            // [UX] 인증 성공 시 대시보드로 즉시 전환
             router.push('/');
             router.refresh();
         }

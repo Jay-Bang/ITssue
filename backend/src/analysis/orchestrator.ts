@@ -36,13 +36,13 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
         const now = new Date();
         const window = calculateTimeWindow(type, now, customStart, customEnd);
 
-        // 출력 디렉토리 식별을 위한 타임스탬프 태그 생성
+        // [Logic] 출력 디렉토리 식별을 위한 타임스탬프 태그 생성
         const dateStr = window.end.toISOString().split('T')[0].replace(/-/g, '.');
         const timeSuffix = now.toTimeString().split(' ')[0].replace(/:/g, '');
         const outputTag = type === 'CUSTOM' ? `${dateStr}_CUSTOM_${timeSuffix}` : `${dateStr}_${type}`;
         const visualVersion: 'bubblegum' | 'arcade' = type === 'NOON' ? 'arcade' : 'bubblegum';
         const p1Title = type === 'NOON' ? 'MIDDAY TRENDS' : 'DAILY TRENDS';
-        const SELECTED_THEME = visualVersion; // Use the actual theme folder name as the theme class
+        const SELECTED_THEME = visualVersion; // [Logic] 테마 디렉토리 경로로 활용
 
         Logger.info(`📅 Analysis Window: ${window.start.toISOString()} ~ ${window.end.toISOString()}`);
 
@@ -58,7 +58,8 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
             return;
         }
 
-        // [Step 3] 상위 N개 이슈 필터링 및 AI 심층 요약 생성
+        // [Step 3] 상위 이슈 필터링 및 AI 심층 요약 생성
+        // [Logic] 전체 이슈 중 점수가 높은 상위 N개만 선별하여 AI 분석 리소스를 집중합니다.
         const topIssues = allMergedIssues
             .sort((a, b) => b.score - a.score)
             .slice(0, TOP_N_ISSUES);
@@ -115,7 +116,7 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
             Logger.error("Failed to generate Instagram caption", e);
         }
 
-        // [Step 7] 이슈 데이터 렌더링 최적화 및 카드 뉴스 생성
+        // [Logic] 이슈 데이터 렌더링 최적화 및 카드 뉴스 생성
         const renderIssues: FinalIssueBoard[] = topIssues.map((iss, idx) => {
             const sum = summaries.find(s => s.representative_keyword === iss.representative_keyword);
             return {
@@ -130,10 +131,10 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
 
         const boardTitles = { NOON: "정오 이슈 보드", NIGHT: "일일 이슈 보드", CUSTOM: "커스텀 이슈 보드" };
 
-        // [Logic] 메모리 버퍼로 이미지 렌더링
+        // [Logic] 메모리 버퍼로 이미지 렌더링 (디스크 I/O 최소화)
         const imageBuffers = await renderFullSet(renderIssues, dateStr, type, SELECTED_THEME, boardTitles[type], visualVersion, p1Title);
 
-        // [Logic] 실패 리포팅 상태 변수 초기화
+        // [Safety] 실패 리포팅 상태 변수 초기화
         const failedSummaries = summaries
             .map((s, idx) => ({ rank: idx + 1, keyword: s.representative_keyword, isFailed: s.instagram_summary[0] === "요약을 생성하지 못했습니다." }))
             .filter(s => s.isFailed);
@@ -193,7 +194,7 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
                     const threadsPublisher = new ThreadsPublisher();
                     const fbPublisher = new FacebookPublisher();
 
-                    // 각 플랫폼별 비동기 작업을 Promise로 래핑
+                    // [Step] 각 플랫폼별 비동기 작업을 Promise로 래핑
                     const igTask = async () => {
                         const mediaId = await igPublisher.publishCarousel(publicUrls, generatedCaption);
                         let permalink = null;
@@ -211,7 +212,7 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
                         return await fbPublisher.publishMultiPhoto(publicUrls, generatedCaption);
                     };
 
-                    // 모든 플랫폼 발행을 동시에 처리
+                    // [Optimization] 모든 플랫폼 발행을 동시에(Concurrent) 처리
                     const [igResult, threadsResult, fbResult] = await Promise.allSettled([
                         igTask(),
                         threadsTask(),
@@ -331,7 +332,7 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
         }
 
         // [Step 10] 로컬 파일 정리 (Cleanup)
-        // [Logic] Supabase 저장 및 알림 전송이 완료되었으므로, 서버 용량 확보를 위해 임시 파일을 제거합니다.
+        // [Logic] Supabase 저장 및 알림 전송이 완료되었으므로 서버 용량 확보를 위해 임시 파일을 제거합니다.
         try {
             Logger.info(`🧹 Cleaning up local output directory: ${outputDir}`);
             await fs.remove(outputDir);
@@ -341,10 +342,11 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
         }
 
     } catch (error: any) {
+        // [Critical Path] 파이프라인 비정상 종료 대응
         Logger.error("Pipeline crashed", error);
         await closeBrowser().catch(() => { });
 
-        // [Fix/Report] 파이프라인 비정상 종료 알림 전송
+        // [Safety] 파이프라인 비정상 종료 알림 전송
         try {
             const notifier = new NotificationService();
             const errorMessage = `❌ **[ITssue Pipeline Crashed]**\n\n- Type: ${type}\n- Error: ${error.message || error}\n\n*자가 치유 시도 후에도 실패한 수동 확인이 필요한 상태입니다.*`;
@@ -357,6 +359,7 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
 
 /**
  * [Logic] 분석 대상 시간 범위(Time Window) 계산기
+ * 
  * [Safety] 서버의 UTC 시간과 한국의 KST(+9) 시간을 매핑하여 '정확한 24시간' 또는 '특정 정시' 범위를 산출합니다.
  */
 function calculateTimeWindow(type: BoardType, now: Date, customStart?: Date, customEnd?: Date): TimeWindow {
@@ -410,6 +413,11 @@ const HASHTAG_SETS = [
     "#ITssue #뉴스정리 #이슈 #트렌드"
 ];
 
+/**
+ * [Logic] 인스타그램 캡션 생성 엔진
+ * 
+ * [Description] Handlebars 템플릿과 정제된 이슈 데이터를 결합하여 SNS 업로드용 캡션을 완성합니다.
+ */
 export async function generateInstagramCaption(type: BoardType, date: string, summaries: FinalIssueBoard[]): Promise<string> {
     const templatePath = path.join(__dirname, '../publish/templates/issue_board_caption.txt');
     const templateSource = await fs.readFile(templatePath, 'utf-8');
@@ -429,7 +437,7 @@ export async function generateInstagramCaption(type: BoardType, date: string, su
 
     const allTags = Array.from(new Set(summaries.flatMap(s => s.tags))).slice(0, 10);
 
-    // [Logic] Hashtag Rotation Strategy (6 sets, 3-day cycle)
+    // [Logic] 해시태그 로테이션 전략 (6개 세트, 3일 주기)
     const day = parseInt(date.split('.')[2], 10) || new Date().getDate();
     const setIdx = (day % 3) * 2 + (type === 'NIGHT' ? 1 : 0);
     const rotatingTags = HASHTAG_SETS[setIdx];
@@ -445,7 +453,11 @@ export async function generateInstagramCaption(type: BoardType, date: string, su
 }
 
 
+/**
+ * [Step] Supabase 감사 로그(Audit Log) 및 이슈 아이템 등록
+ */
 async function recordAuditLog(type: BoardType, window: TimeWindow, summaries: FinalIssueBoard[], topIssues: IssueEntity[]): Promise<string> {
+    // [Logic] KST 기준으로 타겟 데이트 문자열 생성 (DB 조회용)
     const targetDate = new Date(window.end.getTime() + (9 * 60 * 60 * 1000)).toISOString().split('T')[0];
     const { data: board, error: boardError } = await supabase.from('issue_boards').insert([{
         board_type: type, target_date: targetDate, time_window: { start: window.start.toISOString(), end: window.end.toISOString() },

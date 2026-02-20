@@ -1,10 +1,18 @@
+/**
+ * [Admin API: Regenerate Summary]
+ * 
+ * [Description] 기존 이슈 보드 항목의 AI 요약을 재생성하기 위한 API 프록시입니다.
+ * 
+ * [Design Intent]
+ * - [Safety] 관리자 세션을 검증하고 안전하게 백엔드 웹훅 서버에 재생성 요청을 위임합니다.
+ */
 import { NextResponse } from 'next/server';
 import { Logger } from '@/lib/logger';
 import { supabase } from '@/lib/supabase';
 
 export async function POST(request: Request) {
     try {
-        // 1. Check Authentication (Verify Supabase JWT)
+        // [Safety] 관리자 세션 유효성 검증 (Supabase JWT 확인)
         const authHeader = request.headers.get('Authorization');
         if (!authHeader) {
             Logger.warn('[Proxy] Unauthorized access attempt: Missing Authorization header');
@@ -22,7 +30,7 @@ export async function POST(request: Request) {
         const body = await request.json();
         const { itemId } = body;
 
-        // Server-side Environment Variables (Set these in Vercel)
+        // [Config] 서버 사이드 전용 환경 변수 로드 (GCP 백엔드 연동)
         const BACKEND_URL = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
         const API_KEY = process.env.ADMIN_API_KEY || process.env.NEXT_PUBLIC_ADMIN_API_KEY;
 
@@ -35,6 +43,7 @@ export async function POST(request: Request) {
 
         Logger.info(`[Proxy] Forwarding regenerate request for item ${itemId} to ${BACKEND_URL}...`);
 
+        // [Step] GCP 백엔드 서버로 재생성(Regenerate) 요청 위임 (Server-to-Server)
         const response = await fetch(`${BACKEND_URL}/api/regenerate-item`, {
             method: 'POST',
             headers: {

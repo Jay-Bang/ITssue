@@ -1,5 +1,11 @@
-'use client';
-
+/**
+ * [Admin Provider: App Core Context]
+ * 
+ * [Description] 애플리케이션 전역에서 사용할 인증 상태와 사용자 정보를 관리하는 최상위 컨텍스트입니다.
+ * 
+ * [Design Intent]
+ * - [Security] Supabase Auth 세션을 감시하고 이메일 화이트리스트 기반의 인가(Authorization)를 수행합니다.
+ */
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { usePathname, useRouter } from "next/navigation";
@@ -13,13 +19,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
 
     useEffect(() => {
+        // [Logic] 인증 상태 확인 및 라우팅 처리
         const checkAuth = async () => {
+            // [Security] Supabase 세션 체크 및 비인증 사용자 차단 logic
             const { data: { session } } = await supabase.auth.getSession();
 
             if (!session && pathname !== '/login') {
                 router.push('/login');
             } else if (session) {
-                // Strict Admin Email Protection
+                // [Security] 특정 관리자 이메일만 허용하는 엄격한 화이트리스트 정책 적용
                 const ADMIN_EMAIL = 'jaejungbang@gmail.com';
                 if (session.user.email !== ADMIN_EMAIL) {
                     await supabase.auth.signOut();
@@ -38,6 +46,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         checkAuth();
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            // [Strategy] 세션 상태 변경 시 실시간 권한 동기화
             if (!session && pathname !== '/login') {
                 router.push('/login');
             }

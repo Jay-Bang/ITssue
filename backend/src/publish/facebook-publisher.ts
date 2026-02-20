@@ -11,16 +11,16 @@ dotenv.config();
  * [Description] Facebook Page API를 사용하여 이미지 세트를 페이지 피드에 게시하는 도구입니다.
  * 
  * [Design Intent]
- * - Instagram/ThreadsPublisher와 유사한 인터페이스를 유지합니다.
- * - Facebook 페이지 전용 'Page Access Token'을 자동으로 획득하여 게시합니다.
- * - 여러 장의 이미지를 하나의 포스트로 묶어 게시합니다.
+ * - [Logic] Instagram/ThreadsPublisher와 유사한 인터페이스를 유지하여 모듈 간 교체(Swappability)를 용이하게 합니다.
+ * - [Safety] Facebook 페이지 전용 'Page Access Token'을 세션마다 자동으로 갱신/획득하여 보안 사고를 예방합니다.
+ * - [Optimization] 여러 장의 이미지를 하나의 포스트(Multi-photo)로 묶어 게시하여 가독성을 높입니다.
  */
 export class FacebookPublisher {
     private readonly baseUrl = 'https://graph.facebook.com/v24.0';
     private readonly pageId: string;
     private userAccessToken: string;
     private pageAccessToken: string | null = null;
-    private supabase;
+    private supabase; // [Logic] 영구 저장소 토큰 관리를 위한Supabase 객체
 
     constructor() {
         this.pageId = process.env.FB_PAGE_ID || '';
@@ -34,19 +34,23 @@ export class FacebookPublisher {
             Logger.warn('[Facebook] FB_PAGE_ID or Access Token is missing in .env');
         }
 
+        // [Logic] 비동기 라이프사이클 초기화 실행
         this.initialized = this.init();
     }
 
     private initialized: Promise<void>;
 
+    /**
+     * [Logic] 초기화 완료 대기 헬퍼
+     */
     async ensureInitialized(): Promise<void> {
         await this.initialized;
     }
 
     private async init(): Promise<void> {
-        // 1. Supabase에서 최신 유저 토큰 로드
+        // [Step 1] Supabase에서 최신 유저 토큰 로드
         await this.loadUserAccessToken();
-        // 2. 페이지 토큰 획득
+        // [Step 2] 로드된 유저 토큰으로 페이지 전용 토큰(Page Token) 획득
         await this.loadPageAccessToken();
     }
 
@@ -130,7 +134,7 @@ export class FacebookPublisher {
         try {
             Logger.info(`📘 Starting Facebook multi-photo publish with ${imageUrls.length} images...`);
 
-            // 1. 모든 사진을 비공개 상태로 먼저 업로드하여 ID 확보
+            // [Step 1] 모든 사진을 비공개 상태로 선행 업로드하여 임시 ID 확보
             const photoIds: string[] = [];
             for (const url of imageUrls) {
                 Logger.info(`   - Uploading photo: ${url.split('/').pop()}`);
@@ -138,10 +142,10 @@ export class FacebookPublisher {
                 photoIds.push(id);
             }
 
-            // 2. 확보된 사진 ID들을 묶어서 피드에 정식 게시
+            // [Step 2] 확보된 사진 ID들을 레이아웃에 묶어 피드에 정식 발행
             const feedUrl = `${this.baseUrl}/${this.pageId}/feed`;
 
-            // attached_media 형식으로 구성
+            // [Logic] Facebook API 규격(attached_media)에 맞게 객체 배열 구성
             const attachedMedia = photoIds.map(id => ({ media_fbid: id }));
 
             const response = await axios.post(feedUrl, null, {

@@ -1,17 +1,17 @@
 /**
  * [ITssue Core Type Definitions]
  * 
- * [Description] 프로젝트 전역에서 사용되는 핵심 데이터 인터페이스 및 타입을 정의합니다.
+ * [Description] 프로젝트 전역에서 공유되는 핵심 데이터 인터페이스 및 타입을 관리하는 정적 정의 계층입니다.
  * 
  * [Design Intent]
- * - 데이터 흐름(Data Flow)에 따른 단계적 인터페이스 정의 (Snapshot -> Entity -> Board).
- * - 분석 메타데이터와 결과물을 분리하여 리포팅 및 감사(Audit) 편의성 제공.
+ * - [Logic] 데이터 흐름(Data Flow) 단계에 따른 인터페이스 계층화 (Snapshot -> Entity -> Board).
+ * - [Strategy] 분석 메타데이터와 실제 결과물을 분리하여 리포팅 가독성 및 사후 감사(Audit) 편의성을 제공합니다.
  */
 
 /**
- * 이슈 엔티티 (랭킹 엔진 및 병합 게이트 출력)
+ * [Logic] 이슈 엔티티 (랭킹 엔진 및 병합 프로세스 출력 규격)
  * 
- * [Description] 특정 키워드에 대한 집계 결과와 병합 정보를 담는 핵심 데이터 구조입니다.
+ * [Description] 특정 키워드에 대한 시계열 집계 결과와 클러스터링 병합 정보를 담는 핵심 데이터 구조입니다.
  */
 export interface IssueEntity {
     representative_keyword: string;    // 대표 키워드 (병합 후 최종 키워드)
@@ -28,9 +28,9 @@ export interface IssueEntity {
 }
 
 /**
- * 최종 이슈 보드 (AI 요약 완료 후 렌더링 입력)
+ * [Logic] 최종 이슈 보드 (AI 요약 완료 후 렌더링 엔진 입력 규격)
  * 
- * [Description] Instagram 포스팅에 즉시 사용 가능한 형태로 가공된 데이터입니다.
+ * [Description] 소셜 미디어 포스팅 및 카드 뉴스 생성에 최적화된 형태로 정제된 이슈 데이터입니다.
  */
 export interface FinalIssueBoard {
     representative_keyword: string;    // 대표 키워드

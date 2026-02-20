@@ -49,22 +49,22 @@ export interface GroupCardData extends BaseCardData {
 export type CardData = RankingCardData | IssueDetailCardData | GroupCardData;
 
 export interface RenderOptions {
-    outputPath?: string; // Optional now, since we return buffers
-    fileName?: string; // Used to identify the buffer
+    outputPath?: string; // [Logic] 호출부에서 버퍼를 직접 처리하므로 선택 사항임
+    fileName?: string; // [Logic] 버퍼 식별용 이름
     width?: number;
     height?: number;
-    deviceScaleFactor?: number; // 고해상도(Retina 등) 대응 배율
+    deviceScaleFactor?: number; // [Optimization] 고해상도(Retina 등) 대응 배율
     timeout?: number;
-    retry?: number; // 렌더링 실패 시 재시도 횟수
-    visualVersion?: 'bubblegum' | 'arcade'; // 디자인 스타일 (bubblegum, arcade)
+    retry?: number; // [Safety] 렌더링 실패 시 재시도 횟수
+    visualVersion?: 'bubblegum' | 'arcade'; // [Logic] 디자인 스타일 (bubblegum, arcade)
 }
 
-// Handlebars 공통 헬퍼 등록
+// [Logic] Handlebars 공통 헬퍼 등록
 Handlebars.registerHelper('eq', (a, b) => a === b);
 Handlebars.registerHelper('or', (a, b) => a || b);
 
-// [Logic/Design] Browser Instance Singleton Pattern
-// 브라우저 런칭 비용(Overhead)이 매우 크기 때문에, 인스턴스를 하나만 생성하여 프로세스 전반에서 영속적으로 공유합니다.
+// [Logic] Browser Instance Singleton Pattern
+// [Optimization] 브라우저 런칭 비용(Overhead)이 매우 크기 때문에, 인스턴스를 하나만 생성하여 프로세스 전반에서 영속적으로 공유합니다.
 let browser: Browser | null = null;
 
 /**
@@ -142,6 +142,7 @@ export async function closeBrowser() {
  * 4. 뷰포트 설정 후 PNG 스크린샷 캡처 및 자동 저장.
  */
 export async function renderCard(page: Page, data: CardData, options: RenderOptions): Promise<Buffer> {
+    // [Logic] 기본 옵션 및 폴백 설정
     const {
         fileName,
         timeout = 30000,
@@ -162,9 +163,8 @@ export async function renderCard(page: Page, data: CardData, options: RenderOpti
     const templateData = {
         ...data
     };
+    // [Logic] 템플릿 렌더링 및 CSS 수동 주입 (레이아웃 정합성 유지)
     const renderedHtml = template(templateData);
-
-    // [Layout] CSS를 수동으로 주입하여 템플릿 정합성 유지
     const html = renderedHtml.replace('/* STYLING_PLACEHOLDER */', styleCss);
 
 
@@ -197,7 +197,7 @@ export async function renderCard(page: Page, data: CardData, options: RenderOpti
             });
 
 
-            // 타입 안전한 로그 출력
+            // [Logic] 타입 안전한 로그 문자열 생성
             let logInfo = '';
             switch (data.type) {
                 case 'ranking':
@@ -212,7 +212,7 @@ export async function renderCard(page: Page, data: CardData, options: RenderOpti
             }
 
             Logger.success(`[${data.theme}] Card Rendered to memory (${logInfo})`);
-            return Buffer.from(imageBuffer); // 성공 시 Buffer 종료
+            return Buffer.from(imageBuffer); // [Step] 성공 시 Buffer 반환 및 종료
 
         } catch (error: any) {
             lastError = error;
@@ -246,11 +246,11 @@ export async function renderFullSet(
     const currentBrowser = await getBrowser();
     const page = await currentBrowser.newPage();
 
-    // [Optimization] 한 번만 Viewport를 세팅합니다.
+    // [Optimization] 뷰포트(Viewport) 및 해상도 배율 1회 일괄 설정
     await page.setViewport({ width: 1080, height: 1350, deviceScaleFactor: 2 });
 
     try {
-        // P1 Ranking Page
+        // [Step] P1: 랭킹 요약 카드(Ranking Page) 생성
         const p1Data: RankingCardData = {
             type: 'ranking',
             date,
@@ -263,7 +263,7 @@ export async function renderFullSet(
         resultBuffers.push({ fileName: `P1_${type}_${date}.png`, buffer: p1Buffer });
 
         if (!isSummaryMode) {
-            // [Detail Mode] Render all issues as full detail pages
+            // [Logic] Detail Mode: 모든 이슈를 개별 상세 페이지로 렌더링
             for (const issue of issues) {
                 const detailData: IssueDetailCardData = {
                     type: 'issue-detail',
@@ -279,7 +279,8 @@ export async function renderFullSet(
                 resultBuffers.push({ fileName: `P${issue.rank! + 1}_${type}_${date}.png`, buffer });
             }
         } else {
-            // [Summary Mode] P2~P4: Top 3 Issue Details
+            // [Logic] Summary Mode: P2~P4(상위 3개 상세) + P5~P6(하위 그룹)
+            // [Step] P2~P4: Top 3 Issue Details 렌더링
             const top3 = issues.slice(0, 3);
             for (const issue of top3) {
                 const detailData: IssueDetailCardData = {
@@ -296,7 +297,7 @@ export async function renderFullSet(
                 resultBuffers.push({ fileName: `P${issue.rank! + 1}_${type}_${date}.png`, buffer });
             }
 
-            // P5: Group 4-6
+            // [Step] P5: Group 4~6 렌더링
             const group4to6 = issues.slice(3, 6);
             if (group4to6.length > 0) {
                 const groupData: GroupCardData = {
@@ -315,7 +316,7 @@ export async function renderFullSet(
                 resultBuffers.push({ fileName: `P5_${type}_${date}.png`, buffer });
             }
 
-            // P6: Group 7-10
+            // [Step] P6: Group 7~10 렌더링
             const group7to10 = issues.slice(6, 10);
             if (group7to10.length > 0) {
                 const groupData: GroupCardData = {

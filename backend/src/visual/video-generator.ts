@@ -15,11 +15,11 @@ import { Logger } from '../lib/logger';
  */
 export class VideoGenerator {
     /**
-     * 이미지 리스트를 사용하여 MP4 영상 생성
-     * @param images - 순서대로 정렬된 이미지 파일 경로 배열
-     * @param outputDir - 영상이 저장될 디렉토리
-     * @param outputFilename - (Optional) 생성할 영상 파일명 (기본값: preview_clip.mp4)
-     * @returns 생성된 영상 파일의 절대 경로
+     * [Logic] 이미지 리스트를 사용하여 MP4 영상 생성
+     * @param images - 순서대로 정렬된 이미지 파일 경로 배열 (P1~P6 등)
+     * @param outputDir - 영상이 저장될 로컬 작업 디렉토리
+     * @param outputFilename - (Optional) 생성할 영상 파일명
+     * @returns 생성된 영상 파일의 절대 경로 (Local Path)
      */
     static async generatePreview(images: string[], outputDir: string, outputFilename: string = 'preview_clip.mp4'): Promise<string> {
         if (!images || images.length === 0) {
@@ -29,8 +29,8 @@ export class VideoGenerator {
         const listFilePath = path.join(outputDir, 'ffmpeg_input.txt');
         const outputVideoPath = path.join(outputDir, outputFilename);
 
-        // [Step 1] FFmpeg Concat Demuxer용 입력 시퀀스 파일 생성
-        // [Logic] 각 이미지 노출 시간을 3초로 지정합니다.
+        // [Step 1] FFmpeg Concat Demuxer용 입력 시퀀스 텍스트 파일 생성
+        // [Logic] 각 이미지 노출 시간(Duration)을 3초로 고정하여 정적인 카드 뉴스 전달력을 높입니다.
         const DURATION = 3;
         const escapePath = (p: string) => p.replace(/'/g, "'\\''");
 
@@ -43,10 +43,10 @@ export class VideoGenerator {
         Logger.info(`🎬 Generating video preview from ${images.length} images...`);
 
         return new Promise((resolve, reject) => {
-            // [Step 2] FFmpeg 프로세스 실행 및 인코딩 파라미터 적용
-            // - scale/pad: 4:5 이미지를 9:16 캔버스 중앙에 배치 (Instagram Story 대응)
-            // - c:v libx264: 범용적인 H.264 코덱 사용
-            // - movflags +faststart: 웹 및 모바일 기반 프로그레시브 다운로드/재생 최적화
+            // [Step 2] FFmpeg 프로세스 Spawn 및 인코딩 파라미터 적용
+            // [Logic] scale/pad: 4:5(이미지) -> 9:16(캔버스) 중앙 배치하여 Instagram Story 규격에 최적화합니다.
+            // [Safety] libx264 및 pix_fmt yuv420p를 사용하여 모바일 기기 하드웨어 가속 재생 호환성을 확보합니다.
+            // [Optimization] movflags +faststart를 통해 스트리밍 환경에서 'Moov Atom'을 선행 배치하여 재생 대기 시간을 단축합니다.
             const ffmpeg = spawn('ffmpeg', [
                 '-y', // 기존 파일 덮어쓰기
                 '-f', 'concat',
@@ -68,7 +68,7 @@ export class VideoGenerator {
             });
 
             ffmpeg.on('close', async (code) => {
-                // 임시 파일 정리
+                // [Clean-up] 작업 완료 후 임시 ffmpeg_input.txt 파일 삭제
                 await fs.unlink(listFilePath).catch(() => { });
 
                 if (code === 0) {

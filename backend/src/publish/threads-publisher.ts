@@ -11,14 +11,14 @@ dotenv.config();
  * [Description] Threads API를 사용하여 분석 결과 이미지를 캐러셀 형태의 피드로 게시하는 도구입니다.
  * 
  * [Design Intent]
- * - InstagramPublisher와 유사한 인터페이스를 제공하여 일관성을 유지합니다.
- * - Threads API 특유의 500자 텍스트 제한 및 캐러셀 규격(최대 20장)을 준수합니다.
+ * - [Logic] InstagramPublisher와 유사한 인터페이스를 제공하여 모듈 간 일관성을 유지합니다.
+ * - [Safety] Threads API의 특유 정책(500자 텍스트 제한, 최대 20장 캐러셀)을 준수하도록 설계되었습니다.
  */
 export class ThreadsPublisher {
     private readonly baseUrl = 'https://graph.threads.net/v1.0';
     private readonly threadsUserId: string;
     private accessToken: string;
-    private supabase;
+    private supabase; // [Logic] 토큰 동기화를 위한 Supabase 클라이언트
 
     constructor() {
         this.threadsUserId = process.env.THREADS_USER_ID || '';
@@ -32,14 +32,14 @@ export class ThreadsPublisher {
             Logger.warn('[Threads] THREADS_USER_ID or ACCESS_TOKEN is missing in .env');
         }
 
-        // 비동기 토큰 로딩 (Supabase 연동)
+        // [Logic] 비동기 토큰 로딩 (Supabase 연동)
         this.initialized = this.loadAccessToken();
     }
 
     private initialized: Promise<void>;
 
     /**
-     * 토큰 로딩이 완료될 때까지 대기하는 헬퍼
+     * [Logic] 토큰 로딩 초기화 대기 헬퍼
      */
     async ensureInitialized(): Promise<void> {
         await this.initialized;
@@ -108,7 +108,7 @@ export class ThreadsPublisher {
     private async createCarouselContainer(childrenIds: string[], text: string): Promise<string> {
         const url = `${this.baseUrl}/${this.threadsUserId}/threads`;
         try {
-            // 500자 제한 준수
+            // [Step] 500자 제한 준수 (Truncation Strategy)
             const truncatedText = text.length > 500 ? text.substring(0, 497) + "..." : text;
 
             const response = await axios.post(url, null, {
@@ -139,7 +139,7 @@ export class ThreadsPublisher {
                     access_token: this.accessToken
                 }
             });
-            // Threads API returns 'status' field, unlike Instagram's 'status_code'
+            // [Logic] Threads API는 Instagram과 달리 'status' 필드를 반환합니다.
             return response.data.status || 'UNKNOWN';
         } catch (error: any) {
             const errorDetail = error.response?.data?.error?.message || error.message;
@@ -227,13 +227,13 @@ export class ThreadsPublisher {
                 Logger.info(`   - Creating container for: ${url.split('/').pop()}`);
                 const id = await this.createItemContainer(url);
                 itemIds.push(id);
-                // 연이은 요청으로 인한 차단 방지 (Threads는 비교적 넉넉하지만 안전을 위해 2초 대기)
+                // [Optimization] 연이은 요청으로 인한 API 차단 방지 (안전 버퍼 2초)
                 await this.sleep(2000);
             }
 
             // [Safety] 이미지 처리 대기 (Smart Polling)
             Logger.info('⏳ Waiting for Threads processing...');
-            await this.sleep(10000); // Initial delay
+            await this.sleep(10000); // [Logic] 초기 10초 고정 대기 후 상태 폴링 시작
             await this.waitUntilAllItemsFinished(itemIds);
 
             // [Step 2] 캐러셀 컨테이너 생성
