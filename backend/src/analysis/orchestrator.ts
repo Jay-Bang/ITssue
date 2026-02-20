@@ -27,7 +27,8 @@ const TOP_N_ISSUES = 10;
 
 export async function runOrchestrator(type: BoardType, shouldPublish: boolean = false, customStart?: Date, customEnd?: Date) {
     const totalStart = Date.now();
-    Logger.info(`[Pipeline] 🌟 Starting Generation Pipeline [${type}]...`);
+    const startTimeString = new Date(totalStart).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+    Logger.info(`[Pipeline] 🌟 Starting Generation Pipeline [${type}] at ${startTimeString}...`);
 
     try {
         // [Step 1] 분석 시간대(Time Window) 계산 및 출력 환경 설정
@@ -294,9 +295,12 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
             }
         }
 
-        const totalDuration = ((Date.now() - totalStart) / 1000).toFixed(1);
+        const totalEnd = Date.now();
+        const endTimeString = new Date(totalEnd).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+        const totalDuration = ((totalEnd - totalStart) / 1000).toFixed(1);
         await closeBrowser();
-        Logger.success(`Pipeline finishes (Duration: ${totalDuration}s)`);
+        Logger.info(`[Pipeline] 🏁 Pipeline Finished at ${endTimeString}`);
+        Logger.success(`[Pipeline] 🎉 Total Duration: ${totalDuration}s`);
 
         // [Step 9] 시스템 에러 리포트 텔레그램 전송 (문제 발생 시에만)
         // 메인 텔레그램 전송은 8.3 단계에서 선행 수행되었습니다.
