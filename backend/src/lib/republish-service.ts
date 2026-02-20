@@ -64,11 +64,11 @@ export async function republishBoard(boardId: string) {
         await fs.ensureDir(tempDir);
 
         // 5. Render Images
-        Logger.info(`🎨 Rendering images to: ${tempDir}`);
+        Logger.info(`🎨 Rendering images to memory`);
         const boardTitle = type === 'NOON' ? '정오 이슈 보드' : '일일 이슈 보드';
         const p1Title = type === 'NOON' ? 'MIDDAY TRENDS' : 'DAILY TRENDS';
 
-        await renderFullSet(formattedIssues, dateStr, type, theme, tempDir, boardTitle, visualVersion, p1Title);
+        const imageBuffers = await renderFullSet(formattedIssues, dateStr, type, theme, boardTitle, visualVersion, p1Title);
 
         // 6. Generate Caption
         const caption = await generateInstagramCaption(type, dateStr, formattedIssues);
@@ -76,7 +76,7 @@ export async function republishBoard(boardId: string) {
         // 7. Upload to Storage
         Logger.info("🌐 Syncing with Supabase Storage...");
         const storageTag = `republish_${boardId}_${Date.now()}`;
-        const imageUrls = await uploadInstagramImages(tempDir, storageTag);
+        const imageUrls = await uploadInstagramImages(imageBuffers, storageTag);
 
         // 8. Publish to Instagram
         Logger.info("📸 Publishing to Instagram...");
@@ -176,10 +176,14 @@ export async function republishBoard(boardId: string) {
         try {
             Logger.info("📨 Sending Telegram notification...");
             const notifier = new NotificationService();
-            const images = (await fs.readdir(tempDir))
-                .filter(f => f.endsWith('.png'))
-                .map(f => path.join(tempDir, f))
-                .sort();
+
+            const images: string[] = [];
+            for (const img of imageBuffers) {
+                const filePath = path.join(tempDir, img.fileName);
+                await fs.writeFile(filePath, img.buffer);
+                images.push(filePath);
+            }
+            images.sort((a, b) => path.basename(a).localeCompare(path.basename(b)));
 
             await notifier.sendTelegram(type, dateStr, formattedIssues, images, caption);
             Logger.success("✅ Telegram notification sent.");

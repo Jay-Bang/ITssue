@@ -114,7 +114,13 @@ async function runManualRender() {
             'NOON': '정오 이슈 보드',
             'CUSTOM': '커스텀 이슈 보드'
         };
-        await renderFullSet(formattedIssues, dateStr, type, SELECTED_THEME, dirA, boardTitles[type as BoardType] || '이슈 보드', visualVersion, p1Title, true);
+        const imageBuffers = await renderFullSet(formattedIssues, dateStr, type, SELECTED_THEME, boardTitles[type as BoardType] || '이슈 보드', visualVersion, p1Title, true);
+
+        // [Fix] 메모리 버퍼 최적화 이후에도, manual-renderer의 주 목적(로컬에서 렌더링 결과 확인)을 위해 무조건 파일을 생성합니다.
+        for (const img of imageBuffers) {
+            const filePath = path.join(dirA, img.fileName);
+            await fs.writeFile(filePath, img.buffer);
+        }
 
         // [Logic] Regenerate caption with new hashtag rotation
         const newCaption = await generateInstagramCaption(type, dateStr, formattedIssues);
@@ -163,7 +169,7 @@ async function runManualRender() {
             // [Step 4] 미디어 업로드 및 인스타그램 게시
             // [Safety] 인스타그램 서버의 이미지 캐싱 이슈를 피하기 위해 타임스탬프 기반의 고유 Storage 경로를 사용합니다.
             const storageTag = `${outputFolderName}_rev${Date.now()}`;
-            const imageUrls = await uploadInstagramImages(dirA, storageTag);
+            const imageUrls = await uploadInstagramImages(imageBuffers, storageTag);
 
             // 2. 캡션 파일 읽기
             const captionPath = path.join(outputDir, `caption_${type}_${dateStr}.txt`);
@@ -230,7 +236,7 @@ async function runManualRender() {
                 Logger.info("\n📨 Sending Telegram notification...");
                 const notifier = new NotificationService();
 
-                // 이미지 목록 수집 (Ranking 이미지 우선)
+                // 이미지 목록 수집 (Ranking 이미지 우선 - 이미 위에서 로컬 파일로 저장함)
                 const images = (await fs.readdir(dirA))
                     .filter(f => f.endsWith('.png'))
                     .map(f => path.join(dirA, f))

@@ -129,21 +129,23 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
         });
 
         const boardTitles = { NOON: "정오 이슈 보드", NIGHT: "일일 이슈 보드", CUSTOM: "커스텀 이슈 보드" };
-        const dirA = path.join(outputDir, `Instagram_Feed_${type}_${dateStr}`);
-        await fs.ensureDir(dirA);
 
-        // Update visual version mapping for rendering (already declared above)
-        // visualVersion and p1Title are already defined at the start of the function
+        // [Logic] 메모리 버퍼로 이미지 렌더링
+        const imageBuffers = await renderFullSet(renderIssues, dateStr, type, SELECTED_THEME, boardTitles[type], visualVersion, p1Title);
 
-        await renderFullSet(renderIssues, dateStr, type, SELECTED_THEME, dirA, boardTitles[type], visualVersion, p1Title);
+        // [Logic] 실패 리포팅 상태 변수 초기화
+        const failedSummaries = summaries
+            .map((s, idx) => ({ rank: idx + 1, keyword: s.representative_keyword, isFailed: s.instagram_summary[0] === "요약을 생성하지 못했습니다." }))
+            .filter(s => s.isFailed);
+        const failedSNS: string[] = [];
 
         // [Step 8] Supabase Storage 동기화 및 최종 발행
         if (boardId) {
             Logger.info("\n🌐 Syncing with Supabase Storage...");
             try {
                 // [Step 8] 이미지 업로드 및 발행 메타데이터 동기화
-                // [Logic] 8.1 이미지 업로드 (Primary Feed)
-                const imageUrls = await uploadInstagramImages(dirA, outputTag);
+                // [Logic] 8.1 메모리 버퍼 배열을 통해 이미지 업로드 (Primary Feed)
+                const imageUrls = await uploadInstagramImages(imageBuffers, outputTag);
                 const publicUrls = imageUrls.map(img => img.publicUrl);
 
                 // [Logic] 8.2 기본 정보 업데이트 (Storage URL, Caption)
@@ -162,82 +164,94 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
                 if (updateError) throw updateError;
                 Logger.success(`✨ Supabase Storage & Caption Synced!`);
 
-                // [Logic] 8.3 인스타그램 최종 게시 (옵션)
+                // [Logic] 8.3 인스타그램, 스레드, 페이스북 동시(Concurrent) 발행
                 let igMediaId: string | null = null;
                 if (shouldPublish) {
-                    Logger.info("🚀 Publishing to Instagram...");
+                    Logger.info("🚀 Publishing to Social Media concurrently...");
                     const igPublisher = new InstagramPublisher();
-                    igMediaId = await igPublisher.publishCarousel(publicUrls, generatedCaption);
+                    const threadsPublisher = new ThreadsPublisher();
+                    const fbPublisher = new FacebookPublisher();
 
-                    // [Logic] Fetch real permalink with shortcode for reliable linking
-                    let igPermalink: string | null = null;
-                    if (igMediaId) {
-                        igPermalink = await igPublisher.getMediaPermalink(igMediaId);
+                    // 각 플랫폼별 비동기 작업을 Promise로 래핑
+                    const igTask = async () => {
+                        const mediaId = await igPublisher.publishCarousel(publicUrls, generatedCaption);
+                        let permalink = null;
+                        if (mediaId) {
+                            permalink = await igPublisher.getMediaPermalink(mediaId);
+                        }
+                        return { mediaId, permalink };
+                    };
+
+                    const threadsTask = async () => {
+                        return await threadsPublisher.publishCarousel(publicUrls, generatedCaption);
+                    };
+
+                    const fbTask = async () => {
+                        return await fbPublisher.publishMultiPhoto(publicUrls, generatedCaption);
+                    };
+
+                    // 모든 플랫폼 발행을 동시에 처리
+                    const [igResult, threadsResult, fbResult] = await Promise.allSettled([
+                        igTask(),
+                        threadsTask(),
+                        fbTask()
+                    ]);
+
+                    // 메타데이터 업데이트를 위한 객체 구성
+                    let newMetadata: any = {
+                        published_at: new Date().toISOString()
+                    };
+
+                    // Instagram 결과 처리
+                    if (igResult.status === 'fulfilled' && igResult.value.mediaId) {
+                        igMediaId = igResult.value.mediaId;
+                        newMetadata.instagram_post_id = igResult.value.mediaId;
+                        newMetadata.instagram_permalink = igResult.value.permalink;
+                        Logger.success(`✨ Instagram Publishing Complete! ID: ${igMediaId}`);
+                    } else if (igResult.status === 'rejected') {
+                        Logger.error("❌ Instagram Publishing Failed", igResult.reason);
+                        failedSNS.push('Instagram');
+                    } else {
+                        failedSNS.push('Instagram');
                     }
 
-                    const { data: boardBeforeIg } = await supabase.from('issue_boards').select('metadata').eq('id', boardId).single();
-                    const { error: igUpdateError } = await supabase
+                    // Threads 결과 처리
+                    if (threadsResult.status === 'fulfilled' && threadsResult.value) {
+                        newMetadata.threads_post_id = threadsResult.value;
+                        Logger.success(`✨ Threads Publishing Complete! ID: ${threadsResult.value}`);
+                    } else if (threadsResult.status === 'rejected') {
+                        Logger.error("❌ Threads Publishing Failed", threadsResult.reason);
+                        failedSNS.push('Threads');
+                    } else {
+                        failedSNS.push('Threads');
+                    }
+
+                    // Facebook 결과 처리
+                    if (fbResult.status === 'fulfilled' && fbResult.value) {
+                        newMetadata.facebook_post_id = fbResult.value;
+                        Logger.success(`✨ Facebook Publishing Complete! ID: ${fbResult.value}`);
+                    } else if (fbResult.status === 'rejected') {
+                        Logger.error("❌ Facebook Publishing Failed", fbResult.reason);
+                        failedSNS.push('Facebook');
+                    } else {
+                        failedSNS.push('Facebook');
+                    }
+
+                    // 한 번의 DB Update로 모든 플랫폼 메타데이터 반영
+                    const { data: currentBoard } = await supabase.from('issue_boards').select('metadata').eq('id', boardId).single();
+                    const { error: finalUpdateError } = await supabase
                         .from('issue_boards')
                         .update({
-                            instagram_post_id: igMediaId,
+                            instagram_post_id: igMediaId, // Legacy 컬럼 호환 유지
                             metadata: {
-                                ...(boardBeforeIg?.metadata || {}),
-                                published_at: new Date().toISOString(),
-                                instagram_permalink: igPermalink
+                                ...(currentBoard?.metadata || {}),
+                                ...newMetadata
                             }
                         })
                         .eq('id', boardId);
 
-                    if (igUpdateError) throw igUpdateError;
-                    Logger.success(`✨ Instagram Publishing Complete! ID: ${igMediaId}`);
-
-                    // [Logic] 8.5 Threads 최종 게시 (옵션 - Instagram 성공 여부에 독립적으로 실행)
-                    Logger.info("🧵 Publishing to Threads...");
-                    try {
-                        const threadsPublisher = new ThreadsPublisher();
-                        const threadsMediaId = await threadsPublisher.publishCarousel(publicUrls, generatedCaption);
-
-                        if (threadsMediaId) {
-                            const { data: boardBeforeTh } = await supabase.from('issue_boards').select('metadata').eq('id', boardId).single();
-                            const { error: threadsUpdateError } = await supabase
-                                .from('issue_boards')
-                                .update({
-                                    metadata: {
-                                        ...(boardBeforeTh?.metadata || {}),
-                                        threads_post_id: threadsMediaId
-                                    }
-                                })
-                                .eq('id', boardId);
-
-                            if (threadsUpdateError) Logger.warn(`⚠️ Failed to update Threads ID in DB: ${threadsUpdateError.message}`);
-                            Logger.success(`✨ Threads Publishing Complete! ID: ${threadsMediaId}`);
-                        }
-                    } catch (threadsError: any) {
-                        Logger.error("❌ Threads Publishing Failed", threadsError.message);
-                    }
-
-                    // [Logic] 8.6 Facebook 최종 게시 (옵션 - Instagram/Threads 성공과 독립적)
-                    Logger.info("📘 Publishing to Facebook...");
-                    try {
-                        const fbPublisher = new FacebookPublisher();
-                        const fbPostId = await fbPublisher.publishMultiPhoto(publicUrls, generatedCaption);
-
-                        if (fbPostId) {
-                            // Update metadata with FB Post ID
-                            const { data: currentBoard } = await supabase.from('issue_boards').select('metadata').eq('id', boardId).single();
-                            await supabase
-                                .from('issue_boards')
-                                .update({
-                                    metadata: {
-                                        ...(currentBoard?.metadata || {}),
-                                        facebook_post_id: fbPostId
-                                    }
-                                })
-                                .eq('id', boardId);
-                            Logger.success(`✨ Facebook Publishing Complete! ID: ${fbPostId}`);
-                        }
-                    } catch (fbError: any) {
-                        Logger.error("❌ Facebook Publishing Failed", fbError.message);
+                    if (finalUpdateError) {
+                        Logger.warn(`⚠️ Failed to update final SNS metadata in DB: ${finalUpdateError.message}`);
                     }
                 }
 
@@ -269,14 +283,43 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
             Logger.info("\n📨 Sending Telegram notification...");
             const notifier = new NotificationService();
 
-            // 이미지 목록 수집 (Ranking 이미지 우선)
-            const images = (await fs.readdir(dirA))
-                .filter(f => f.endsWith('.png'))
-                .map(f => path.join(dirA, f))
-                .sort((a, b) => a.includes('Ranking') ? -1 : 1);
+            // 이미지 목록 수집 (메모리 버퍼 객체를 로컬에 임시 저장하여 텔레그램 전송 및 영상 생성 기능 복구)
+            const dirA = path.join(outputDir, `Instagram_Feed_${type}_${dateStr}`);
+            await fs.ensureDir(dirA);
 
-            // 전송 실행
+            const images: string[] = [];
+            for (const img of imageBuffers) {
+                const filePath = path.join(dirA, img.fileName);
+                await fs.writeFile(filePath, img.buffer);
+                images.push(filePath);
+            }
+
+            // P1(Ranking) 이미지가 제일 앞으로 오도록 정렬
+            images.sort((a, b) => path.basename(a).localeCompare(path.basename(b)));
+
+            // [Logic] 시스템 결과 리포트 구성 (문제 발생 시 별도 전송)
+            let report = '';
+            if (failedSummaries.length > 0 || failedSNS.length > 0) {
+                report = `⚠️ <b>[시스템 결과 리포트]</b>\n`;
+                if (failedSummaries.length > 0) {
+                    report += `\n<b>📌 AI 요약 실패 (기본값 대체됨):</b>\n`;
+                    failedSummaries.forEach(f => {
+                        report += `- ${f.rank}위: ${f.keyword}\n`;
+                    });
+                }
+                if (failedSNS.length > 0) {
+                    report += `\n<b>📌 SNS 업로드 실패:</b>\n`;
+                    report += `- ${failedSNS.join(', ')}\n`;
+                }
+            }
+
+            // 메인 캡션 전송 실행
             await notifier.sendTelegram(type, dateStr, renderIssues, images, generatedCaption);
+
+            // [Logic] 에러가 있다면 텔레그램으로 별도 메시지 발송
+            if (report) {
+                await notifier.sendErrorReport(report);
+            }
         } catch (e) {
             Logger.warn("⚠️ Notification failed but pipeline completed.", e);
         }

@@ -148,4 +148,26 @@ export class NotificationService {
             }
         }
     }
+
+    /**
+     * 별도의 시스템 에러/결과 리포트를 텔레그램으로 전송합니다.
+     */
+    async sendErrorReport(reportText: string) {
+        if (!this.telegramToken || !this.telegramChatId) return;
+
+        try {
+            const safeText = this.escapeHtml(reportText);
+            await axios.post(`https://api.telegram.org/bot${this.telegramToken}/sendMessage`, {
+                chat_id: this.telegramChatId,
+                text: safeText,
+                parse_mode: 'HTML'
+            }, {
+                httpsAgent: telegramAgent,
+                timeout: 5000
+            });
+            Logger.success('✅ Telegram error report sent.');
+        } catch (error: any) {
+            Logger.warn(`⚠️ Failed to send Telegram error report: ${error.message}`);
+        }
+    }
 }

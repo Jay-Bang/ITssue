@@ -8,7 +8,7 @@
  * - 디바이스 픽셀 비율(deviceScaleFactor) 조정을 통한 인스타그램 최적화 고화질 에셋 생성.
  * - 셀프 힐링(Self-healing) 로직을 통해 서버 환경에서의 브라우저 미설치 이슈에 대응합니다.
  */
-import puppeteer, { Browser } from 'puppeteer';
+import puppeteer, { Browser, Page } from 'puppeteer';
 import * as Handlebars from 'handlebars';
 import { Logger } from '../lib/logger';
 import { FinalIssueBoard } from '../types';
@@ -49,7 +49,8 @@ export interface GroupCardData extends BaseCardData {
 export type CardData = RankingCardData | IssueDetailCardData | GroupCardData;
 
 export interface RenderOptions {
-    outputPath: string;
+    outputPath?: string; // Optional now, since we return buffers
+    fileName?: string; // Used to identify the buffer
     width?: number;
     height?: number;
     deviceScaleFactor?: number; // 고해상도(Retina 등) 대응 배율
@@ -140,12 +141,9 @@ export async function closeBrowser() {
  * 3. `document.fonts.ready`를 통한 웹 폰트 로딩 완벽 대기.
  * 4. 뷰포트 설정 후 PNG 스크린샷 캡처 및 자동 저장.
  */
-export async function renderCard(data: CardData, options: RenderOptions) {
+export async function renderCard(page: Page, data: CardData, options: RenderOptions): Promise<Buffer> {
     const {
-        outputPath,
-        width = 1080,
-        height = 1350,
-        deviceScaleFactor = 2,
+        fileName,
         timeout = 30000,
         retry = 1,
         visualVersion = 'bubblegum'
@@ -170,18 +168,10 @@ export async function renderCard(data: CardData, options: RenderOptions) {
     const html = renderedHtml.replace('/* STYLING_PLACEHOLDER */', styleCss);
     Logger.timeEnd('Template & Data Prep');
 
-    // [Step 3] 브라우저 렌더링 루프 (Retry 지원)
+    // [Step 3] 브라우저 렌더링 루프 (Retry 지원) - Page is now injected
     let lastError: any = null;
     for (let attempt = 0; attempt <= retry; attempt++) {
-        Logger.time('Browser & Render Loop');
-        const currentBrowser = await getBrowser();
-        const page = await currentBrowser.newPage();
-
         try {
-            // [Optimization] 뷰포트 및 고해상도 배율 설정
-            // deviceScaleFactor를 높여(기본 2) 망막 디스플레이(Retina)급의 선명한 비트맵 이미지를 생성합니다.
-            await page.setViewport({ width, height, deviceScaleFactor });
-
             Logger.time('Page Content Set');
             // [Step] HTML/CSS 주입 및 로딩 대기
             // [Optimization] 'networkidle0'은 외부 폰트/에셋의 네트워크 상황에 따라 타임아웃을 유발할 수 있습니다.
@@ -198,11 +188,10 @@ export async function renderCard(data: CardData, options: RenderOptions) {
                 await document.fonts.ready;
             })()`);
 
-            // [Step 4] 스크린샷 캡처 및 이미지 저장
+            // [Step 4] 스크린샷 캡처 및 이미지 반환
             Logger.time('Screenshot Capture');
-            await fs.ensureDir(path.dirname(outputPath));
-            await page.screenshot({
-                path: outputPath,
+            // path 파라미터를 제거하여 Uint8Array(Buffer)로 반환받음
+            const imageBuffer = await page.screenshot({
                 type: 'png',
                 omitBackground: false
             });
@@ -222,15 +211,12 @@ export async function renderCard(data: CardData, options: RenderOptions) {
                     break;
             }
 
-            Logger.success(`[${data.theme}] Card Rendered (${logInfo}): ${outputPath}`);
-            return; // 성공 시 종료
+            Logger.success(`[${data.theme}] Card Rendered to memory (${logInfo})`);
+            return Buffer.from(imageBuffer); // 성공 시 Buffer 종료
 
         } catch (error: any) {
             lastError = error;
             Logger.error(`[${data.theme}] Attempt ${attempt} failed: ${error.message}`);
-        } finally {
-            await page.close();
-            Logger.timeEnd('Browser & Render Loop');
         }
     }
 
@@ -248,92 +234,111 @@ export async function renderFullSet(
     date: string,
     type: string,
     theme: string,
-    dir: string,
     boardTitle: string,
     visualVersion: 'bubblegum' | 'arcade',
     p1Title?: string,
     isSummaryMode: boolean = true
-) {
-    const renderOpts: RenderOptions = { visualVersion, outputPath: '' };
+): Promise<{ fileName: string, buffer: Buffer }[]> {
+    const renderOpts: RenderOptions = { visualVersion };
+    const resultBuffers: { fileName: string, buffer: Buffer }[] = [];
 
-    // P1 Ranking Page
-    const p1Data: RankingCardData = {
-        type: 'ranking',
-        date,
-        theme,
-        boardTitle,
-        p1Title,
-        ranking: issues.map(i => ({ rank: i.rank!, keyword: i.representative_keyword }))
-    };
-    await renderCard(p1Data, { ...renderOpts, outputPath: path.join(dir, `P1_${type}_${date}.png`) });
+    Logger.info(`[RenderFullSet] Initializing shared Puppeteer page instance...`);
+    const currentBrowser = await getBrowser();
+    const page = await currentBrowser.newPage();
 
-    if (!isSummaryMode) {
-        // [Detail Mode] Render all issues as full detail pages
-        for (const issue of issues) {
-            const detailData: IssueDetailCardData = {
-                type: 'issue-detail',
-                date,
-                theme,
-                boardTitle,
-                rank: issue.rank!,
-                keyword: issue.representative_keyword,
-                subKeywords: issue.tags,
-                summary: issue.instagram_summary
-            };
-            await renderCard(detailData, { ...renderOpts, outputPath: path.join(dir, `P${issue.rank! + 1}_${type}_${date}.png`) });
-        }
-    } else {
-        // [Summary Mode] P2~P4: Top 3 Issue Details
-        const top3 = issues.slice(0, 3);
-        for (const issue of top3) {
-            const detailData: IssueDetailCardData = {
-                type: 'issue-detail',
-                date,
-                theme,
-                boardTitle,
-                rank: issue.rank!,
-                keyword: issue.representative_keyword,
-                subKeywords: issue.tags,
-                summary: issue.instagram_summary
-            };
-            await renderCard(detailData, { ...renderOpts, outputPath: path.join(dir, `P${issue.rank! + 1}_${type}_${date}.png`) });
-        }
+    // [Optimization] 한 번만 Viewport를 세팅합니다.
+    await page.setViewport({ width: 1080, height: 1350, deviceScaleFactor: 2 });
 
-        // P5: Group 4-6
-        const group4to6 = issues.slice(3, 6);
-        if (group4to6.length > 0) {
-            const groupData: GroupCardData = {
-                type: 'group',
-                date,
-                theme,
-                boardTitle,
-                rankRange: "TOP 4 ~ TOP 6",
-                issues: group4to6.map(iss => ({
-                    rank: iss.rank!,
-                    keyword: iss.representative_keyword,
-                    summaryLines: iss.instagram_summary.slice(0, 2)
-                }))
-            };
-            await renderCard(groupData, { ...renderOpts, outputPath: path.join(dir, `P5_${type}_${date}.png`) });
-        }
+    try {
+        // P1 Ranking Page
+        const p1Data: RankingCardData = {
+            type: 'ranking',
+            date,
+            theme,
+            boardTitle,
+            p1Title,
+            ranking: issues.map(i => ({ rank: i.rank!, keyword: i.representative_keyword }))
+        };
+        const p1Buffer = await renderCard(page, p1Data, renderOpts);
+        resultBuffers.push({ fileName: `P1_${type}_${date}.png`, buffer: p1Buffer });
 
-        // P6: Group 7-10
-        const group7to10 = issues.slice(6, 10);
-        if (group7to10.length > 0) {
-            const groupData: GroupCardData = {
-                type: 'group',
-                date,
-                theme,
-                boardTitle,
-                rankRange: "TOP 7 ~ TOP 10",
-                issues: group7to10.map(iss => ({
-                    rank: iss.rank!,
-                    keyword: iss.representative_keyword,
-                    summaryLines: iss.instagram_summary.slice(0, 2)
-                }))
-            };
-            await renderCard(groupData, { ...renderOpts, outputPath: path.join(dir, `P6_${type}_${date}.png`) });
+        if (!isSummaryMode) {
+            // [Detail Mode] Render all issues as full detail pages
+            for (const issue of issues) {
+                const detailData: IssueDetailCardData = {
+                    type: 'issue-detail',
+                    date,
+                    theme,
+                    boardTitle,
+                    rank: issue.rank!,
+                    keyword: issue.representative_keyword,
+                    subKeywords: issue.tags,
+                    summary: issue.instagram_summary
+                };
+                const buffer = await renderCard(page, detailData, renderOpts);
+                resultBuffers.push({ fileName: `P${issue.rank! + 1}_${type}_${date}.png`, buffer });
+            }
+        } else {
+            // [Summary Mode] P2~P4: Top 3 Issue Details
+            const top3 = issues.slice(0, 3);
+            for (const issue of top3) {
+                const detailData: IssueDetailCardData = {
+                    type: 'issue-detail',
+                    date,
+                    theme,
+                    boardTitle,
+                    rank: issue.rank!,
+                    keyword: issue.representative_keyword,
+                    subKeywords: issue.tags,
+                    summary: issue.instagram_summary
+                };
+                const buffer = await renderCard(page, detailData, renderOpts);
+                resultBuffers.push({ fileName: `P${issue.rank! + 1}_${type}_${date}.png`, buffer });
+            }
+
+            // P5: Group 4-6
+            const group4to6 = issues.slice(3, 6);
+            if (group4to6.length > 0) {
+                const groupData: GroupCardData = {
+                    type: 'group',
+                    date,
+                    theme,
+                    boardTitle,
+                    rankRange: "TOP 4 ~ TOP 6",
+                    issues: group4to6.map(iss => ({
+                        rank: iss.rank!,
+                        keyword: iss.representative_keyword,
+                        summaryLines: iss.instagram_summary.slice(0, 2)
+                    }))
+                };
+                const buffer = await renderCard(page, groupData, renderOpts);
+                resultBuffers.push({ fileName: `P5_${type}_${date}.png`, buffer });
+            }
+
+            // P6: Group 7-10
+            const group7to10 = issues.slice(6, 10);
+            if (group7to10.length > 0) {
+                const groupData: GroupCardData = {
+                    type: 'group',
+                    date,
+                    theme,
+                    boardTitle,
+                    rankRange: "TOP 7 ~ TOP 10",
+                    issues: group7to10.map(iss => ({
+                        rank: iss.rank!,
+                        keyword: iss.representative_keyword,
+                        summaryLines: iss.instagram_summary.slice(0, 2)
+                    }))
+                };
+                const buffer = await renderCard(page, groupData, renderOpts);
+                resultBuffers.push({ fileName: `P6_${type}_${date}.png`, buffer });
+            }
         }
+    } finally {
+        await page.close();
+        Logger.info(`[RenderFullSet] Shared Puppeteer page closed.`);
     }
+
+    return resultBuffers;
 }
 
