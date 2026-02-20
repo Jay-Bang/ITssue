@@ -67,6 +67,7 @@ export async function runRankingEngine(options: TimeWindow): Promise<IssueEntity
     Logger.success(`Supabase Fetch Success: ${allRows.length} rows loaded.`);
 
     // [Step 2] 키워드별 그룹화 (Keyword Pooling)
+    // [Logic] 동일 키워드가 여러 시간대에 수집된 데이터를 통합하여 단일 풀(Pool)로 관리합니다.
     const issueMap = new Map<string, any[]>();
 
     allRows.forEach(s => {
@@ -114,6 +115,7 @@ export async function runRankingEngine(options: TimeWindow): Promise<IssueEntity
     });
 
     // [Step 4] 최종 점수순 정렬 및 결과 반환
+    // [Optimization] 가장 파괴력이 높은 트렌드를 최상단으로 보내 리포트 가독성을 높입니다.
     const sortedIssues = issueEntities.sort((a, b) => b.score - a.score);
 
     Logger.info(`🏆 --- RANKING ENGINE COMPLETE (Total ${sortedIssues.length} issues) ---`);

@@ -104,6 +104,7 @@ export async function fetchAndStoreTrends() {
             }
         }
 
+        /** [Logic] 실행 에러 핸들러 */
     } catch (err: any) {
         Logger.error('[Collector] Fatal error in fetchAndStoreTrends', err.message);
     }

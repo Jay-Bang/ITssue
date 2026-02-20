@@ -27,6 +27,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// [Config] Metadata Settings
 export const metadata: Metadata = {
   title: "ITssue Admin | AI Autonomous Dashboard",
   description: "Advanced analytics and management for the ITssue AI autonomous engine.",

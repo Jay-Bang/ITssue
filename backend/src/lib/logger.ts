@@ -20,9 +20,9 @@ export const Logger = {
     /** [Level: FAIL] 에러 메시지 출력 (❌) */
     error: (msg: string, ...args: any[]) => console.error(`[FAIL] ${msg}`, ...args),
 
-    /** [Level: STRAT] 성능 측정 시작 (성능 모니터링) */
+    /** [Strategy] 성능 측정 시작 (성능 모니터링) */
     time: (label: string) => console.time(label),
 
-    /** [Level: STRAT] 성능 측정 종료 및 결과 자동 출력 */
+    /** [Strategy] 성능 측정 종료 및 결과 자동 출력 */
     timeEnd: (label: string) => console.timeEnd(label)
 };

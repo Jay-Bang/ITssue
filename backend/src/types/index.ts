@@ -72,35 +72,50 @@ export interface FinalIssueBoard {
 }
 
 /**
- * 최종 분석 보고서 (JSON 파일 저장용)
+ * [Logic] 최종 분석 보고서 (JSON 파일 저장용)
+ *
+ * [Description] 파이프라인 실행 결과를 파일로 저장할 때 사용하는 메타데이터 및 results 구조입니다.
  */
 export interface AnalysisReport {
     metadata: {
-        type: BoardType;               // 보드 타입
-        date: string;                  // 분석 날짜 (YYYY.MM.DD)
+        /** [Data] 보드 타입 */
+        type: BoardType;
+        /** [Data] 분석 날짜 (YYYY.MM.DD) */
+        date: string;
         period: {
-            start: string;             // 분석 시작 시각
-            end: string;               // 분석 종료 시각
+            /** [Data] 분석 시작 시각 */
+            start: string;
+            /** [Data] 분석 종료 시각 */
+            end: string;
         };
         stats: {
-            total_atoms: number;       // 병합 전 총 이슈 수
-            merged_count: number;      // 병합 후 최종 이슈 수
-            processed_at: string;      // 보고서 생성 시각
-            model: string;             // 사용된 AI 모델
+            /** [Data] 병합 전 총 이슈 수 */
+            total_atoms: number;
+            /** [Data] 병합 후 최종 이슈 수 */
+            merged_count: number;
+            /** [Data] 보고서 생성 시각 */
+            processed_at: string;
+            /** [Data] 사용된 AI 모델 */
+            model: string;
         };
     };
-    results: FinalIssueBoard[];        // 분석 결과 리스트
+    /** [Data] 분석 결과 리스트 */
+    results: FinalIssueBoard[];
 }
 
 /**
- * 보드 타입 (정오/일일/커스텀)
+ * [Logic] 보드 타입 (정오/일일/커스텀)
  */
 export type BoardType = 'NOON' | 'NIGHT' | 'CUSTOM';
 
 /**
- * 시간 범위 (분석 대상 기간)
+ * [Logic] 시간 범위 (분석 대상 기간)
+ *
+ * [Description] 랭킹/병합 엔진에 전달되는 수집 구간입니다.
  */
 export interface TimeWindow {
-    start: Date;  // 시작 시각
-    end: Date;    // 종료 시각
+    /** [Data] 시작 시각 */
+    start: Date;
+    /** [Data] 종료 시각 */
+    end: Date;
 }

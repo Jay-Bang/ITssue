@@ -20,7 +20,7 @@ export class FacebookPublisher {
     private readonly pageId: string;
     private userAccessToken: string;
     private pageAccessToken: string | null = null;
-    private supabase; // [Logic] 영구 저장소 토큰 관리를 위한Supabase 객체
+    private supabase; // [Logic] 영구 저장소 토큰 관리를 위한 Supabase 객체
 
     constructor() {
         this.pageId = process.env.FB_PAGE_ID || '';

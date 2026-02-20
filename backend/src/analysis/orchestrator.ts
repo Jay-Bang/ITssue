@@ -4,9 +4,9 @@
  * [Description] 수집부터 배포까지 이어지는 ITssue-AI의 전체 파이프라인을 조율(Orchestration)하고 통합 실행합니다.
  * 
  * [Design Intent]
- * - 모듈 간의 낮은 결합도(Loose Coupling)를 유지하며 전체 프로세스를 제어합니다.
- * - 정오/일일/커스텀 등 다양한 분석 시간대(Time Window) 관리와 데이터 영구 저장을 담당합니다.
- * - 시각화 및 배포 계층과 소통하며 전체 엔드투엔드(E2E) 흐름을 완성합니다.
+ * - [Logic] 모듈 간의 낮은 결합도(Loose Coupling)를 유지하며 전체 프로세스를 제어합니다.
+ * - [Config] 정오/일일/커스텀 등 다양한 분석 시간대(Time Window) 관리와 데이터 영구 저장을 담당합니다.
+ * - [UX] 시각화 및 배포 계층과 소통하며 전체 엔드투엔드(E2E) 흐름을 완성합니다.
  */
 import { Logger } from '../lib/logger';
 import { IssueEntity, FinalIssueBoard, BoardType, TimeWindow, AnalysisReport } from '../types';
@@ -164,8 +164,8 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
                 if (updateError) throw updateError;
                 Logger.success(`✨ Supabase Storage & Caption Synced!`);
 
-                // [Logic] 8.3 텔레그램 메인 메시지(이미지+영상+캡션) 선행 전송
-                // 사용자 요청 반영: Supabase 업로드 직후, 수 분이 소요되는 SNS 발행을 기다리지 않고 즉시 텔레그램을 발송합니다.
+                // [Step 9] 텔레그램 메시지 선행 전송 (Pre-emptive Notification)
+                // [Logic] Supabase 업로드 직후, 수 분이 소요되는 SNS 발행을 기다리지 않고 즉시 텔레그램을 발송합니다.
                 try {
                     Logger.info("\n📨 Sending Telegram main notification early (Before SNS Publish)...");
                     const notifier = new NotificationService();
@@ -180,13 +180,13 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
                     }
                     images.sort((a, b) => path.basename(a).localeCompare(path.basename(b)));
 
-                    // 메인 메시지 전송 실행 (동영상 인코딩 포함 약 10~20초 소요)
+                    // [Step] 메인 메시지 전송 실행 (동영상 인코딩 포함 약 10~20초 소요)
                     await notifier.sendTelegram(type, dateStr, renderIssues, images, generatedCaption);
                 } catch (e) {
                     Logger.warn("⚠️ Telegram main notification failed.", e);
                 }
 
-                // [Logic] 8.4 인스타그램, 스레드, 페이스북 동시(Concurrent) 발행
+                // [Step 10] SNS 다중 채널 동시 발행 (Multi-Channel Publishing)
                 let igMediaId: string | null = null;
                 if (shouldPublish) {
                     Logger.info("🚀 Publishing to Social Media concurrently...");
@@ -224,6 +224,7 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
                         published_at: new Date().toISOString()
                     };
 
+                    // [Step] 플랫폼별 발행 결과 취합 및 처리
                     // Instagram 결과 처리
                     if (igResult.status === 'fulfilled' && igResult.value.mediaId) {
                         igMediaId = igResult.value.mediaId;
@@ -277,7 +278,7 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
                     }
                 }
 
-                // [Logic] 8.5 발행 정보 파일 저장 (publish_info.json)
+                // [Step 11] 로컬 발행 정보 기록 (Audit Persistence)
                 // [Description] 향후 수동 재렌더링 시 참조할 수 있도록 발행 메타데이터를 로컬에 저장합니다.
                 const publishInfoPath = path.join(outputDir, `publish_${type}_${dateStr}.json`);
                 const publishInfo = {

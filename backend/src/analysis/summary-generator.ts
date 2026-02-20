@@ -22,6 +22,7 @@ export async function generateAISummaries(issues: IssueEntity[]): Promise<FinalI
     Logger.info(`🚀 Starting AI Search Summarization for ${issues.length} issues...`);
 
     for (let i = 0; i < issues.length; i++) {
+        // [Step 1] 개별 이슈 분석 준비
         const issue = issues[i];
         const keyword = issue.representative_keyword;
 
@@ -35,6 +36,8 @@ export async function generateAISummaries(issues: IssueEntity[]): Promise<FinalI
         Logger.info(`🔍 [AI] Analyzing keyword: [${keyword}]`);
 
 
+        // [Step 2] AI 심층 분석 프롬프트 설계
+        // [Logic] 순위에 따른 요약 길이 차등 적용 (TOP3는 2문장, 나머지는 1문장)
         const isTop3 = i < 3;
         const sentenceCount = isTop3 ? 2 : 1;
         const summaryRule = isTop3
@@ -92,7 +95,7 @@ ${summaryRule}
                 const rawTags: string[] = parsed.tags || [];
                 const sanitizedTags = rawTags.map(tag => tag.replace(/^#/, '').trim());
 
-                // [Step] 수집된 메트릭 및 요약 정보 통합
+                // [Step 3] 수집된 메트릭 및 요약 정보 통합
                 results.push({
                     representative_keyword: issue.representative_keyword,
                     news_titles: issue.news_titles,

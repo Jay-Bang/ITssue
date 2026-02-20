@@ -45,10 +45,7 @@ export class ThreadsPublisher {
         await this.initialized;
     }
 
-    /**
-     * Access Token 로딩 (Supabase → .env fallback)
-     * [Logic] 인스타그램과 동일한 테이블에서 공유 토큰을 가져옵니다.
-     */
+    /** [Logic] Access Token 로딩 (Supabase -> .env fallback) */
     private async loadAccessToken(): Promise<void> {
         try {
             // [Design Change] Threads requires a separate token (id=2 in our schema).

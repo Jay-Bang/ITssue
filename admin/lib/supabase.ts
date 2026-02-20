@@ -11,4 +11,5 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
+// [Logic] 글로벌 싱글톤 Supabase 인스턴스 초기화
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
