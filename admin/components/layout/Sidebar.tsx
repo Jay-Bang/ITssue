@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * [Admin Layout: Sidebar Navigation]
  * 
@@ -5,7 +7,7 @@
  * 
  * [Design Intent]
  * - [Nav] 현재 경로를 인식하여 활성 메뉴를 강조하고 서비스 간 이동을 직관적으로 보조합니다.
- */
+ * */
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';

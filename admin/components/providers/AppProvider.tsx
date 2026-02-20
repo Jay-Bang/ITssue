@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * [Admin Provider: App Core Context]
  * 
@@ -5,7 +7,7 @@
  * 
  * [Design Intent]
  * - [Security] Supabase Auth 세션을 감시하고 이메일 화이트리스트 기반의 인가(Authorization)를 수행합니다.
- */
+ * */
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { usePathname, useRouter } from "next/navigation";

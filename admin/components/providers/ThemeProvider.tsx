@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * [Global Provider: Dynamic Theme Engine]
  * 
