@@ -249,8 +249,6 @@ export class InstagramPublisher {
                 Logger.info(`   - Creating container for: ${url.split('/').pop()}`);
                 const id = await this.createItemContainer(url);
                 itemIds.push(id);
-                // [Optimization] 연이은 요청으로 인한 차단 방지를 위한 5초 대기
-                await this.sleep(5000);
             }
 
             // [Safety] 인스타그램 이미지 처리 지연 대기 (Smart Polling)

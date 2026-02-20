@@ -85,8 +85,7 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
         const outputDir = path.join(__dirname, `../../output/${outputTag}`);
         await fs.ensureDir(outputDir);
 
-        // [Step 4] 분석 리포트(JSON) 물리적 파일 저장
-
+        // [Logic] 분석 리포트(JSON) 물리적 파일 저장
         const rawJsonPath = path.join(outputDir, `results_${type}_${dateStr}.json`);
         await fs.writeJson(rawJsonPath, report, { spaces: 2 });
         Logger.info(`💾 Enhanced report saved to: ${rawJsonPath}`);
@@ -143,7 +142,6 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
         if (boardId) {
             Logger.info("\n🌐 Syncing with Supabase Storage...");
             try {
-                // [Step 8] 이미지 업로드 및 발행 메타데이터 동기화
                 // [Logic] 8.1 메모리 버퍼 배열을 통해 이미지 업로드 (Primary Feed)
                 const imageUrls = await uploadInstagramImages(imageBuffers, outputTag);
                 const publicUrls = imageUrls.map(img => img.publicUrl);
@@ -164,7 +162,7 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
                 if (updateError) throw updateError;
                 Logger.success(`✨ Supabase Storage & Caption Synced!`);
 
-                // [Step 8.2.5] 텔레그램 메인 메시지(이미지+영상+캡션) 선행 전송
+                // [Logic] 8.3 텔레그램 메인 메시지(이미지+영상+캡션) 선행 전송
                 // 사용자 요청 반영: Supabase 업로드 직후, 수 분이 소요되는 SNS 발행을 기다리지 않고 즉시 텔레그램을 발송합니다.
                 try {
                     Logger.info("\n📨 Sending Telegram main notification early (Before SNS Publish)...");
@@ -186,7 +184,7 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
                     Logger.warn("⚠️ Telegram main notification failed.", e);
                 }
 
-                // [Logic] 8.3 인스타그램, 스레드, 페이스북 동시(Concurrent) 발행
+                // [Logic] 8.4 인스타그램, 스레드, 페이스북 동시(Concurrent) 발행
                 let igMediaId: string | null = null;
                 if (shouldPublish) {
                     Logger.info("🚀 Publishing to Social Media concurrently...");
@@ -277,7 +275,7 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
                     }
                 }
 
-                // [Logic] 8.4 발행 정보 파일 저장 (publish_info.json)
+                // [Logic] 8.5 발행 정보 파일 저장 (publish_info.json)
                 // [Description] 향후 수동 재렌더링 시 참조할 수 있도록 발행 메타데이터를 로컬에 저장합니다.
                 const publishInfoPath = path.join(outputDir, `publish_${type}_${dateStr}.json`);
                 const publishInfo = {
@@ -301,7 +299,7 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
         Logger.success(`Pipeline finishes (Duration: ${totalDuration}s)`);
 
         // [Step 9] 시스템 에러 리포트 텔레그램 전송 (문제 발생 시에만)
-        // 메인 텔레그램 전송은 Step 8.2.5에서 선행 수행되었습니다.
+        // 메인 텔레그램 전송은 8.3 단계에서 선행 수행되었습니다.
         try {
             let report = '';
             if (failedSummaries.length > 0 || failedSNS.length > 0) {
