@@ -14,17 +14,27 @@
  * [Description] 특정 키워드에 대한 시계열 집계 결과와 클러스터링 병합 정보를 담는 핵심 데이터 구조입니다.
  */
 export interface IssueEntity {
-    representative_keyword: string;    // 대표 키워드 (병합 후 최종 키워드)
-    news_titles: string[];             // 수집된 모든 뉴스 제목 배열
-    snapshot_count: number;            // 해당 키워드가 수집된 총 횟수
-    first_seen_at: string;             // 최초 수집 시각 (UTC timestamptz)
-    last_seen_at: string;              // 마지막 수집 시각 (UTC timestamptz)
-    score: number;                     // 랭킹 점수 (1위=20점 기준 누적)
-    raw_snapshot_ids: number[];        // 원본 스냅샷 ID 배열 (추적용)
+    /** [Data] 대표 키워드 (병합 후 최종 키워드) */
+    representative_keyword: string;
+    /** [Data] 수집된 모든 뉴스 제목 배열 */
+    news_titles: string[];
+    /** [Data] 해당 키워드가 수집된 총 횟수 */
+    snapshot_count: number;
+    /** [Data] 최초 수집 시각 (UTC timestamptz) */
+    first_seen_at: string;
+    /** [Data] 마지막 수집 시각 (UTC timestamptz) */
+    last_seen_at: string;
+    /** [Data] 랭킹 점수 (1위=20점 기준 누적) */
+    score: number;
+    /** [Data] 원본 스냅샷 ID 배열 (추적용) */
+    raw_snapshot_ids: number[];
 
-    merge_reasons?: string[];          // 병합 사유 (JACCARD_STRONG, OVERLAP_WEAK 등)
-    merged_keywords?: string[];        // 병합된 원본 키워드 리스트
-    core_news_titles?: string[];       // 대표 키워드 본연의 뉴스 (Pass 2 정제용)
+    /** [Logic] 병합 사유 (JACCARD_STRONG, OVERLAP_WEAK 등) */
+    merge_reasons?: string[];
+    /** [Logic] 병합된 원본 키워드 리스트 */
+    merged_keywords?: string[];
+    /** [Logic] 대표 키워드 본연의 뉴스 (Pass 2 정제용) */
+    core_news_titles?: string[];
 }
 
 /**
@@ -33,20 +43,32 @@ export interface IssueEntity {
  * [Description] 소셜 미디어 포스팅 및 카드 뉴스 생성에 최적화된 형태로 정제된 이슈 데이터입니다.
  */
 export interface FinalIssueBoard {
-    representative_keyword: string;    // 대표 키워드
-    news_titles: string[];             // 관련 뉴스 제목 배열
-    rank?: number;                     // [NEW] 이슈 순위 (1~10)
-    merge_reasons?: string[];          // 병합 사유
-    instagram_summary: string[];       // AI 생성 3문장 요약 (정중한 어조)
-    tags: string[];                    // 해시태그 배열
-    merged_keywords?: string[];        // 병합된 원본 키워드 리스트
+    /** [Data] 대표 키워드 */
+    representative_keyword: string;
+    /** [Data] 관련 뉴스 제목 배열 */
+    news_titles: string[];
+    /** [NEW] 이슈 순위 (1~10) */
+    rank?: number;
+    /** [Logic] 병합 사유 */
+    merge_reasons?: string[];
+    /** [Logic] AI 생성 3문장 요약 (정중한 어조) */
+    instagram_summary: string[];
+    /** [Logic] 해시태그 배열 */
+    tags: string[];
+    /** [Logic] 병합된 원본 키워드 리스트 */
+    merged_keywords?: string[];
+    /** [Safety] 생성 실패 시 사유 */
     fallback_reason?: 'invalid_summary' | 'empty_tags' | 'llm_error' | 'batch_mismatch';
 
     // [Metric Updates] 분석 결과 데이터 보강
-    score?: number;                    // 랭킹 엔진 합산 점수
-    snapshot_count?: number;           // 기간 내 노출 횟수
-    first_seen_at?: string;            // 최초 노출 시각
-    last_seen_at?: string;             // 마지막 노출 시각
+    /** [Data] 랭킹 엔진 합산 점수 */
+    score?: number;
+    /** [Data] 기간 내 노출 횟수 */
+    snapshot_count?: number;
+    /** [Data] 최초 노출 시각 */
+    first_seen_at?: string;
+    /** [Data] 마지막 노출 시각 */
+    last_seen_at?: string;
 }
 
 /**

@@ -37,18 +37,20 @@ export default function BoardsPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // [Step 1] 초기 로드 시 보드 데이터 즉시 조회
     fetchBoards();
   }, []);
 
   const stats = useMemo(() => {
+    // [Safety] 데이터가 없을 경우 기본 객체 반환
     if (boards.length === 0) return { total: 0, successRate: 0, lastRun: '-', activity: Array(7).fill(0) };
 
-    // 1. Core Stats
+    // [Step 1] Core Stats 계산
     const published = boards.filter(b => b.instagram_post_id).length;
     const successRate = Math.round((published / boards.length) * 100);
     const lastRun = boards[0].target_date;
 
-    // 2. Activity Pulse (Last 7 Days)
+    // [Step 2] Activity Pulse (Last 7 Days) 트렌드 분석
     const today = new Date();
     const activity = Array(7).fill(0).map((_, i) => {
       const d = new Date();
@@ -82,7 +84,7 @@ export default function BoardsPage() {
     }
   }
 
-  // Auto-refresh every 5 minutes
+  // [UX] 5분마다 실시간 데이터 자동 동기화 셋업
   useEffect(() => {
     const interval = setInterval(fetchBoards, 5 * 60 * 1000);
     return () => clearInterval(interval);

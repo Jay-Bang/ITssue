@@ -13,7 +13,7 @@ dotenv.config();
  * [Design Intent]
  * - [Safety] 복잡한 Graph API 포스팅 과정을 캡슐화하여 일관된 인터페이스를 제공합니다.
  * - [Optimization] 이미지 처리 지연 시간을 고려한 명시적 대기(Smart Polling) 및 재시도 메커니즘을 구축했습니다.
- * - 토큰 및 사용자 ID의 안전한 관리를 위한 환경 변수 연동을 수행합니다.
+ * - [Config] 토큰 및 사용자 ID의 안전한 관리를 위한 환경 변수 연동을 수행합니다.
  */
 export class InstagramPublisher {
     private readonly baseUrl = 'https://graph.facebook.com/v24.0';
@@ -39,16 +39,12 @@ export class InstagramPublisher {
 
     private initialized: Promise<void>;
 
-    /**
-     * 토큰 로딩이 완료될 때까지 대기하는 헬퍼
-     */
+    /** [Logic] 토큰 로딩이 완료될 때까지 대기하는 헬퍼 */
     async ensureInitialized(): Promise<void> {
         await this.initialized;
     }
 
-    /**
-     * Access Token 로딩 (Supabase → .env fallback)
-     */
+    /** [Logic] Access Token 로딩 (Supabase -> .env fallback) */
     private async loadAccessToken(): Promise<void> {
         try {
             // [Step] Supabase 전역 설정 테이블에서 최신 Access Token 인출
@@ -151,11 +147,10 @@ export class InstagramPublisher {
         }
     }
 
-    /**
-     * 특정 미디어 ID에 대한 공개 숏코드가 포함된 permalink 조회
-     */
+    /** [Logic] 특정 미디어 ID에 대한 공개 숏코드가 포함된 permalink 조회 */
     async getMediaPermalink(mediaId: string): Promise<string | null> {
         await this.ensureInitialized();
+        // [Step 1] Graph API를 통해 permalink 속성 자원 요청
         const url = `${this.baseUrl}/${mediaId}`;
         try {
             const response = await axios.get(url, {

@@ -15,9 +15,12 @@ const MERGE_CONFIG = {
 
 // [Logic] 내부 처리용 확장 인터페이스 (V2.6)
 interface MergableIssue extends IssueEntity {
+    /** [Data] 어휘 분석용 토큰 세트 */
     tokens: Set<string>;
+    /** [Data] 원본 배열 인덱스 */
     originalIndex: number;
-    merge_reasons: string[]; // [Logic] 병합 사유 추적 (Observability)
+    /** [Logic] 병합 사유 추적 (Observability) */
+    merge_reasons: string[];
 }
 
 /**
@@ -95,8 +98,9 @@ function normalizeHanja(text: string): string {
  * [Optimization] 불필요한 조사와 공백을 제거하고 핵심 명사 위주로 토큰 세트를 구축합니다.
  */
 function tokenize(text: string): Set<string> {
-    const normalized = normalizeHanja(text); // 한자 -> 한글 치환 우선 실행
-    // 한글, 영문, 숫자를 제외한 모든 특수문자를 공백 처리
+    // [Step 1] 한자 -> 한글 치환 및 정규화
+    const normalized = normalizeHanja(text);
+    // [Safety] 한글, 영문, 숫자를 제외한 모든 특수문자를 공백 처리
     const rawTokens = normalized.replace(/[^\w\s가-힣\u4e00-\u9fff]/g, ' ').split(/[\s,]+/);
     const validTokens = new Set<string>();
 
@@ -246,21 +250,21 @@ export async function runMergeGate(options: TimeWindow): Promise<IssueEntity[]> 
     const mergedKeywordsMap = new Map<string, string[]>();
 
     for (const [rootIdx, members] of groupedMap) {
-        // 점수 내림차순 정렬 (대표 키워드 선정을 위해)
+        // [Logic] 점수 내림차순 정렬 (대표 키워드 선정을 위해)
         members.sort((a, b) => b.score - a.score);
         const leader = members[0]; // 점수가 가장 높은 녀석이 대표
 
-        // 속성 합치기 (Set 이용)
+        // [Logic] 속성 합치기 (Set 이용)
         const allTitles = Array.from(new Set(members.flatMap(m => m.news_titles)));
         const allSnapshotIds = Array.from(new Set(members.flatMap(m => m.raw_snapshot_ids)));
-        // 모든 멤버의 병합 사유 합치기
+        // [Logic] 모든 멤버의 병합 사유 합치기
         const allReasons = Array.from(new Set(members.flatMap(m => m.merge_reasons)));
 
-        // 점수 단순 합산 (Pure Sum)
+        // [Logic] 점수 단순 합산 (Pure Sum)
         const totalScore = members.reduce((sum, m) => sum + m.score, 0);
         const totalSnapshots = members.reduce((sum, m) => sum + m.snapshot_count, 0);
 
-        // 시간 범위 확장
+        // [Logic] 시간 범위 확장
         const earliest = members.map(m => new Date(m.first_seen_at).getTime()).reduce((min, t) => Math.min(min, t), Infinity);
         const latest = members.map(m => new Date(m.last_seen_at).getTime()).reduce((max, t) => Math.max(max, t), -Infinity);
 
@@ -278,7 +282,7 @@ export async function runMergeGate(options: TimeWindow): Promise<IssueEntity[]> 
             merged_keywords: members.map(m => m.representative_keyword),
         });
 
-        // 맵에 메타데이터 저장
+        // [Data] 대표 키워드 기반 메타데이터 맵핑
         mergeCountMap.set(leader.representative_keyword, members.length);
         mergedKeywordsMap.set(leader.representative_keyword, members.map(m => m.representative_keyword));
     }

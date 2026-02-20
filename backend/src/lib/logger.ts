@@ -8,21 +8,21 @@
  * - [Strategy] 이모지(Emoji) 및 성능 측정(Console Time) 기능을 통합하여 실시간 모니터링 및 병목 지점 파악에 최적화 설계했습니다.
  */
 export const Logger = {
-    /** 일반 정보 로그 출력 */
+    /** [Level: INFO] 일반 정보 로그 출력 */
     info: (msg: string, ...args: any[]) => console.log(`[INFO] ${msg}`, ...args),
 
-    /** 성공 메시지 로그 출력 (주로 ✅ 이모지와 함께 사용) */
+    /** [Level: PASS] 성공 메시지 로그 출력 (주로 ✅ 이모지와 함께 사용) */
     success: (msg: string, ...args: any[]) => console.log(`[PASS] ${msg}`, ...args),
 
-    /** [Logic] 경고 메시지 출력 (⚠️) */
+    /** [Level: WARN] 경고 메시지 출력 (⚠️) */
     warn: (msg: string, ...args: any[]) => console.warn(`[WARN] ${msg}`, ...args),
 
-    /** [Logic] 에러 메시지 출력 (❌) */
+    /** [Level: FAIL] 에러 메시지 출력 (❌) */
     error: (msg: string, ...args: any[]) => console.error(`[FAIL] ${msg}`, ...args),
 
-    /** [Strategy] 성능 측정 시작 (성능 모니터링) */
+    /** [Level: STRAT] 성능 측정 시작 (성능 모니터링) */
     time: (label: string) => console.time(label),
 
-    /** [Strategy] 성능 측정 종료 및 결과 자동 출력 */
+    /** [Level: STRAT] 성능 측정 종료 및 결과 자동 출력 */
     timeEnd: (label: string) => console.timeEnd(label)
 };

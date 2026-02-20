@@ -16,9 +16,12 @@ import * as fs from 'fs-extra';
 import * as path from 'path';
 
 export interface BaseCardData {
+    /** [Data] 시각 테마 명칭 (Arcade/Bubblegum) */
     theme: string;
+    /** [Data] 기준 날짜 문자열 */
     date: string;
-    boardTitle: string; // e.g., "정오 이슈 보드", "일일 이슈 보드"
+    /** [Data] 보드 제목 (e.g., "정오 이슈 보드") */
+    boardTitle: string;
 }
 
 export interface RankingCardData extends BaseCardData {
@@ -59,8 +62,10 @@ export interface RenderOptions {
     visualVersion?: 'bubblegum' | 'arcade'; // [Logic] 디자인 스타일 (bubblegum, arcade)
 }
 
-// [Logic] Handlebars 공통 헬퍼 등록
+// [Config] Handlebars 공통 헬퍼 등록
+/** [Logic] 동등 비교 헬퍼 */
 Handlebars.registerHelper('eq', (a, b) => a === b);
+/** [Logic] 논리합 헬퍼 */
 Handlebars.registerHelper('or', (a, b) => a || b);
 
 // [Logic] Browser Instance Singleton Pattern
