@@ -164,6 +164,28 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
                 if (updateError) throw updateError;
                 Logger.success(`✨ Supabase Storage & Caption Synced!`);
 
+                // [Step 8.2.5] 텔레그램 메인 메시지(이미지+영상+캡션) 선행 전송
+                // 사용자 요청 반영: Supabase 업로드 직후, 수 분이 소요되는 SNS 발행을 기다리지 않고 즉시 텔레그램을 발송합니다.
+                try {
+                    Logger.info("\n📨 Sending Telegram main notification early (Before SNS Publish)...");
+                    const notifier = new NotificationService();
+                    const dirA = path.join(outputDir, `Instagram_Feed_${type}_${dateStr}`);
+                    await fs.ensureDir(dirA);
+
+                    const images: string[] = [];
+                    for (const img of imageBuffers) {
+                        const filePath = path.join(dirA, img.fileName);
+                        await fs.writeFile(filePath, img.buffer);
+                        images.push(filePath);
+                    }
+                    images.sort((a, b) => path.basename(a).localeCompare(path.basename(b)));
+
+                    // 메인 메시지 전송 실행 (동영상 인코딩 포함 약 10~20초 소요)
+                    await notifier.sendTelegram(type, dateStr, renderIssues, images, generatedCaption);
+                } catch (e) {
+                    Logger.warn("⚠️ Telegram main notification failed.", e);
+                }
+
                 // [Logic] 8.3 인스타그램, 스레드, 페이스북 동시(Concurrent) 발행
                 let igMediaId: string | null = null;
                 if (shouldPublish) {
@@ -278,26 +300,9 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
         await closeBrowser();
         Logger.success(`Pipeline finishes (Duration: ${totalDuration}s)`);
 
-        // [Step 9] 알림 및 모니터링 전송 (Telegram)
+        // [Step 9] 시스템 에러 리포트 텔레그램 전송 (문제 발생 시에만)
+        // 메인 텔레그램 전송은 Step 8.2.5에서 선행 수행되었습니다.
         try {
-            Logger.info("\n📨 Sending Telegram notification...");
-            const notifier = new NotificationService();
-
-            // 이미지 목록 수집 (메모리 버퍼 객체를 로컬에 임시 저장하여 텔레그램 전송 및 영상 생성 기능 복구)
-            const dirA = path.join(outputDir, `Instagram_Feed_${type}_${dateStr}`);
-            await fs.ensureDir(dirA);
-
-            const images: string[] = [];
-            for (const img of imageBuffers) {
-                const filePath = path.join(dirA, img.fileName);
-                await fs.writeFile(filePath, img.buffer);
-                images.push(filePath);
-            }
-
-            // P1(Ranking) 이미지가 제일 앞으로 오도록 정렬
-            images.sort((a, b) => path.basename(a).localeCompare(path.basename(b)));
-
-            // [Logic] 시스템 결과 리포트 구성 (문제 발생 시 별도 전송)
             let report = '';
             if (failedSummaries.length > 0 || failedSNS.length > 0) {
                 report = `⚠️ <b>[시스템 결과 리포트]</b>\n`;
@@ -313,15 +318,14 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
                 }
             }
 
-            // 메인 캡션 전송 실행
-            await notifier.sendTelegram(type, dateStr, renderIssues, images, generatedCaption);
-
             // [Logic] 에러가 있다면 텔레그램으로 별도 메시지 발송
             if (report) {
+                Logger.info("\n📨 Sending Telegram Error Report...");
+                const notifier = new NotificationService();
                 await notifier.sendErrorReport(report);
             }
         } catch (e) {
-            Logger.warn("⚠️ Notification failed but pipeline completed.", e);
+            Logger.warn("⚠️ Error Report notification failed.", e);
         }
 
         // [Step 10] 로컬 파일 정리 (Cleanup)
