@@ -251,8 +251,10 @@ export async function retryPublishBoard(boardId: string) {
         const type = board.board_type as BoardType;
         const dateStr = board.target_date.replace(/-/g, '.');
 
-        // [Step 4] 인스타그램 업로드용 캡션 생성
-        const caption = await generateInstagramCaption(type, dateStr, formattedIssues);
+        // [Step 4] 인스타그램 업로드용 캡션 로드
+        // [Optimization] DB에 이미 저장된 caption을 재사용하여 템플릿 파일 재참조를 방지합니다.
+        // [Fallback] 저장된 캡션이 없는 경우에만 템플릿으로 재생성합니다.
+        const caption = board.caption || await generateInstagramCaption(type, dateStr, formattedIssues);
 
         // [Step 5] 인스타그램 조건부 발행 (게시 ID가 없는 경우에만 수행)
         let igMediaId = board.instagram_post_id;
