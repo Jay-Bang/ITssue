@@ -179,10 +179,11 @@ export default function BoardsPage() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${board.instagram_post_id ? 'bg-accent-secondary animate-pulse' : 'bg-accent-orange'}`} />
+                          <div className={`w-2 h-2 rounded-full ${board.metadata?.threads_post_id || board.instagram_post_id ? 'bg-accent-secondary animate-pulse' : 'bg-accent-orange'}`} />
                           <span className="text-sm font-bold text-foreground capitalize">
-                            {board.instagram_post_id ? 'Published' : 'Draft'}
+                            {board.metadata?.threads_post_id || board.instagram_post_id ? 'Published' : 'Draft'}
                           </span>
+                          {/* [DISABLED: Instagram]
                           {board.instagram_post_id && (
                             <a
                               href={board.metadata?.instagram_permalink as string || `https://www.instagram.com/p/${board.instagram_post_id}`}
@@ -194,6 +195,7 @@ export default function BoardsPage() {
                               📸
                             </a>
                           )}
+                          */}
                           {board.metadata?.threads_post_id && (
                             <a
                               href={`https://www.threads.net/@issue.itssue/post/${board.metadata.threads_post_id}`}
@@ -205,6 +207,7 @@ export default function BoardsPage() {
                               🧵
                             </a>
                           )}
+                          {/* [DISABLED: Facebook]
                           {board.metadata?.facebook_post_id && (
                             <a
                               href={`https://www.facebook.com/${board.metadata.facebook_post_id}`}
@@ -216,6 +219,7 @@ export default function BoardsPage() {
                               📘
                             </a>
                           )}
+                          */}
                           {!board.instagram_post_id && !board.metadata?.threads_post_id && !board.metadata?.facebook_post_id && (
                             <div className="text-muted text-[10px] italic font-medium">Pending</div>
                           )}

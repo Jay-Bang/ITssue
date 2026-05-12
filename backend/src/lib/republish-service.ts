@@ -12,9 +12,9 @@ import * as fs from 'fs-extra';
 import { supabase } from '../db/supabase-client';
 import { closeBrowser, renderFullSet } from '../visual/card-renderer';
 import { Logger } from '../lib/logger';
-import { InstagramPublisher } from '../publish/instagram-publisher';
+// import { InstagramPublisher } from '../publish/instagram-publisher';
 import { ThreadsPublisher } from '../publish/threads-publisher';
-import { FacebookPublisher } from '../publish/facebook-publisher';
+// import { FacebookPublisher } from '../publish/facebook-publisher';
 import { uploadInstagramImages } from '../publish/storage-manager';
 import { NotificationService } from '../lib/notifier';
 import * as Handlebars from 'handlebars';
@@ -22,6 +22,8 @@ import { FinalIssueBoard, BoardType } from '../types';
 
 export async function republishBoard(boardId: string) {
     Logger.info(`🔄 [RepublishService] Starting republish for Board ID: ${boardId}`);
+    let igMediaId: string | null = null;
+    let igPermalink: string | null = null;
 
     try {
         // [Step 1] Supabase에서 기존 보드 및 아이템 정보 조회
@@ -81,6 +83,7 @@ export async function republishBoard(boardId: string) {
         const imageUrls = await uploadInstagramImages(imageBuffers, storageTag);
 
         // [Step 8] 인스타그램 최종 발행 및 기존 게시물 정리
+        /* [DISABLED: Instagram]
         Logger.info("📸 Publishing to Instagram...");
         const igPublisher = new InstagramPublisher();
 
@@ -125,6 +128,7 @@ export async function republishBoard(boardId: string) {
             Logger.error(`❌ DB Update Failed for Board: ${boardId}`, updateError);
             throw updateError;
         }
+        */
 
         // [Logic] 9.1 Threads에도 동일하게 게시
         Logger.info("🧵 [Republish] Also publishing to Threads...");
@@ -135,6 +139,7 @@ export async function republishBoard(boardId: string) {
                 await supabase
                     .from('issue_boards')
                     .update({
+                        instagram_post_id: threadsMediaId, // [Compatibility] 쓰레즈 ID를 레거시 컬럼에 저장
                         metadata: {
                             ...(board.metadata || {}),
                             republished_at: new Date().toISOString(),
@@ -150,6 +155,7 @@ export async function republishBoard(boardId: string) {
         }
 
         // [Logic] 9.2 Facebook에도 동일하게 게시
+        /* [DISABLED: Facebook]
         Logger.info("📘 [Republish] Also publishing to Facebook...");
         try {
             const fbPublisher = new FacebookPublisher();
@@ -170,8 +176,9 @@ export async function republishBoard(boardId: string) {
         } catch (fbErr: any) {
             Logger.warn(`⚠️ Facebook Repost Failed: ${fbErr.message}`);
         }
+        */
 
-        Logger.success(`✅ Database updated with new IG_MEDIA_ID: ${igMediaId}`);
+        // Logger.success(`✅ Database updated with new IG_MEDIA_ID: ${igMediaId}`);
 
         // [Step 10] 텔레그램 최종 알림 전송 (비디오 포함)
         // [Safety] 알림 전송은 부차적인 기능이므로 실패해도 전체 프로세스 중단을 방해하지 않도록 처리합니다.
@@ -260,6 +267,7 @@ export async function retryPublishBoard(boardId: string) {
         let igMediaId = board.instagram_post_id;
         let igPermalink = board.metadata?.instagram_permalink;
 
+        /* [DISABLED: Instagram]
         if (!igMediaId) {
             Logger.info("📸 Retry: Publishing to Instagram...");
             const igPublisher = new InstagramPublisher();
@@ -272,6 +280,7 @@ export async function retryPublishBoard(boardId: string) {
         } else {
             Logger.info(`✅ Instagram already published (ID: ${igMediaId}). Skipping.`);
         }
+        */
 
         // [Step 7] 데이터베이스 동기화 및 메타데이터 갱신
         const { error: updateError } = await supabase
@@ -301,6 +310,7 @@ export async function retryPublishBoard(boardId: string) {
                     await supabase
                         .from('issue_boards')
                         .update({
+                            instagram_post_id: threadsMediaId, // [Compatibility] 쓰레즈 ID를 레거시 컬럼에 저장
                             metadata: {
                                 ...(board.metadata || {}),
                                 republished_at: new Date().toISOString(),
@@ -316,6 +326,7 @@ export async function retryPublishBoard(boardId: string) {
         }
 
         // [Logic] 7.2 Facebook Retry
+        /* [DISABLED: Facebook]
         if (!board.metadata?.facebook_post_id) {
             Logger.info("📘 [Retry] Publishing missing post to Facebook...");
             try {
@@ -337,8 +348,9 @@ export async function retryPublishBoard(boardId: string) {
                 Logger.warn(`⚠️ Facebook Retry Failed: ${fbErr.message}`);
             }
         }
+        */
 
-        Logger.success(`🎉 Retry Publish Successful! ID: ${igMediaId}`);
+        // Logger.success(`🎉 Retry Publish Successful! ID: ${igMediaId}`);
         return { success: true, igMediaId };
 
     } catch (error: any) {

@@ -190,11 +190,12 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
                 let igMediaId: string | null = null;
                 if (shouldPublish) {
                     Logger.info("🚀 Publishing to Social Media concurrently...");
-                    const igPublisher = new InstagramPublisher();
+                    // const igPublisher = new InstagramPublisher();
                     const threadsPublisher = new ThreadsPublisher();
-                    const fbPublisher = new FacebookPublisher();
+                    // const fbPublisher = new FacebookPublisher();
 
                     // [Step] 각 플랫폼별 비동기 작업을 Promise로 래핑
+                    /* [DISABLED: Instagram/Facebook]
                     const igTask = async () => {
                         const mediaId = await igPublisher.publishCarousel(publicUrls, generatedCaption);
                         let permalink = null;
@@ -203,27 +204,33 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
                         }
                         return { mediaId, permalink };
                     };
+                    */
 
                     const threadsTask = async () => {
                         return await threadsPublisher.publishCarousel(publicUrls, generatedCaption);
                     };
 
+                    /* [DISABLED: Facebook]
                     const fbTask = async () => {
                         return await fbPublisher.publishMultiPhoto(publicUrls, generatedCaption);
                     };
+                    */
 
                     // [Optimization] 모든 플랫폼 발행을 동시에(Concurrent) 처리
-                    const [igResult, threadsResult, fbResult] = await Promise.allSettled([
-                        igTask(),
+                    const results = await Promise.allSettled([
+                        // igTask(), // [DISABLED]
                         threadsTask(),
-                        fbTask()
+                        // fbTask() // [DISABLED]
                     ]);
+
+                    const threadsResult = results[0];
 
                     // 메타데이터 업데이트를 위한 객체 구성
                     let newMetadata: any = {
                         published_at: new Date().toISOString()
                     };
 
+                    /* [DISABLED: Instagram]
                     // [Step] 플랫폼별 발행 결과 취합 및 처리
                     // Instagram 결과 처리
                     if (igResult.status === 'fulfilled' && igResult.value.mediaId) {
@@ -237,11 +244,14 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
                     } else {
                         failedSNS.push('Instagram');
                     }
+                    */
 
                     // Threads 결과 처리
                     if (threadsResult.status === 'fulfilled' && threadsResult.value) {
-                        newMetadata.threads_post_id = threadsResult.value;
-                        Logger.success(`✨ Threads Publishing Complete! ID: ${threadsResult.value}`);
+                        const threadsMediaId = threadsResult.value;
+                        igMediaId = threadsMediaId; // [Compatibility] 쓰레즈 ID를 레거시 인스타그램 ID 컬럼에도 저장
+                        newMetadata.threads_post_id = threadsMediaId;
+                        Logger.success(`✨ Threads Publishing Complete! ID: ${threadsMediaId}`);
                     } else if (threadsResult.status === 'rejected') {
                         Logger.error("❌ Threads Publishing Failed", threadsResult.reason);
                         failedSNS.push('Threads');
@@ -249,6 +259,7 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
                         failedSNS.push('Threads');
                     }
 
+                    /* [DISABLED: Facebook]
                     // Facebook 결과 처리
                     if (fbResult.status === 'fulfilled' && fbResult.value) {
                         newMetadata.facebook_post_id = fbResult.value;
@@ -259,6 +270,7 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
                     } else {
                         failedSNS.push('Facebook');
                     }
+                    */
 
                     // 한 번의 DB Update로 모든 플랫폼 메타데이터 반영
                     const { data: currentBoard } = await supabase.from('issue_boards').select('metadata').eq('id', boardId).single();

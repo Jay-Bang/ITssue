@@ -209,6 +209,7 @@ async function runManualRender() {
             Logger.success(`New Edition Board created: ${newBoardId}`);
 
             // [Step 4] 인스타그램 자동 교체 게시 (Self-healing)
+            /* [DISABLED: Instagram]
             Logger.info("📸 Publishing manual edition to Instagram...");
             const igPublisher = new InstagramPublisher();
 
@@ -234,6 +235,7 @@ async function runManualRender() {
                     })
                     .eq('id', newBoardId);
             }
+            */
 
             // 4. 이슈 텍스트 데이터 동기화 (새로운 board_id에 연결)
             Logger.info("📝 Syncing issue details (issue_board_items)...");
@@ -279,7 +281,7 @@ async function runManualRender() {
             // 5. publish info 업데이트 (새로운 boardId 및 igMediaId로 갱신)
             publishInfo.boardId = newBoardId;
             publishInfo.imageUrls = imageUrls;
-            publishInfo.igMediaId = igMediaId;
+            // publishInfo.igMediaId = igMediaId; // [DISABLED]
             publishInfo.processedAt = new Date().toISOString();
             await fs.writeJson(publishInfoPath, publishInfo, { spaces: 2 });
             Logger.success("Publish info updated with new Board ID and IG Media ID.");

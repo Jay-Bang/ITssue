@@ -95,7 +95,7 @@ cron.schedule('0 0 1 * *', async () => {
     Logger.info('🔄 [Daemon] Monthly Token Refresh Job Triggered');
 
     // [Step 1] Instagram용 Long-lived Token 갱신 (id=1)
-    runCommand('npm run refresh-token', 'Instagram Token Refresh');
+    // runCommand('npm run refresh-token', 'Instagram Token Refresh');
 
     // [Step 2] Threads용 Long-lived Token 갱신 (id=2)
     // [Safety] 동시 요청으로 인한 충돌을 방지하기 위해 30초의 간격을 두고 실행합니다.

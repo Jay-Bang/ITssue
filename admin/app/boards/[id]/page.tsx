@@ -141,7 +141,7 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
 
     const handleRetryPublish = async () => {
         // [Safety] 업로드만 실패한 경우를 위한 경량화된 재시도 가이드 제공
-        if (!confirm('이미지 렌더링을 건너뛰고 인스타그램 업로드만 다시 시도하시겠습니까?\n(이미지가 깨져있다면 전체 Republish를 사용하세요)')) return;
+        if (!confirm('이미지 렌더링을 건너뛰고 쓰레즈(Threads) 업로드만 다시 시도하시겠습니까?\n(이미지가 깨져있다면 전체 Republish를 사용하세요)')) return;
 
         setRetrying(true);
         try {
@@ -178,7 +178,7 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
     };
 
     const handleRepublish = async () => {
-        if (!confirm('변경된 내용으로 이미지를 다시 렌더링하고 인스타그램에 재발행하시겠습니까?')) return;
+        if (!confirm('변경된 내용으로 이미지를 다시 렌더링하고 쓰레즈(Threads)에 재발행하시겠습니까?')) return;
 
         setRepublishing(true);
         try {
@@ -204,7 +204,7 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
 
             const data = await res.json();
             if (res.ok) {
-                alert('🚀 재발행 요청 성공! 약 1-2분 뒤 인스타그램을 확인하세요.');
+                alert('🚀 재발행 요청 성공! 약 1-2분 뒤 쓰레즈(Threads)를 확인하세요.');
             } else {
                 alert(`❌ 실패: ${data.error}`);
             }
@@ -233,15 +233,19 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
                     <div className="flex items-center gap-3">
                         <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">Board Editor</h1>
                         <div className="flex gap-2">
+                            {/* [DISABLED: Instagram]
                             {board.metadata?.instagram_permalink && (
                                 <a href={board.metadata.instagram_permalink} target="_blank" className="text-xs bg-accent-primary/10 text-accent-primary px-2 py-1 rounded-md font-bold hover:bg-accent-primary/20 transition-all">📸 Instagram</a>
                             )}
+                            */}
                             {board.metadata?.threads_post_id && (
                                 <a href={`https://www.threads.net/@issue.itssue/post/${board.metadata.threads_post_id}`} target="_blank" className="text-xs bg-foreground/10 text-foreground px-2 py-1 rounded-md font-bold hover:bg-foreground/20 transition-all">🧵 Threads</a>
                             )}
+                            {/* [DISABLED: Facebook]
                             {board.metadata?.facebook_post_id && (
                                 <a href={`https://www.facebook.com/${board.metadata.facebook_post_id}`} target="_blank" className="text-xs bg-[#1877F2]/10 text-[#1877F2] px-2 py-1 rounded-md font-bold hover:bg-[#1877F2]/20 transition-all">📘 Facebook</a>
                             )}
+                            */}
                         </div>
                     </div>
                     <p className="text-sm sm:text-base text-muted font-medium uppercase">{board.board_type} Report • {board.target_date}</p>

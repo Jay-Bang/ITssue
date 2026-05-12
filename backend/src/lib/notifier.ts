@@ -100,6 +100,7 @@ export class NotificationService {
                 }
 
                 // [Step 1.5] 비디오 프리뷰 생성 및 전송 (FFmpeg)
+                /* [DISABLED: Instagram/Video]
                 try {
                     if (imagePaths.length > 0) {
                         const outputDir = path.dirname(imagePaths[0]);
@@ -125,6 +126,7 @@ export class NotificationService {
                 } catch (videoError: any) {
                     Logger.warn('⚠️ Failed to generate or send video preview (Skipping...)', videoError.message);
                 }
+                */
 
                 // [Step 2] 인스타그램 캡션 전송
                 if (caption) {
