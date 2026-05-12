@@ -134,7 +134,7 @@ export async function republishBoard(boardId: string) {
         Logger.info("🧵 [Republish] Also publishing to Threads...");
         try {
             const threadsPublisher = new ThreadsPublisher();
-            const threadsMediaId = await threadsPublisher.publishCarousel(imageUrls.map(img => img.publicUrl), caption);
+            const threadsMediaId = await threadsPublisher.publishCarousel(imageUrls.map(img => img.publicUrl), caption, "ITssue");
             if (threadsMediaId) {
                 await supabase
                     .from('issue_boards')
@@ -305,7 +305,7 @@ export async function retryPublishBoard(boardId: string) {
             Logger.info("🧵 [Retry] Publishing missing post to Threads...");
             try {
                 const threadsPublisher = new ThreadsPublisher();
-                const threadsMediaId = await threadsPublisher.publishCarousel(imageUrls, caption);
+                const threadsMediaId = await threadsPublisher.publishCarousel(imageUrls, caption, "ITssue");
                 if (threadsMediaId) {
                     await supabase
                         .from('issue_boards')

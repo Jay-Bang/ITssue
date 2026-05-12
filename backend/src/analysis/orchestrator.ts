@@ -207,7 +207,7 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
                     */
 
                     const threadsTask = async () => {
-                        return await threadsPublisher.publishCarousel(publicUrls, generatedCaption);
+                        return await threadsPublisher.publishCarousel(publicUrls, generatedCaption, "ITssue");
                     };
 
                     /* [DISABLED: Facebook]

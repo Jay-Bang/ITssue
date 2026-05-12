@@ -102,20 +102,25 @@ export class ThreadsPublisher {
     /**
      * 여러 이미지 컨테이너 ID를 하나로 묶어 캐러셀 컨테이너 생성
      */
-    private async createCarouselContainer(childrenIds: string[], text: string): Promise<string> {
+    private async createCarouselContainer(childrenIds: string[], text: string, topicTag?: string): Promise<string> {
         const url = `${this.baseUrl}/${this.threadsUserId}/threads`;
         try {
             // [Step] 500자 제한 준수 (Truncation Strategy)
             const truncatedText = text.length > 500 ? text.substring(0, 497) + "..." : text;
 
-            const response = await axios.post(url, null, {
-                params: {
-                    media_type: 'CAROUSEL',
-                    children: childrenIds.join(','),
-                    text: truncatedText,
-                    access_token: this.accessToken
-                }
-            });
+            const params: any = {
+                media_type: 'CAROUSEL',
+                children: childrenIds.join(','),
+                text: truncatedText,
+                access_token: this.accessToken
+            };
+
+            // [Logic] 공식 토픽 태그 추가 (문서 사양 준수: . & 포함 불가)
+            if (topicTag) {
+                params.topic_tag = topicTag.replace(/[.&]/g, '');
+            }
+
+            const response = await axios.post(url, null, { params });
             return response.data.id;
         } catch (error: any) {
             const errorDetail = error.response?.data?.error || error.response?.data || error.message;
@@ -205,9 +210,10 @@ export class ThreadsPublisher {
      * 
      * @param imageUrls - 업로드할 이미지 URL 배열
      * @param text - 게시물 본문
+     * @param topicTag - (Optional) 공식 토픽 태그 (1-50자)
      * @returns 발행된 게시물의 고유 ID
      */
-    async publishCarousel(imageUrls: string[], text: string): Promise<string | null> {
+    async publishCarousel(imageUrls: string[], text: string, topicTag?: string): Promise<string | null> {
         await this.ensureInitialized();
 
         if (!this.threadsUserId || !this.accessToken) {
@@ -235,7 +241,7 @@ export class ThreadsPublisher {
 
             // [Step 2] 캐러셀 컨테이너 생성
             Logger.info('📦 Assembling carousel container...');
-            const carouselContainerId = await this.createCarouselContainer(itemIds, text);
+            const carouselContainerId = await this.createCarouselContainer(itemIds, text, topicTag);
 
             // [Step 3] 최종 미디어 발행
             Logger.info('🚀 Publishing to Threads (with retries)...');
