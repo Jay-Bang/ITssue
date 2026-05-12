@@ -24,7 +24,7 @@ const TIMEZONE = 'Asia/Seoul';
 Logger.info('🚀 ITssue Automation Daemon Started');
 Logger.info(`⏰ Timezone: ${TIMEZONE}`);
 Logger.info(`🕰️ Current Server Time: ${new Date().toString()}`);
-Logger.info('📅 Scheduled Jobs: Noon(11:45), Night(20:45), Token Refresh(1st 00:00)');
+Logger.info('📅 Scheduled Jobs: Noon(11:50), Night(20:50), Token Refresh(1st 00:00)');
 
 // [Logic] 관리자 패널(Admin UI) 연동을 위한 Webhook API 서버는 현재 standalone 프로세스(itssue-api)로 운영되므로 데몬에서 제외합니다.
 // import './api/webhook-server';
@@ -74,16 +74,16 @@ function runCommand(command: string, label: string) {
     });
 }
 
-// ☀️ [Job] 정오 이슈 보드: 매일 11:45 KST
-cron.schedule('45 11 * * *', () => {
+// ☀️ [Job] 정오 이슈 보드: 매일 11:50 KST
+cron.schedule('50 11 * * *', () => {
     Logger.info('⏰ Triggering Noon Board Generation...');
     runCommand('npm run board:noon -- --publish', 'Noon Board');
 }, {
     timezone: "Asia/Seoul"
 });
 
-// 🌙 [Job] 일일 이슈 보드: 매일 20:45 KST
-cron.schedule('45 20 * * *', () => {
+// 🌙 [Job] 일일 이슈 보드: 매일 20:50 KST
+cron.schedule('50 20 * * *', () => {
     Logger.info('⏰ Triggering Night Board Generation...');
     runCommand('npm run board:night -- --publish', 'Night Board');
 }, {
