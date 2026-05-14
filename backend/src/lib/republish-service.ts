@@ -139,7 +139,7 @@ export async function republishBoard(boardId: string) {
                 await supabase
                     .from('issue_boards')
                     .update({
-                        instagram_post_id: threadsMediaId, // [Compatibility] 쓰레즈 ID를 레거시 컬럼에 저장
+                        instagram_post_id: threadsMediaId, // [Compatibility] Threads ID를 레거시 컬럼에 저장
                         metadata: {
                             ...(board.metadata || {}),
                             republished_at: new Date().toISOString(),
@@ -310,7 +310,7 @@ export async function retryPublishBoard(boardId: string) {
                     await supabase
                         .from('issue_boards')
                         .update({
-                            instagram_post_id: threadsMediaId, // [Compatibility] 쓰레즈 ID를 레거시 컬럼에 저장
+                            instagram_post_id: threadsMediaId, // [Compatibility] Threads ID를 레거시 컬럼에 저장
                             metadata: {
                                 ...(board.metadata || {}),
                                 republished_at: new Date().toISOString(),

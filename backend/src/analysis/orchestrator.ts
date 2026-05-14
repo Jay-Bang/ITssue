@@ -249,7 +249,7 @@ export async function runOrchestrator(type: BoardType, shouldPublish: boolean = 
                     // Threads 결과 처리
                     if (threadsResult.status === 'fulfilled' && threadsResult.value) {
                         const threadsMediaId = threadsResult.value;
-                        igMediaId = threadsMediaId; // [Compatibility] 쓰레즈 ID를 레거시 인스타그램 ID 컬럼에도 저장
+                        igMediaId = threadsMediaId; // [Compatibility] Threads ID를 레거시 인스타그램 ID 컬럼에도 저장
                         newMetadata.threads_post_id = threadsMediaId;
                         Logger.success(`✨ Threads Publishing Complete! ID: ${threadsMediaId}`);
                     } else if (threadsResult.status === 'rejected') {

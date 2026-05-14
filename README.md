@@ -11,7 +11,7 @@
 
 **ITssue**는 실시간 트렌드 데이터를 스스로 수집하고, 최신 인공지능(Search Grounding) 기술을 통해 심층 분석하여 자동화된 인사이트 리포트와 시각적 카드뉴스 콘텐츠를 생성/발행하는 **자율형 데이터 파이프라인 엔진**입니다. 
 
-단순히 인기 검색어를 나열하는 수준을 넘어, 사건의 본질적인 원인을 분석하고 가독성 높은 시각 자산으로 변환하여 **쓰레즈(Threads)**에 게시하는 전 과정을 사람의 개입 없이 완결합니다. (현재 인스타그램/페이스북 발행은 레거시로 유지하며 Threads 중심으로 운영 중입니다.)
+단순히 인기 검색어를 나열하는 수준을 넘어, 사건의 본질적인 원인을 분석하고 가독성 높은 시각 자산으로 변환하여 **Threads**에 게시하는 전 과정을 사람의 개입 없이 완결합니다. (현재 인스타그램/페이스북 발행은 레거시로 유지하며 Threads 중심으로 운영 중입니다.)
 
 ---
 
@@ -166,7 +166,7 @@ npm run board:night -- --publish
 
   <br>
 
-  <h3>[쓰레즈(Threads) 실제 발행 사례]</h3>
+  <h3>[Threads 실제 발행 사례]</h3>
   <table style="width: 100%; border-collapse: collapse;">
     <tr align="center">
       <td colspan="2"><img src="backend/docs/assets/ITssue_Threads_1.png" width="50%" alt="Threads 프로필" /><br><b>Threads Profile</b></td>

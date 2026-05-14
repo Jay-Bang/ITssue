@@ -141,7 +141,7 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
 
     const handleRetryPublish = async () => {
         // [Safety] 업로드만 실패한 경우를 위한 경량화된 재시도 가이드 제공
-        if (!confirm('이미지 렌더링을 건너뛰고 쓰레즈(Threads) 업로드만 다시 시도하시겠습니까?\n(이미지가 깨져있다면 전체 Republish를 사용하세요)')) return;
+        if (!confirm('이미지 렌더링을 건너뛰고 Threads 업로드만 다시 시도하시겠습니까?\n(이미지가 깨져있다면 전체 Republish를 사용하세요)')) return;
 
         setRetrying(true);
         try {
@@ -178,7 +178,7 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
     };
 
     const handleRepublish = async () => {
-        if (!confirm('변경된 내용으로 이미지를 다시 렌더링하고 쓰레즈(Threads)에 재발행하시겠습니까?')) return;
+        if (!confirm('변경된 내용으로 이미지를 다시 렌더링하고 Threads에 재발행하시겠습니까?')) return;
 
         setRepublishing(true);
         try {
@@ -204,7 +204,7 @@ export default function BoardDetailPage(props: { params: Promise<{ id: string }>
 
             const data = await res.json();
             if (res.ok) {
-                alert('🚀 재발행 요청 성공! 약 1-2분 뒤 쓰레즈(Threads)를 확인하세요.');
+                alert('🚀 재발행 요청 성공! 약 1-2분 뒤 Threads를 확인하세요.');
             } else {
                 alert(`❌ 실패: ${data.error}`);
             }
