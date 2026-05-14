@@ -168,15 +168,12 @@ npm run board:night -- --publish
 
   <h3>[쓰레즈(Threads) 실제 발행 사례]</h3>
   <table style="width: 100%; border-collapse: collapse;">
-    <tr>
-      <td width="33%"><img src="backend/docs/assets/ITssue_Threads_1.png" alt="Threads 프로필" /></td>
-      <td width="33%"><img src="backend/docs/assets/ITssue_Threads_2.png" alt="게시 예시 1" /></td>
-      <td width="33%"><img src="backend/docs/assets/ITssue_Threads_3.png" alt="게시 예시 2" /></td>
+    <tr align="center">
+      <td colspan="2"><img src="backend/docs/assets/ITssue_Threads_1.png" width="50%" alt="Threads 프로필" /><br><b>Threads Profile</b></td>
     </tr>
     <tr align="center">
-      <td><b>Threads Profile</b></td>
-      <td><b>Threads Feed 1</b></td>
-      <td><b>Threads Feed 2</b></td>
+      <td width="50%"><img src="backend/docs/assets/ITssue_Threads_2.png" alt="게시 예시 1" /><br><b>Threads Feed 1</b></td>
+      <td width="50%"><img src="backend/docs/assets/ITssue_Threads_3.png" alt="게시 예시 2" /><br><b>Threads Feed 2</b></td>
     </tr>
   </table>
 </div>
