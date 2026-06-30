@@ -117,6 +117,7 @@ export class AIEngine {
                     if (keySwitchAttempts < maxKeySwitches - 1 && this.switchToNextKey()) {
                         keySwitchAttempts++;
                         Logger.info(`[AI] 🔄 Retrying with new API key...`);
+                        attempt--; // [Fix] 키 교체 시에는 전체 재시도 횟수(maxRetries)를 소모하지 않도록 방지
                         continue; // 대기 시간 없이 즉시 재시도
                     }
 
