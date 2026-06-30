@@ -111,8 +111,8 @@ export class AIEngine {
             } catch (error: any) {
                 lastError = error;
 
-                // [Logic] Rate Limit(429) 또는 할당량 초과 상황 대응
-                if (error.status === 429 || error.status === 404) {
+                // [Logic] Rate Limit(429), 할당량 초과(404), 서버 과부하(503) 상황 대응
+                if (error.status === 429 || error.status === 404 || error.status === 503) {
                     // [Strategy A] 현재 시도하지 않은 다른 API 키가 있다면 즉시 전환
                     if (keySwitchAttempts < maxKeySwitches - 1 && this.switchToNextKey()) {
                         keySwitchAttempts++;
